@@ -1,0 +1,59 @@
+:root {
+  --ui-text: #f2f2f2;
+  --ui-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+  --ui-font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #101014;
+}
+
+#game-root canvas { display: block; }
+
+/* La interfaz no debe capturar el mouse: el canvas necesita los eventos
+   para el control en primera persona (Pointer Lock). */
+#ui-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--ui-font);
+  color: var(--ui-text);
+  text-shadow: var(--ui-shadow);
+  user-select: none;
+}
+
+.hud-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+}
+
+.hud-crosshair::before,
+.hud-crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.hud-crosshair::before { top: 8px; left: 0; width: 18px; height: 2px; }
+.hud-crosshair::after { left: 8px; top: 0; width: 2px; height: 18px; }
+
+.hud-debug {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.hud-debug[hidden] { display: none; }
