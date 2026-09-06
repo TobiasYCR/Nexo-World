@@ -57,3 +57,113 @@ html, body {
 }
 
 .hud-debug[hidden] { display: none; }
+
+/* Capa siempre presente durante la partida (mira + hotbar + debug). */
+.hud-game-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.hud-game-layer[hidden] { display: none; }
+
+.hud-hotbar {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+}
+
+.hud-hotbar__slot {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(20, 20, 24, 0.55);
+  font-size: 10px;
+  text-align: center;
+}
+
+.hud-hotbar__slot--active {
+  border-color: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.hud-hotbar__label {
+  text-shadow: var(--ui-shadow);
+  word-break: break-word;
+}
+
+/* Pantallas de navegación (menú, pausa, placeholders de config/controles). */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: rgba(8, 10, 16, 0.55);
+}
+
+/* La UA ya oculta [hidden], pero lo forzamos: una pantalla oculta no debe
+   ni pintarse ni comerse clics, sin depender del orden de cascada. */
+.screen[hidden] {
+  display: none !important;
+  pointer-events: none;
+}
+
+.menu-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  min-width: 240px;
+  padding: 32px 28px;
+  border-radius: 10px;
+  background: rgba(16, 16, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.menu-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.menu-note {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-align: center;
+  opacity: 0.75;
+}
+
+.menu-button {
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ui-text);
+  font-family: var(--ui-font);
+  font-size: 15px;
+  text-shadow: var(--ui-shadow);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.menu-button:hover,
+.menu-button:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.4);
+  outline: none;
+}
+
+.menu-button--secondary {
+  opacity: 0.85;
+}
