@@ -1,0 +1,520 @@
+/* ==========================================================================
+   Nexo World - Sistema de Componentes y Pantallas (Frontend 2)
+   Estilos Scoped con prefijo .nx- y diseño temático Dark Voxel / Slate & Emerald
+   ========================================================================== */
+
+/* Variables locales del subsistema de interfaz */
+:root {
+  --nx-bg-dialog: #0f172a;
+  --nx-bg-card: #131d35;
+  --nx-bg-input: #1e293b;
+  --nx-border-dialog: #334155;
+  --nx-border-subtle: rgba(255, 255, 255, 0.08);
+  --nx-text-primary: #f8fafc;
+  --nx-text-secondary: #94a3b8;
+  --nx-text-accent: #38bdf8;
+  --nx-emerald-base: #10b981;
+  --nx-emerald-light: #34d399;
+  --nx-emerald-dark: #064e3b;
+  --nx-danger-base: #ef4444;
+  --nx-shadow-dialog: 0 20px 45px -10px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --nx-font-family: ui-monospace, "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+  --nx-radius-lg: 16px;
+  --nx-radius-md: 10px;
+  --nx-radius-sm: 6px;
+}
+
+/* ==========================================================================
+   Diseño de Scrollbar Personalizada (Global y Scoped)
+   ========================================================================== */
+
+/* Estilos de scrollbar estándar para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #0f172a;
+}
+
+/* Estilos de scrollbar Webkit (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0 var(--nx-radius-lg) var(--nx-radius-lg) 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+  border: 2px solid #0f172a;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--nx-emerald-light);
+}
+
+/* ==========================================================================
+   Modal Dialog Base (.nx-modal-*)
+   ========================================================================== */
+
+.nx-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 22, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  pointer-events: auto;
+  padding: 20px;
+}
+
+.nx-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.nx-modal-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--nx-bg-dialog);
+  border: 1px solid var(--nx-border-dialog);
+  border-radius: var(--nx-radius-lg);
+  box-shadow: var(--nx-shadow-dialog);
+  color: var(--nx-text-primary);
+  font-family: var(--nx-font-family);
+  overflow: hidden;
+  animation: nx-dialog-appear 0.2s ease-out;
+  pointer-events: auto;
+}
+
+@keyframes nx-dialog-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.nx-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--nx-border-subtle);
+}
+
+.nx-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.nx-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--nx-text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--nx-radius-sm);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.nx-modal-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nx-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.nx-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--nx-border-subtle);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+/* ==========================================================================
+   Botones (.nx-btn)
+   ========================================================================== */
+
+.nx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--nx-font-family);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  border-radius: var(--nx-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.nx-btn:focus-visible {
+  outline: 2px solid var(--nx-emerald-light);
+  outline-offset: 2px;
+}
+
+.nx-btn-primary {
+  background: var(--nx-emerald-base);
+  color: #064e3b;
+  border-color: var(--nx-emerald-light);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.nx-btn-primary:hover {
+  background: var(--nx-emerald-light);
+  box-shadow: 0 6px 18px rgba(52, 211, 153, 0.4);
+  transform: translateY(-1px);
+}
+
+.nx-btn-primary:active {
+  transform: translateY(0);
+}
+
+.nx-btn-secondary {
+  background: #1e293b;
+  color: var(--nx-text-primary);
+  border-color: #334155;
+}
+
+.nx-btn-secondary:hover {
+  background: #334155;
+  color: #ffffff;
+  border-color: #475569;
+}
+
+.nx-btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.nx-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+  border-color: var(--nx-danger-base);
+}
+
+.nx-btn-large {
+  padding: 14px 28px;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.nx-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Slider (.nx-slider-*)
+   ========================================================================== */
+
+.nx-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.nx-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.nx-slider-label {
+  color: var(--nx-text-primary);
+  font-weight: 500;
+}
+
+.nx-slider-value {
+  color: var(--nx-emerald-light);
+  font-weight: 700;
+  font-family: var(--nx-font-family);
+}
+
+.nx-slider-container.is-disabled .nx-slider-value {
+  color: var(--nx-text-secondary);
+}
+
+.nx-slider-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+  background: #1e293b;
+  outline: none;
+  cursor: pointer;
+  margin: 6px 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  pointer-events: auto;
+}
+
+.nx-slider-input::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--nx-emerald-light);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  transition: transform 0.1s ease;
+}
+
+.nx-slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.nx-slider-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--nx-emerald-light);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.nx-slider-container.is-disabled .nx-slider-input {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.nx-slider-container.is-disabled .nx-slider-input::-webkit-slider-thumb {
+  background: #64748b;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.nx-control-note {
+  margin: 2px 0 0 0;
+  font-size: 0.75rem;
+  color: #7dd3fc;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+/* ==========================================================================
+   Toggle Switch (.nx-toggle-*)
+   ========================================================================== */
+
+.nx-toggle-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  pointer-events: auto;
+}
+
+.nx-toggle-label {
+  font-size: 0.9rem;
+  color: var(--nx-text-primary);
+  font-weight: 500;
+}
+
+.nx-toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 9999px;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  pointer-events: auto;
+}
+
+.nx-toggle-switch.is-checked {
+  background: var(--nx-emerald-base);
+  border-color: var(--nx-emerald-light);
+}
+
+.nx-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.nx-toggle-switch.is-checked .nx-toggle-knob {
+  transform: translateX(20px);
+}
+
+/* ==========================================================================
+   Pantalla de Controles (.nx-controls-*)
+   ========================================================================== */
+
+.nx-controls-dialog {
+  max-width: 520px;
+}
+
+.nx-controls-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nx-controls-group-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #60a5fa;
+  text-transform: uppercase;
+}
+
+.nx-controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nx-control-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.nx-control-name {
+  font-size: 0.9rem;
+  color: var(--nx-text-primary);
+}
+
+.nx-key-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 4px 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: var(--nx-radius-sm);
+  color: #f1f5f9;
+  font-family: var(--nx-font-family);
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 2px 0 #0f172a;
+}
+
+/* ==========================================================================
+   Pantalla de Inventario (.nx-inventory-*)
+   ========================================================================== */
+
+.nx-inventory-dialog {
+  max-width: 620px;
+}
+
+.nx-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  padding: 4px;
+}
+
+@media (max-width: 580px) {
+  .nx-inventory-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.nx-block-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 6px;
+  background: #182030;
+  border: 2px solid transparent;
+  border-radius: var(--nx-radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.nx-block-card:hover {
+  background: #1e293b;
+  border-color: #475569;
+  transform: translateY(-2px);
+}
+
+.nx-block-card.is-selected {
+  border-color: var(--nx-emerald-light);
+  background: #1e2d42;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+}
+
+.nx-block-card:focus-visible {
+  outline: 2px solid var(--nx-emerald-light);
+  outline-offset: 2px;
+}
+
+.nx-block-swatch {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--nx-radius-sm);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15), 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.nx-block-name {
+  font-size: 0.72rem;
+  color: var(--nx-text-primary);
+  text-align: center;
+  font-weight: 500;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
