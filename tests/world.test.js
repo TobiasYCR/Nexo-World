@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/world/World.js';
 import { WorldGenerator } from '../src/world/WorldGenerator.js';
+import { NoiseGenerator } from '../src/world/NoiseGenerator.js';
 import { createDefaultBlockRegistry } from '../src/blocks/BlockRegistry.js';
 import { GameConfig } from '../src/game/GameConfig.js';
 import { BlockIds } from '../src/utils/Constants.js';
@@ -39,7 +40,7 @@ test('colocar un id no registrado falla', () => {
 test('la generación llena el terreno y deja aire arriba', () => {
   const world = new WorldGenerator(GameConfig.world).generate(buildWorld());
 
-  assert.equal(world.getBlockId(0, 0, 0), BlockIds.STONE);
+  assert.equal(world.isSolid(0, 0, 0), true);
   assert.equal(world.getBlockId(0, world.height - 1, 0), BlockIds.AIR);
 
   const surface = world.getSurfaceHeight(0, 0);
@@ -62,4 +63,30 @@ test('la conversión mundo <-> bloque es coherente', () => {
   const world = buildWorld();
   const worldPosition = world.blockToWorld(3, 4, 5);
   assert.deepEqual(world.worldToBlock(worldPosition.x, worldPosition.y, worldPosition.z), { x: 3, y: 4, z: 5 });
+});
+
+test('noise2D varía con la semilla por defecto (bug del ruido plano)', () => {
+  const noise = new NoiseGenerator(GameConfig.world.SEED);
+  const values = new Set([
+    noise.noise2D(0, 0),
+    noise.noise2D(1, 0),
+    noise.noise2D(0, 1),
+    noise.noise2D(7, 3),
+    noise.noise2D(10, 10)
+  ]);
+  assert.ok(values.size > 1, 'la semilla por defecto no debe producir ruido constante');
+});
+
+test('la generación produce relieve, no una plancha plana', () => {
+  const world = new WorldGenerator(GameConfig.world).generate(buildWorld());
+
+  const heights = new Set();
+  for (let x = 0; x < world.width; x += 1) {
+    for (let z = 0; z < world.depth; z += 1) {
+      heights.add(world.getSurfaceHeight(x, z));
+    }
+  }
+
+  assert.ok(heights.size > 1, `debería haber más de una altura de superficie (solo: ${[...heights].join(', ')})`);
+  assert.ok(Math.min(...heights) < GameConfig.world.BASE_TERRAIN_HEIGHT, 'la amplitud también debe hundir el terreno');
 });

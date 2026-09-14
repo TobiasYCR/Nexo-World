@@ -1,16 +1,21 @@
-import { BlockIds } from '../utils/Constants.js';
+import { GameConfig } from '../game/GameConfig.js';
 
 /** Resultado de un raycast contra la grilla de bloques. */
 export class RaycastHit {
+  /**
+   * @param {import('../blocks/Block.js').Block|null} block bloque impactado
+   * @param {{x:number,y:number,z:number}|null} face normal de la cara golpeada,
+   *   o null si el origen estaba dentro del bloque (no hay cara válida)
+   */
   constructor(block, face, distance) {
     this.block = block;
-    /** Normal de la cara golpeada, en coordenadas de bloque. */
     this.face = face;
     this.distance = distance;
   }
 
   /** Posición del bloque adyacente a la cara: donde iría un bloque nuevo. */
   get adjacentPosition() {
+    if (!this.face) return null;
     return {
       x: this.block.x + this.face.x,
       y: this.block.y + this.face.y,
@@ -22,39 +27,53 @@ export class RaycastHit {
 /**
  * Recorrido de voxeles (algoritmo DDA de Amanatides & Woo): avanza rayo por
  * rayo saltando de celda en celda, sin muestreo por pasos fijos.
- * Queda disponible para la etapa de romper/colocar bloques.
+ *
+ * La dirección se normaliza antes de recorrer para que el resultado no dependa
+ * de la magnitud del vector, y la solidez se consulta a través del registro de
+ * bloques del mundo (World.isSolid), nunca comparando ids a mano.
  */
 export class Raycast {
-  constructor(world) {
+  constructor(world, config = GameConfig.blocks) {
     this.world = world;
+    this.reachDistance = config.REACH_DISTANCE;
   }
 
-  cast(origin, direction, maxDistance) {
+  cast(origin, direction, maxDistance = this.reachDistance) {
     const size = this.world.blockSize;
+
+    const magnitude = Math.sqrt(
+      direction.x * direction.x + direction.y * direction.y + direction.z * direction.z
+    );
+    if (magnitude === 0) return null;
+    // Misma dirección, pero unitaria: la métrica de distancia solo depende del rayo.
+    const dirX = direction.x / magnitude;
+    const dirY = direction.y / magnitude;
+    const dirZ = direction.z / magnitude;
 
     let x = Math.floor(origin.x / size);
     let y = Math.floor(origin.y / size);
     let z = Math.floor(origin.z / size);
 
-    const step = { x: Math.sign(direction.x), y: Math.sign(direction.y), z: Math.sign(direction.z) };
+    const step = { x: Math.sign(dirX), y: Math.sign(dirY), z: Math.sign(dirZ) };
     const tDelta = {
-      x: direction.x === 0 ? Infinity : Math.abs(size / direction.x),
-      y: direction.y === 0 ? Infinity : Math.abs(size / direction.y),
-      z: direction.z === 0 ? Infinity : Math.abs(size / direction.z)
+      x: dirX === 0 ? Infinity : Math.abs(size / dirX),
+      y: dirY === 0 ? Infinity : Math.abs(size / dirY),
+      z: dirZ === 0 ? Infinity : Math.abs(size / dirZ)
     };
 
     const tMax = {
-      x: Raycast.#initialT(origin.x, direction.x, x, size, tDelta.x),
-      y: Raycast.#initialT(origin.y, direction.y, y, size, tDelta.y),
-      z: Raycast.#initialT(origin.z, direction.z, z, size, tDelta.z)
+      x: Raycast.#initialT(origin.x, dirX, x, size, tDelta.x),
+      y: Raycast.#initialT(origin.y, dirY, y, size, tDelta.y),
+      z: Raycast.#initialT(origin.z, dirZ, z, size, tDelta.z)
     };
 
     let face = { x: 0, y: 0, z: 0 };
     let travelled = 0;
 
     while (travelled <= maxDistance) {
-      if (this.world.getBlockId(x, y, z) !== BlockIds.AIR) {
-        return new RaycastHit(this.world.getBlock(x, y, z), face, travelled);
+      if (this.world.isSolid(x, y, z)) {
+        const validFace = face.x !== 0 || face.y !== 0 || face.z !== 0;
+        return new RaycastHit(this.world.getBlock(x, y, z), validFace ? face : null, travelled);
       }
 
       if (tMax.x < tMax.y && tMax.x < tMax.z) {

@@ -44,6 +44,21 @@ export class InputManager {
     return (this.isActionDown(positiveAction) ? 1 : 0) - (this.isActionDown(negativeAction) ? 1 : 0);
   }
 
+  /**
+   * Pedido de romper bloque en este frame (borde de subida del clic izquierdo).
+   * El input solo expone la intención; decidir qué hacer es del orquestador.
+   */
+  wasBreakRequested() {
+    return this.mouse.leftJustPressed;
+  }
+
+  /**
+   * Pedido de colocar bloque en este frame (borde de subida del clic derecho).
+   */
+  wasPlaceRequested() {
+    return this.mouse.rightJustPressed;
+  }
+
   /** Índice de slot de hotbar solicitado con las teclas 1-9, o -1 si no hubo pedido. */
   requestedHotbarSlot() {
     for (let slot = 1; slot <= 9; slot += 1) {

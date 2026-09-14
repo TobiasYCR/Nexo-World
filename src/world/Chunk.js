@@ -28,6 +28,18 @@ export class Chunk {
     return `${chunkX},${chunkZ}`;
   }
 
+  get isDirty() {
+    return this.dirty;
+  }
+
+  markDirty() {
+    this.dirty = true;
+  }
+
+  markClean() {
+    this.dirty = false;
+  }
+
   containsLocal(x, y, z) {
     return x >= 0 && x < this.sizeX && y >= 0 && y < this.height && z >= 0 && z < this.sizeZ;
   }
@@ -43,7 +55,9 @@ export class Chunk {
 
   setBlock(x, y, z, blockId) {
     if (!this.containsLocal(x, y, z)) return false;
-    this.blocks[this.#index(x, y, z)] = blockId;
+    const index = this.#index(x, y, z);
+    if (this.blocks[index] === blockId) return true;
+    this.blocks[index] = blockId;
     this.dirty = true;
     return true;
   }

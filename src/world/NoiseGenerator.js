@@ -2,6 +2,9 @@
  * Ruido de valor con interpolación suave y semilla propia.
  * Se implementa acá en vez de usar el ruido de p5 para que la generación del
  * mundo sea determinista, testeable en Node y ajena al ciclo de vida del sketch.
+ *
+ * El hash usa aritmética de 32 bits con Math.imul para que el producto de
+ * coordenadas con la semilla no pierda bits bajos con semillas grandes.
  */
 export class NoiseGenerator {
   #seed;
@@ -16,8 +19,8 @@ export class NoiseGenerator {
 
   /** Hash entero -> [0, 1). Rápido y suficientemente uniforme para terreno. */
   #hash2D(x, y) {
-    let h = (x * 374761393 + y * 668265263 + this.#seed * 1442695040888963407) | 0;
-    h = (h ^ (h >>> 13)) * 1274126177;
+    let h = (Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(this.#seed, 2654435761)) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
     h = h ^ (h >>> 16);
     return (h >>> 0) / 4294967296;
   }
@@ -26,7 +29,7 @@ export class NoiseGenerator {
     return t * t * (3 - 2 * t);
   }
 
-  /** Ruido 2D continuo en [0, 1]. */
+  /** Ruido 2D continuo en [0, 1). */
   noise2D(x, y) {
     const x0 = Math.floor(x);
     const y0 = Math.floor(y);

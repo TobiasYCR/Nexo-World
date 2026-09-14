@@ -15,7 +15,10 @@ export class WorldGenerator {
 
   /** Altura de terreno, en bloques, para una columna del mundo. */
   columnHeight(x, z) {
-    const sample = this.noise.fractalNoise2D(x * this.config.NOISE_SCALE, z * this.config.NOISE_SCALE);
+    // El ruido fractal vive en [0, 1]; se remapea a [-1, 1] para que la amplitud
+    // tanto hunda como levante el terreno respecto de la base.
+    const raw = this.noise.fractalNoise2D(x * this.config.NOISE_SCALE, z * this.config.NOISE_SCALE);
+    const sample = raw * 2 - 1;
     const height = this.config.BASE_TERRAIN_HEIGHT + Math.round(sample * this.config.TERRAIN_AMPLITUDE);
     return Math.max(1, height);
   }

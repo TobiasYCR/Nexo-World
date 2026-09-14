@@ -40,6 +40,7 @@ export class PlayerController {
     }
 
     player.isSprinting = this.input.isActionDown(InputActions.SPRINT);
-    player.wantsToJump = this.input.isActionDown(InputActions.JUMP);
+    // Borde de subida del salto: mantener la tecla no debe permitir volar.
+    player.wantsToJump = this.input.wasActionJustPressed(InputActions.JUMP);
   }
 }
