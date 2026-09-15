@@ -2,7 +2,7 @@ import { GameConfig } from '../game/GameConfig.js';
 import { MathUtils } from '../utils/MathUtils.js';
 
 /**
- * Panel de diagnóstico: FPS y posición del jugador.
+ * Panel de diagnóstico: FPS, posición, chunk, bloques y estado.
  * Se refresca a intervalos en vez de cada frame para no ensuciar la medición
  * con escrituras al DOM.
  */
@@ -17,7 +17,10 @@ export class DebugOverlay {
   }
 
   mount(container) {
-    container.appendChild(this.element);
+    if (!container) return;
+    if (!this.element.parentNode) {
+      container.appendChild(this.element);
+    }
   }
 
   get isVisible() {
@@ -28,26 +31,41 @@ export class DebugOverlay {
     this.element.hidden = !this.element.hidden;
   }
 
+  setVisible(visible) {
+    this.element.hidden = !visible;
+  }
+
   /**
    * @param {number} deltaTime segundos desde el frame anterior
    * @param {{fps:number, position:{x:number,y:number,z:number}, renderedBlocks:number, state:string}} stats
    */
   update(deltaTime, stats) {
-    if (this.element.hidden) return;
+    if (this.element.hidden || !stats) return;
 
     this.#elapsedSinceRefresh += deltaTime;
     if (this.#elapsedSinceRefresh < this.config.OVERLAY_REFRESH_INTERVAL) return;
     this.#elapsedSinceRefresh = 0;
 
-    const { x, y, z } = stats.position;
+    const { x, y, z } = stats.position ?? { x: 0, y: 0, z: 0 };
+    const blockSize = GameConfig.world.BLOCK_SIZE || 20;
+    const chunkSizeX = GameConfig.chunk.SIZE_X || 16;
+    const chunkSizeZ = GameConfig.chunk.SIZE_Z || 16;
+
+    const blockX = Math.floor(x / blockSize);
+    const blockY = Math.floor(y / blockSize);
+    const blockZ = Math.floor(z / blockSize);
+
+    const chunkX = MathUtils.floorDiv(blockX, chunkSizeX);
+    const chunkZ = MathUtils.floorDiv(blockZ, chunkSizeZ);
+
     this.element.textContent = [
-      'Nexo World — F3 para ocultar',
-      `FPS: ${Math.round(stats.fps)}`,
-      `X: ${MathUtils.roundTo(x, 1)}`,
-      `Y: ${MathUtils.roundTo(y, 1)}`,
-      `Z: ${MathUtils.roundTo(z, 1)}`,
-      `Bloques dibujados: ${stats.renderedBlocks}`,
-      `Estado: ${stats.state}`
+      'Nexo World — F3 para alternar',
+      `FPS: ${Math.round(stats.fps ?? 60)}`,
+      `Pos: X: ${MathUtils.roundTo(x, 1)} | Y: ${MathUtils.roundTo(y, 1)} | Z: ${MathUtils.roundTo(z, 1)}`,
+      `Bloque: [${blockX}, ${blockY}, ${blockZ}]`,
+      `Chunk: [${chunkX}, ${chunkZ}]`,
+      `Bloques renderizados: ${stats.renderedBlocks ?? 0}`,
+      `Estado: ${stats.state ?? 'running'}`
     ].join('\n');
   }
 }

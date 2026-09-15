@@ -1,59 +1,374 @@
+/* ==========================================================================
+   Nexo World - Estilos Globales, HUD y Capa Base de Interfaz (Frontend 1)
+   ========================================================================== */
+
 :root {
-  --ui-text: #f2f2f2;
-  --ui-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
-  --ui-font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ui-text: #f8fafc;
+  --ui-text-muted: #94a3b8;
+  --ui-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  --ui-font: ui-monospace, "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace;
+  --ui-emerald: #10b981;
+  --ui-emerald-light: #34d399;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   overflow: hidden;
-  background: #101014;
+  background: #0b0f19;
+  font-family: var(--ui-font);
+  color: var(--ui-text);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-#game-root canvas { display: block; }
+#game-root canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
 
-/* La interfaz no debe capturar el mouse: el canvas necesita los eventos
-   para el control en primera persona (Pointer Lock). */
+/* ==========================================================================
+   Reglas globales de ocultación estricta
+   ========================================================================== */
+
+[hidden],
+.screen[hidden],
+.nx-modal-backdrop[hidden],
+.nx-menu-backdrop[hidden],
+.nx-pause-backdrop[hidden],
+.hud-debug[hidden],
+.hud-crosshair[hidden],
+.hud-hotbar-container[hidden],
+.hud-hotbar-label[hidden] {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Capa de Interfaz (#ui-root)
+   pointer-events: none por defecto para que los clics lleguen al canvas
+   ========================================================================== */
+
 #ui-root {
   position: fixed;
   inset: 0;
   pointer-events: none;
   font-family: var(--ui-font);
   color: var(--ui-text);
-  text-shadow: var(--ui-shadow);
-  user-select: none;
+  z-index: 100;
+  overflow: hidden;
 }
+
+#ui-root.has-active-screen {
+  pointer-events: auto;
+}
+
+/* Solo los elementos interactivos o pantallas activas capturan el puntero */
+.screen:not([hidden]),
+.screen.is-active,
+.nx-modal-backdrop:not([hidden]),
+.nx-menu-backdrop:not([hidden]),
+.nx-pause-backdrop:not([hidden]) {
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   HUD In-Game: Mira (Crosshair)
+   ========================================================================== */
 
 .hud-crosshair {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
 }
 
 .hud-crosshair::before,
 .hud-crosshair::after {
   content: "";
   position: absolute;
-  background: rgba(255, 255, 255, 0.85);
+  background: #ffffff;
 }
 
-.hud-crosshair::before { top: 8px; left: 0; width: 18px; height: 2px; }
-.hud-crosshair::after { left: 8px; top: 0; width: 2px; height: 18px; }
+.hud-crosshair::before {
+  top: 9px;
+  left: 0;
+  width: 20px;
+  height: 2px;
+}
+
+.hud-crosshair::after {
+  left: 9px;
+  top: 0;
+  width: 2px;
+  height: 20px;
+}
+
+/* ==========================================================================
+   HUD In-Game: Panel de Debug (F3)
+   ========================================================================== */
 
 .hud-debug {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  top: 14px;
+  left: 14px;
+  font-size: 12px;
+  line-height: 1.6;
   white-space: pre;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f1f5f9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  z-index: 150;
 }
 
-.hud-debug[hidden] { display: none; }
+/* ==========================================================================
+   HUD In-Game: Hotbar (9 slots)
+   ========================================================================== */
+
+.hud-hotbar-container {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 120;
+}
+
+/* Nombre del bloque seleccionado con alto contraste */
+.hud-hotbar-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 4px 14px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.2s ease;
+}
+
+.hud-hotbar-bar {
+  display: flex;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.hud-hotbar-slot {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  background: #182030;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.hud-hotbar-slot.is-selected {
+  border-color: var(--ui-emerald-light);
+  background: #1e2e46;
+  box-shadow: 0 0 14px rgba(52, 211, 153, 0.6), inset 0 0 4px rgba(52, 211, 153, 0.3);
+  transform: scale(1.08);
+  z-index: 2;
+}
+
+.hud-slot-number {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ui-text-muted);
+  text-shadow: var(--ui-shadow);
+}
+
+.hud-slot-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.hud-slot-count {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* ==========================================================================
+   Pantalla de Menú Principal (.nx-menu-*)
+   ========================================================================== */
+
+.nx-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.65) 0%, rgba(11, 15, 25, 0.85) 100%);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  pointer-events: auto;
+}
+
+.nx-menu-card {
+  width: 100%;
+  max-width: 440px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 20px;
+  padding: 36px 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+  animation: nx-menu-entrance 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+@keyframes nx-menu-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.nx-menu-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.nx-menu-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--ui-emerald-light);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.nx-menu-title {
+  margin: 4px 0 0 0;
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+}
+
+.nx-menu-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ui-text-muted);
+  line-height: 1.4;
+}
+
+.nx-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.nx-menu-footer {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Overlay de Pausa (.nx-pause-*)
+   ========================================================================== */
+
+.nx-pause-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 22, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 600;
+  pointer-events: auto;
+}
+
+.nx-pause-card {
+  width: 100%;
+  max-width: 380px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 30px 26px;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+  animation: nx-menu-entrance 0.2s ease-out;
+  pointer-events: auto;
+}
+
+.nx-pause-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #ffffff;
+}
+
+.nx-pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.nx-pause-hint {
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
+}
