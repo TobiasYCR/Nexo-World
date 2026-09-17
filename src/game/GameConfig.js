@@ -29,12 +29,25 @@ export const GameConfig = Object.freeze({
     SPRINT_MULTIPLIER: 1.6,
     GRAVITY: -260,
     JUMP_FORCE: 150,
+    /** Velocidad de caída máxima: evita atravesar bloques a bajo framerate. */
+    MAX_FALL_SPEED: 600,
     /** Dimensiones de la caja de colisión, en unidades de mundo. */
     WIDTH: 12,
     HEIGHT: 34,
     /** Altura de los ojos medida desde los pies. */
     EYE_HEIGHT: 30,
+    /** Holgura entre la caja y una cara sólida: anti pegote por punto flotante. */
+    COLLISION_SKIN: 0.05,
+    /** Tolerancia de la sonda de suelo: debe ser mayor que COLLISION_SKIN. */
+    GROUND_TOLERANCE: 0.3,
+    /** Desnivel que se sube sin saltar, en unidades de mundo (un bloque). */
+    STEP_HEIGHT: 20,
     SPAWN: Object.freeze({ x: 160, y: 200, z: 160 })
+  }),
+
+  blocks: Object.freeze({
+    /** Alcance máximo del raycast de interacción, en unidades de mundo. */
+    REACH_DISTANCE: 80
   }),
 
   camera: Object.freeze({

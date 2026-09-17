@@ -76,13 +76,32 @@ export class World {
     if (!this.blockRegistry.has(blockId)) {
       throw new RangeError(`No se puede colocar un bloque con id desconocido: ${blockId}.`);
     }
+    // Escribir el mismo id no cambia nada: no se ensucia ni se materializa un chunk.
+    if (this.getBlockId(x, y, z) === blockId) return true;
+
     const chunk = this.#chunkAt(x, z, true);
-    return chunk.setBlock(
-      MathUtils.mod(x, this.chunkSizeX),
-      y,
-      MathUtils.mod(z, this.chunkSizeZ),
-      blockId
-    );
+    const localX = MathUtils.mod(x, this.chunkSizeX);
+    const localZ = MathUtils.mod(z, this.chunkSizeZ);
+    if (!chunk.setBlock(localX, y, localZ, blockId)) return false;
+
+    // Cambiar un bloque en el borde de un chunk altera las caras visibles del
+    // vecino: hay que invalidar también su caché de geometría.
+    if (x > 0 && localX === 0) this.#markExistingChunkDirty(x - 1, z);
+    if (x < this.width - 1 && localX === this.chunkSizeX - 1) this.#markExistingChunkDirty(x + 1, z);
+    if (z > 0 && localZ === 0) this.#markExistingChunkDirty(x, z - 1);
+    if (z < this.depth - 1 && localZ === this.chunkSizeZ - 1) this.#markExistingChunkDirty(x, z + 1);
+    return true;
+  }
+
+  /** Ensucia solo un chunk existente: marcar un vecino no debe materializarlo. */
+  #markExistingChunkDirty(x, z) {
+    const chunk = this.#chunkAt(x, z);
+    if (chunk) chunk.markDirty();
+  }
+
+  /** Chunks con cambios pendientes, para que el renderer invalide su geometría. */
+  dirtyChunks() {
+    return [...this.#chunks.values()].filter((chunk) => chunk.isDirty);
   }
 
   isSolid(x, y, z) {
