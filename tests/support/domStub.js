@@ -86,6 +86,7 @@ export function createP5Stub() {
     noStroke: noop,
     translate: noop,
     texture: noop,
+    fill: noop,
     ambientMaterial: () => { calls.material += 1; },
     box: () => { calls.box += 1; },
     loadImage: (_path, _onLoad, onError) => onError(new Error('sin texturas en el test'))

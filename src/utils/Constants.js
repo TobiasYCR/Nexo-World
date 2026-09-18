@@ -41,3 +41,16 @@ export const BlockFaces = Object.freeze([
 ]);
 
 export const EPSILON = 1e-6;
+
+/** Categorías de mezcla del audio. Cada una tiene su propio control de volumen. */
+export const AudioCategories = Object.freeze({
+  SFX: 'sfx',
+  MUSIC: 'music',
+  AMBIENT: 'ambient'
+});
+
+/** Identificadores lógicos de sonido. Las rutas se resuelven en AssetCatalog. */
+export const SoundIds = Object.freeze({
+  BLOCK_PLACE: 'blockPlace',
+  BLOCK_BREAK: 'blockBreak'
+});

@@ -22,7 +22,19 @@ export class Renderer {
     this.blockRenderer.render(world, camera.position);
   }
 
+  /** Punto de entrada para Configuración: radio en bloques, sin recargar. */
+  get renderDistance() {
+    return this.blockRenderer.renderDistance;
+  }
+
+  setRenderDistance(blocks) {
+    return this.blockRenderer.setRenderDistance(blocks);
+  }
+
   get stats() {
-    return { renderedBlocks: this.blockRenderer.renderedBlocks };
+    return {
+      renderedBlocks: this.blockRenderer.renderedBlocks,
+      renderDistance: this.blockRenderer.renderDistance
+    };
   }
 }

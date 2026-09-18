@@ -4,6 +4,11 @@ export class MathUtils {
     return Math.min(Math.max(value, min), max);
   }
 
+  /** Acota a [0, 1]; un valor no numérico cae a `fallback`. */
+  static clamp01(value, fallback = 0) {
+    return Number.isFinite(value) ? MathUtils.clamp(value, 0, 1) : fallback;
+  }
+
   static lerp(from, to, t) {
     return from + (to - from) * t;
   }
