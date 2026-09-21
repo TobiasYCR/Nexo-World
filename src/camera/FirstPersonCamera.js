@@ -40,14 +40,20 @@ export class FirstPersonCamera {
     VectorUtils.directionFromAngles(this.yaw, this.pitch, this.lookDirection);
   }
 
-  /** Aplica proyección y vista al sketch. Único punto de contacto con p5. */
+  /**
+   * Aplica proyección y vista al sketch. Único punto de contacto con p5.
+   *
+   * p5 usa Y hacia abajo y su perspective() invierte el eje Y de la proyección.
+   * El mundo del juego es Y hacia arriba, así que con perspective() la escena se
+   * ve espejada verticalmente (suelo arriba, cielo abajo). No se corrige con el
+   * vector up de camera(): eso rota 180° y espeja X. Se usa frustum() con
+   * bottom/top intercambiados, que arma la misma pirámide sin la inversión.
+   */
   applyTo(p) {
-    p.perspective(
-      MathUtils.degToRad(this.config.FOV_DEGREES),
-      p.width / p.height,
-      this.config.NEAR_PLANE,
-      this.config.FAR_PLANE
-    );
+    const near = this.config.NEAR_PLANE;
+    const top = near * Math.tan(MathUtils.degToRad(this.config.FOV_DEGREES) / 2);
+    const right = top * (p.width / p.height);
+    p.frustum(-right, right, top, -top, near, this.config.FAR_PLANE);
 
     const { x, y, z } = this.position;
     const target = this.lookDirection;

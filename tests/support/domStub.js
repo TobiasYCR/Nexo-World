@@ -78,6 +78,7 @@ export function createP5Stub() {
     resizeCanvas: noop,
     background: () => { calls.background += 1; },
     perspective: noop,
+    frustum: noop,
     camera: () => { calls.camera += 1; },
     ambientLight: noop,
     directionalLight: noop,
