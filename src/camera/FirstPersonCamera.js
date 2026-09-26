@@ -7,6 +7,9 @@ import { Vec3, VectorUtils } from '../utils/VectorUtils.js';
  * sketch de p5. No lee input directamente; recibe deltas ya normalizados.
  */
 export class FirstPersonCamera {
+  #sensitivityMultiplier = 1;
+  #fovDegrees = null;
+
   constructor(config = GameConfig.camera) {
     this.config = config;
     this.position = new Vec3();
@@ -19,11 +22,32 @@ export class FirstPersonCamera {
     this.#updateBasis();
   }
 
+  setSensitivityMultiplier(multiplier) {
+    if (Number.isFinite(multiplier) && multiplier > 0) {
+      this.#sensitivityMultiplier = multiplier;
+    }
+  }
+
+  get sensitivityMultiplier() {
+    return this.#sensitivityMultiplier;
+  }
+
+  setFov(fovDegrees) {
+    if (Number.isFinite(fovDegrees) && fovDegrees > 0) {
+      this.#fovDegrees = fovDegrees;
+    }
+  }
+
+  get fov() {
+    return this.#fovDegrees ?? this.config.FOV_DEGREES;
+  }
+
   /** Rotación a partir del desplazamiento del mouse en píxeles. */
   rotate(deltaX, deltaY) {
-    this.yaw += deltaX * this.config.MOUSE_SENSITIVITY;
+    const sensitivity = this.config.MOUSE_SENSITIVITY * this.#sensitivityMultiplier;
+    this.yaw += deltaX * sensitivity;
     this.pitch = MathUtils.clamp(
-      this.pitch - deltaY * this.config.MOUSE_SENSITIVITY,
+      this.pitch - deltaY * sensitivity,
       -this.config.MAX_PITCH,
       this.config.MAX_PITCH
     );
@@ -51,7 +75,7 @@ export class FirstPersonCamera {
    */
   applyTo(p) {
     const near = this.config.NEAR_PLANE;
-    const top = near * Math.tan(MathUtils.degToRad(this.config.FOV_DEGREES) / 2);
+    const top = near * Math.tan(MathUtils.degToRad(this.fov) / 2);
     const right = top * (p.width / p.height);
     p.frustum(-right, right, top, -top, near, this.config.FAR_PLANE);
 

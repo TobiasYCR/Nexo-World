@@ -372,3 +372,98 @@ html, body {
   font-size: 0.75rem;
   color: var(--ui-text-muted);
 }
+
+/* ==========================================================================
+   Estados deshabilitados y estilos de Toast
+   ========================================================================== */
+
+.nx-btn[disabled],
+.nx-btn.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  filter: grayscale(0.6);
+  pointer-events: none;
+}
+
+.nx-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.nx-btn-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.nx-toast-container {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.nx-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  animation: nx-toast-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.nx-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
+}
+
+.nx-toast.is-success {
+  border-color: rgba(52, 211, 153, 0.6);
+  color: #34d399;
+}
+
+.nx-toast.is-error {
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fca5a5;
+}
+
+.nx-toast.is-info {
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #7dd3fc;
+}
+
+.nx-toast-icon {
+  font-size: 1rem;
+}
+
+@keyframes nx-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

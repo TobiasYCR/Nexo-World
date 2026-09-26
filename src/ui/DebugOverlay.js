@@ -58,13 +58,28 @@ export class DebugOverlay {
     const chunkX = MathUtils.floorDiv(blockX, chunkSizeX);
     const chunkZ = MathUtils.floorDiv(blockZ, chunkSizeZ);
 
+    const targeted = stats.targetedBlock
+      ? `[${stats.targetedBlock.x}, ${stats.targetedBlock.y}, ${stats.targetedBlock.z}]`
+      : 'Ninguno';
+
+    const selectedSlot = stats.selectedSlot !== undefined
+      ? stats.selectedSlot + 1
+      : (stats.selectedIndex !== undefined ? stats.selectedIndex + 1 : (stats.hotbar?.selectedIndex !== undefined ? stats.hotbar.selectedIndex + 1 : 1));
+
+    const renderedChunks = stats.renderedChunks !== undefined
+      ? stats.renderedChunks
+      : (stats.chunksRendered !== undefined ? stats.chunksRendered : (stats.chunkCount ?? 'N/A'));
+
     this.element.textContent = [
       'Nexo World — F3 para alternar',
       `FPS: ${Math.round(stats.fps ?? 60)}`,
       `Pos: X: ${MathUtils.roundTo(x, 1)} | Y: ${MathUtils.roundTo(y, 1)} | Z: ${MathUtils.roundTo(z, 1)}`,
       `Bloque: [${blockX}, ${blockY}, ${blockZ}]`,
       `Chunk: [${chunkX}, ${chunkZ}]`,
+      `Chunks dibujados: ${renderedChunks}`,
       `Bloques renderizados: ${stats.renderedBlocks ?? 0}`,
+      `Bloque apuntado: ${targeted}`,
+      `Slot seleccionado: ${selectedSlot}`,
       `Estado: ${stats.state ?? 'running'}`
     ].join('\n');
   }

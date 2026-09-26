@@ -1,6 +1,7 @@
 import { Screen } from './Screen.js';
 import { ScreenType } from './ScreenType.js';
 import { IntentBus } from './IntentBus.js';
+import { Icons } from './Icons.js';
 
 /**
  * Pantalla del Menú Principal.
@@ -43,13 +44,23 @@ export class MenuScreen extends Screen {
     const nav = document.createElement('div');
     nav.className = 'nx-menu-actions';
 
+    this.continueBtn = document.createElement('button');
+    this.continueBtn.type = 'button';
+    this.continueBtn.className = 'nx-btn nx-btn-primary nx-btn-large';
+    this.continueBtn.id = 'menu-btn-continue';
+    this.continueBtn.innerHTML = `
+      <span class="nx-btn-icon">${Icons.CONTINUE}</span>
+      <span class="nx-btn-text">CONTINUAR</span>
+    `;
+    this.continueBtn.addEventListener('click', () => this.handleContinue());
+
     this.playBtn = document.createElement('button');
     this.playBtn.type = 'button';
     this.playBtn.className = 'nx-btn nx-btn-primary nx-btn-large';
     this.playBtn.id = 'menu-btn-play';
     this.playBtn.innerHTML = `
-      <span class="nx-btn-icon">▶</span>
-      <span class="nx-btn-text">JUGAR</span>
+      <span class="nx-btn-icon">${Icons.PLAY}</span>
+      <span class="nx-btn-text">NUEVA PARTIDA</span>
     `;
     this.playBtn.addEventListener('click', () => this.handlePlay());
 
@@ -58,7 +69,7 @@ export class MenuScreen extends Screen {
     this.settingsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.settingsBtn.id = 'menu-btn-settings';
     this.settingsBtn.innerHTML = `
-      <span class="nx-btn-icon">⚙</span>
+      <span class="nx-btn-icon">${Icons.SETTINGS}</span>
       <span class="nx-btn-text">CONFIGURACIÓN</span>
     `;
     this.settingsBtn.addEventListener('click', () => this.handleSettings());
@@ -68,11 +79,12 @@ export class MenuScreen extends Screen {
     this.controlsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.controlsBtn.id = 'menu-btn-controls';
     this.controlsBtn.innerHTML = `
-      <span class="nx-btn-icon">⌨</span>
+      <span class="nx-btn-icon">${Icons.CONTROLS}</span>
       <span class="nx-btn-text">CONTROLES</span>
     `;
     this.controlsBtn.addEventListener('click', () => this.handleControls());
 
+    nav.appendChild(this.continueBtn);
     nav.appendChild(this.playBtn);
     nav.appendChild(this.settingsBtn);
     nav.appendChild(this.controlsBtn);
@@ -91,8 +103,29 @@ export class MenuScreen extends Screen {
 
   show(params = {}) {
     super.show(params);
-    // Autofoco en botón jugar
-    setTimeout(() => this.playBtn?.focus?.(), 50);
+    this.updateSaveState();
+    setTimeout(() => {
+      if (!this.continueBtn.disabled) {
+        this.continueBtn?.focus?.();
+      } else {
+        this.playBtn?.focus?.();
+      }
+    }, 50);
+  }
+
+  updateSaveState(slot = 'quicksave') {
+    const exists = this.saveManager?.exists ? this.saveManager.exists(slot) : false;
+    this.continueBtn.disabled = !exists;
+    if (this.continueBtn.classList?.toggle) {
+      this.continueBtn.classList.toggle('is-disabled', !exists);
+    }
+  }
+
+  handleContinue(slot = 'quicksave') {
+    if (this.continueBtn.disabled) return;
+    if (this.intentBus) {
+      this.intentBus.emit(IntentBus.Events.CONTINUE_GAME, { slot });
+    }
   }
 
   handlePlay() {

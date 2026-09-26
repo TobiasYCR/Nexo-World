@@ -4,69 +4,106 @@ import { IntentBus } from '../../ui/IntentBus.js';
 import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { createDefaultBlockRegistry } from '../../blocks/BlockRegistry.js';
+import { AssetCatalog } from '../../utils/AssetCatalog.js';
+import { GameConfig } from '../../game/GameConfig.js';
 
 /**
- * Catálogo expandido de bloques para demostración visual completa del inventario (Mockup 3).
- */
-const EXTENDED_BLOCK_CATALOG = [
-  { id: 1, name: 'Pasto', color: [106, 170, 80] },
-  { id: 2, name: 'Tierra', color: [134, 96, 67] },
-  { id: 3, name: 'Piedra', color: [128, 128, 132] },
-  { id: 4, name: 'Madera', color: [168, 114, 52] },
-  { id: 5, name: 'Tablones', color: [198, 148, 80] },
-  { id: 6, name: 'Hojas', color: [84, 150, 52] },
-  { id: 7, name: 'Agua', color: [54, 118, 206] },
-  { id: 8, name: 'Lava', color: [222, 92, 28] },
-  { id: 9, name: 'Vidrio', color: [186, 226, 240] },
-  { id: 10, name: 'Hierro', color: [224, 224, 228] },
-  { id: 11, name: 'Oro', color: [238, 186, 48] },
-  { id: 12, name: 'Carbón', color: [48, 48, 48] },
-  { id: 13, name: 'Ladrillo', color: [176, 78, 56] },
-  { id: 14, name: 'Nieve', color: [240, 244, 248] },
-  { id: 15, name: 'Hielo', color: [164, 214, 236] },
-  { id: 16, name: 'Arcilla', color: [156, 166, 178] },
-  { id: 17, name: 'Obsidiana', color: [32, 24, 44] }
-];
-
-/**
- * Pantalla de Inventario.
- * Presenta una grilla accesible de bloques disponibles, con selección interactiva,
- * navegación con flechas de teclado y reflejo en el hotbar.
+ * Pantalla de Inventario (modo creativo).
+ * Muestra únicamente los bloques colocables registrados en BlockRegistry,
+ * con selección accesible por teclado y carga de pilas completas al slot activo.
  */
 export class InventoryScreen extends Screen {
   #selectedIndex = 0;
   #cards = [];
   #columns = 6;
+  #blockRegistry = null;
 
   /**
    * @param {import('../../blocks/BlockRegistry.js').BlockRegistry} [blockRegistry]
    * @param {import('../../ui/ScreenManager.js').ScreenManager} [screenManager]
    * @param {IntentBus} [intentBus]
+   * @param {AssetCatalog} [assetCatalog]
    */
-  constructor(blockRegistry = null, screenManager = null, intentBus = null) {
+  constructor(blockRegistry = null, screenManager = null, intentBus = null, assetCatalog = null) {
     super(ScreenType.INVENTORY, screenManager, intentBus);
-    this.blockRegistry = blockRegistry || createDefaultBlockRegistry();
+    this.assetCatalog = assetCatalog || new AssetCatalog(GameConfig.assets);
+    this.#blockRegistry = blockRegistry || createDefaultBlockRegistry();
     this.blocks = this.#prepareBlocks();
     this.#buildDOM();
   }
 
+  get blockRegistry() {
+    return this.#blockRegistry;
+  }
+
+  set blockRegistry(registry) {
+    if (registry && registry !== this.#blockRegistry) {
+      this.#blockRegistry = registry;
+      this.refresh();
+    }
+  }
+
   #prepareBlocks() {
-    const registryBlocks = this.blockRegistry.placeableTypes ? this.blockRegistry.placeableTypes() : [];
-    const blockMap = new Map();
+    return this.#blockRegistry?.placeableTypes ? this.#blockRegistry.placeableTypes() : [];
+  }
 
-    for (const b of EXTENDED_BLOCK_CATALOG) {
-      blockMap.set(b.id, b);
+  refresh() {
+    this.blocks = this.#prepareBlocks();
+    if (this.#selectedIndex >= this.blocks.length) {
+      this.#selectedIndex = Math.max(0, this.blocks.length - 1);
     }
-    for (const b of registryBlocks) {
-      blockMap.set(b.id, {
-        id: b.id,
-        name: b.name,
-        color: b.color || [200, 200, 200],
-        texture: b.texture
+    this.#rebuildGrid();
+  }
+
+  #rebuildGrid() {
+    if (!this.gridElem) return;
+    this.gridElem.innerHTML = '';
+    this.#cards = [];
+
+    this.blocks.forEach((block, index) => {
+      const card = document.createElement('div');
+      const isSelected = index === this.#selectedIndex;
+      card.className = `nx-block-card ${isSelected ? 'is-selected' : ''}`;
+      card.setAttribute?.('role', 'radio');
+      card.setAttribute?.('aria-checked', String(isSelected));
+      card.setAttribute?.('aria-label', block.label || block.name);
+      card.tabIndex = isSelected ? 0 : -1;
+      if (card.dataset) card.dataset.index = String(index);
+
+      // Muestra de color / textura
+      const swatch = document.createElement('div');
+      swatch.className = 'nx-block-swatch';
+      const rgb = block.color ?? [180, 180, 180];
+      if (swatch.style) {
+        swatch.style.backgroundColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        if (block.texture) {
+          const url = this.assetCatalog.textureUrl(block.texture);
+          swatch.style.backgroundImage = `url("${url}")`;
+          swatch.style.backgroundSize = 'cover';
+          swatch.style.backgroundPosition = 'center';
+          swatch.style.imageRendering = 'pixelated';
+        }
+      }
+
+      // Etiqueta del bloque
+      const label = document.createElement('span');
+      label.className = 'nx-block-name';
+      label.textContent = block.label || block.name;
+
+      card.appendChild(swatch);
+      card.appendChild(label);
+
+      card.addEventListener('click', () => {
+        this.selectIndex(index);
       });
-    }
 
-    return Array.from(blockMap.values());
+      card.addEventListener('keydown', (e) => {
+        this.#handleCardKey(e, index);
+      });
+
+      this.gridElem.appendChild(card);
+      this.#cards.push(card);
+    });
   }
 
   #buildDOM() {
@@ -83,45 +120,7 @@ export class InventoryScreen extends Screen {
     this.gridElem.setAttribute?.('role', 'radiogroup');
     this.gridElem.setAttribute?.('aria-label', 'Selección de bloque');
 
-    this.#cards = [];
-
-    this.blocks.forEach((block, index) => {
-      const card = document.createElement('div');
-      card.className = `nx-block-card ${index === this.#selectedIndex ? 'is-selected' : ''}`;
-      card.setAttribute?.('role', 'radio');
-      card.setAttribute?.('aria-checked', String(index === this.#selectedIndex));
-      card.setAttribute?.('aria-label', block.name);
-      card.tabIndex = index === this.#selectedIndex ? 0 : -1;
-      if (card.dataset) card.dataset.index = String(index);
-
-      // Muestra de color / textura
-      const swatch = document.createElement('div');
-      swatch.className = 'nx-block-swatch';
-      const rgb = block.color ?? [180, 180, 180];
-      if (swatch.style) {
-        swatch.style.backgroundColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-      }
-
-      // Etiqueta del bloque
-      const label = document.createElement('span');
-      label.className = 'nx-block-name';
-      label.textContent = block.name;
-
-      card.appendChild(swatch);
-      card.appendChild(label);
-
-      card.addEventListener('click', () => {
-        this.selectIndex(index);
-      });
-
-      card.addEventListener('keydown', (e) => {
-        this.#handleCardKey(e, index);
-      });
-
-      this.gridElem.appendChild(card);
-      this.#cards.push(card);
-    });
-
+    this.#rebuildGrid();
     this.modal.addBodyItem(this.gridElem);
 
     this.backBtn = new Button({
@@ -155,7 +154,8 @@ export class InventoryScreen extends Screen {
 
     if (this.intentBus) {
       this.intentBus.emit(IntentBus.Events.SET_HOTBAR_BLOCK, {
-        blockType: selectedBlock
+        blockType: selectedBlock,
+        count: 64
       });
     }
   }
@@ -163,6 +163,7 @@ export class InventoryScreen extends Screen {
   #handleCardKey(e, currentIndex) {
     let nextIndex = currentIndex;
     const total = this.blocks.length;
+    if (total === 0) return;
 
     switch (e.key) {
       case 'ArrowRight':

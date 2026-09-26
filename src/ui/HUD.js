@@ -63,16 +63,10 @@ export class HUD {
 
     this.intentBus.on(IntentBus.Events.RESUME_GAME, () => {
       this.screenManager.open(ScreenType.PLAYING);
-      if (this.#lastKnownState === 'paused' && typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
-      }
     });
 
     this.intentBus.on(IntentBus.Events.BACK_TO_MENU, () => {
       this.screenManager.open(ScreenType.MENU);
-      if (this.#lastKnownState === 'running' && typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
-      }
     });
 
     this.intentBus.on(IntentBus.Events.OPEN_SCREEN, (payload) => {
@@ -137,22 +131,6 @@ export class HUD {
     // Estado inicial de visibilidad del HUD in-game
     this.crosshair.setVisible(false);
     this.hotbarView.setVisible(false);
-
-    // Inicializar hotbar con datos visuales por defecto
-    this.hotbarView.update({
-      selectedIndex: 0,
-      slots: [
-        { blockType: { name: 'Pasto', color: [106, 170, 80] }, count: 64 },
-        { blockType: { name: 'Tierra', color: [134, 96, 67] }, count: 64 },
-        { blockType: { name: 'Piedra', color: [128, 128, 132] }, count: 64 },
-        { blockType: { name: 'Madera', color: [168, 114, 52] }, count: 32 },
-        { blockType: { name: 'Tablones', color: [198, 148, 80] }, count: 32 },
-        { blockType: { name: 'Hojas', color: [84, 150, 52] }, count: 16 },
-        { blockType: { name: 'Vidrio', color: [186, 226, 240] }, count: 16 },
-        { blockType: { name: 'Ladrillo', color: [176, 78, 56] }, count: 16 },
-        { blockType: { name: 'Obsidiana', color: [32, 24, 44] }, count: 8 }
-      ]
-    });
   }
 
   toggleDebug() {
@@ -162,9 +140,18 @@ export class HUD {
   /**
    * Actualización periódica desde Game.update.
    * @param {number} deltaTime
-   * @param {{fps:number, position:{x:number,y:number,z:number}, renderedBlocks:number, state:string}} stats
+   * @param {{fps:number, position:{x:number,y:number,z:number}, renderedBlocks:number, state:string, hotbar?:object, selectedSlot?:number}} stats
    */
   update(deltaTime, stats) {
+    if (this.hotbar) {
+      this.hotbarView.update(this.hotbar);
+      if (stats && stats.selectedSlot === undefined) {
+        stats.selectedSlot = this.hotbar.selectedIndex;
+      }
+    } else if (stats?.hotbar) {
+      this.hotbarView.update(stats.hotbar);
+    }
+
     this.debugOverlay.update(deltaTime, stats);
 
     if (stats?.state) {

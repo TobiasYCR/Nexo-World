@@ -24,8 +24,7 @@ export const SETTINGS_SCHEMA = Object.freeze({
     max: 16,
     step: 1,
     formatter: (v) => `${v} chunks`,
-    disabled: true,
-    disabledNote: 'Pendiente Backend 2: hoy es parámetro de construcción del mundo, falta un setter en caliente.'
+    disabled: false
   }),
   masterVolume: Object.freeze({
     id: 'masterVolume',
@@ -42,7 +41,7 @@ export const SETTINGS_SCHEMA = Object.freeze({
     id: 'fov',
     label: 'Campo de visión (FOV)',
     type: 'number',
-    default: 75,
+    default: 70,
     min: 60,
     max: 110,
     step: 1,

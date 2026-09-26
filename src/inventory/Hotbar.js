@@ -29,6 +29,25 @@ export class Hotbar extends Inventory {
     this.#selectedIndex = MathUtils.clamp(index, 0, this.size - 1);
   }
 
+  /**
+   * Carga o actualiza una ranura específica del hotbar.
+   * @param {number} index
+   * @param {import('../blocks/BlockType.js').BlockType|null} blockType
+   * @param {number} [count]
+   */
+  setSlot(index, blockType, count = GameConfig.inventory.SLOT_MAX_STACK) {
+    const slot = this.getSlot(index);
+    if (!slot) return;
+
+    if (!blockType || count <= 0) {
+      slot.clear();
+      return;
+    }
+
+    slot.blockType = blockType;
+    slot.count = MathUtils.clamp(count, 1, slot.maxStack);
+  }
+
   /** Selección cíclica, pensada para la rueda del mouse. */
   cycle(offset) {
     this.#selectedIndex = MathUtils.mod(this.#selectedIndex + offset, this.size);
