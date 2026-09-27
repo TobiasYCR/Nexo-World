@@ -102,5 +102,63 @@ export const GameConfig = Object.freeze({
     SHOW_OVERLAY_ON_START: true,
     /** Intervalo de refresco del overlay en segundos, para no escribir en el DOM cada frame. */
     OVERLAY_REFRESH_INTERVAL: 0.2
+  }),
+
+  /**
+   * Viewmodel: mano en primera persona y feedback visual de romper/colocar.
+   * Sección de Frontend 1 (issue #9) — el resto de GameConfig no se toca.
+   */
+  viewmodel: Object.freeze({
+    hand: Object.freeze({
+      /** Duración del swing al romper/colocar, en segundos. */
+      SWING_DURATION: 0.25,
+      /** Distancia que recorre la mano durante el swing, en unidades de mundo. */
+      SWING_DISTANCE: 6,
+      /** Duración de la animación al cambiar de slot, en segundos. */
+      SLOT_CHANGE_DURATION: 0.15,
+      /** Cuánto baja la mano al cambiar de slot, en unidades de mundo. */
+      SLOT_CHANGE_DROP: 5,
+      /** Offset en reposo respecto al ojo de la cámara fija (x: derecha, y: arriba, z: adelante). */
+      IDLE_OFFSET: Object.freeze({ x: 9, y: -7, z: -15 }),
+      /** Lado del cubo que representa el bloque en la mano. */
+      BLOCK_SCALE: 5,
+      ARM_WIDTH: 3.5,
+      ARM_LENGTH: 11,
+      ARM_COLOR: Object.freeze([214, 168, 132])
+    }),
+
+    highlight: Object.freeze({
+      /** Cuánto más grande es la caja de resalte que el bloque, para no parpadear contra sus caras. */
+      EXPANSION: 0.005,
+      STROKE_COLOR: Object.freeze([12, 12, 14, 170]),
+      STROKE_WEIGHT: 1.5
+    }),
+
+    breakOverlay: Object.freeze({
+      STAGE_COUNT: 10,
+      TEXTURE_BASE_PATH: '/textures/effects/',
+      /** Igual criterio que highlight.EXPANSION: evita z-fighting contra las caras del bloque. */
+      EXPANSION: 0.01,
+      /** Oscurecimiento de respaldo por etapa mientras la textura no cargó (0 a 1). */
+      FALLBACK_ALPHA_PER_STAGE: 22
+    }),
+
+    particles: Object.freeze({
+      MIN_COUNT: 12,
+      MAX_COUNT: 16,
+      LIFETIME_SECONDS: 0.6,
+      GRAVITY: -260,
+      SIZE: 2.5,
+      INITIAL_SPEED: 55,
+      /** Tope del pool: ninguna partícula nueva se crea por encima de este número. */
+      MAX_PARTICLES: 64
+    }),
+
+    viewBob: Object.freeze({
+      AMPLITUDE: 2.2,
+      FREQUENCY: 9,
+      /** Velocidad horizontal a la que el balanceo llega a su amplitud máxima. */
+      REFERENCE_SPEED: 120
+    })
   })
 });
