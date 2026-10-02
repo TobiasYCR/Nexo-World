@@ -48,11 +48,13 @@ test('con el pool lleno, una nueva tanda recicla las partículas más viejas', (
   });
 
   particles.spawn({ x: 0, y: 0, z: 0 }, COLOR);
-  // Se guarda una referencia indirecta: después de llenar el pool, un segundo
-  // spawn en otra posición debe pisar las 4 partículas originales.
   particles.spawn({ x: 100, y: 100, z: 100 }, COLOR);
 
   assert.equal(particles.activeCount, 4, 'sigue habiendo como máximo 4 activas');
+  assert.ok(
+    particles.activeParticles.every(({ x, y, z }) => x === 100 && y === 100 && z === 100),
+    'las partículas más antiguas fueron reemplazadas por la última tanda'
+  );
 });
 
 test('no crea objetos nuevos por frame: update() solo muta el pool existente', () => {

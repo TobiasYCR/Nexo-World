@@ -22,7 +22,13 @@ export class HandRenderer {
 
   #slotChangeTime = null;
 
-  constructor(textureManager, camera = null, config = GameConfig.viewmodel.hand, cameraConfig = GameConfig.camera) {
+  constructor(
+    textureManager,
+    camera = null,
+    config = GameConfig.viewmodel.hand,
+    cameraConfig = GameConfig.camera,
+    viewBobConfig = GameConfig.viewmodel.viewBob
+  ) {
     this.textures = textureManager;
     // Cámara real del jugador, solo para leer su FOV vigente (puede cambiar en
     // caliente desde Configuración). Nunca se usa su posición/orientación acá:
@@ -30,7 +36,7 @@ export class HandRenderer {
     this.playerCamera = camera;
     this.config = config;
     this.cameraConfig = cameraConfig;
-    this.viewBob = new ViewBob();
+    this.viewBob = new ViewBob(viewBobConfig);
   }
 
   /**
@@ -129,6 +135,7 @@ export class HandRenderer {
     p.clearDepth?.();
     this.#applyFixedCamera(p);
     p.translate(x, y, z);
+    p.noStroke();
 
     if (this.#blockType) {
       this.#drawBlock(p);
@@ -166,7 +173,6 @@ export class HandRenderer {
   }
 
   #drawArm(p) {
-    p.noStroke();
     p.fill(...this.config.ARM_COLOR);
     p.ambientMaterial(...this.config.ARM_COLOR);
     p.box(this.config.ARM_WIDTH, this.config.ARM_WIDTH, this.config.ARM_LENGTH);

@@ -10,6 +10,9 @@ import { BlockIds } from '../utils/Constants.js';
  * acá nunca se compara ids a mano.
  */
 export class BlockInteraction {
+  #breakingElapsed = 0;
+  #listeners = new Map();
+
   constructor(world, player, hotbar, raycast, config = GameConfig) {
     this.world = world;
     this.player = player;
@@ -17,6 +20,8 @@ export class BlockInteraction {
     this.raycast = raycast;
     this.config = config;
     this.hit = null;
+    this.breakingBlock = null;
+    this.breakProgress = 0;
   }
 
   /** Bloque apuntado este frame, para que el renderer pueda resaltarlo. */
@@ -27,6 +32,40 @@ export class BlockInteraction {
   /** Refresca la mira. Game la llama cada frame con ojo del jugador y cámara. */
   update(origin, direction) {
     this.hit = this.raycast.cast(origin, direction, this.config.blocks.REACH_DISTANCE);
+    if (!this.#sameBlock(this.breakingBlock, this.targetedBlock)) this.#resetBreaking();
+  }
+
+  on(event, listener) {
+    if (!this.#listeners.has(event)) this.#listeners.set(event, new Set());
+    this.#listeners.get(event).add(listener);
+    return () => this.#listeners.get(event)?.delete(listener);
+  }
+
+  /** Acumula el progreso de rotura mientras se mantiene pulsado sobre el mismo bloque. */
+  updateBreaking(deltaTime, isHeld) {
+    const block = this.targetedBlock;
+    const type = block ? this.world.getBlockType(block.x, block.y, block.z) : null;
+    if (!isHeld || !block || !type?.breakable) {
+      this.#resetBreaking();
+      return false;
+    }
+
+    if (!this.#sameBlock(this.breakingBlock, block)) {
+      this.#resetBreaking();
+      this.breakingBlock = { x: block.x, y: block.y, z: block.z };
+    }
+
+    this.#breakingElapsed += deltaTime;
+    const duration = Math.max(
+      Number.EPSILON,
+      type.hardness * this.config.viewmodel.breakOverlay.BREAK_DURATION_PER_HARDNESS
+    );
+    this.breakProgress = Math.min(1, this.#breakingElapsed / duration);
+    if (this.breakProgress < 1) return false;
+
+    this.tryBreak();
+    this.#resetBreaking();
+    return true;
   }
 
   /** Rompe el bloque apuntado (si es rompible) y lo agrega al hotbar. */
@@ -39,6 +78,10 @@ export class BlockInteraction {
 
     this.world.setBlockId(hit.block.x, hit.block.y, hit.block.z, BlockIds.AIR);
     this.hotbar.add(type);
+    this.#emit('blockBroken', {
+      position: { x: hit.block.x, y: hit.block.y, z: hit.block.z },
+      blockType: type
+    });
     return true;
   }
 
@@ -63,7 +106,31 @@ export class BlockInteraction {
     const blockType = slot.blockType;
     if (this.hotbar.removeAt(this.hotbar.selectedIndex, 1) === 0) return false;
     this.world.setBlockId(adjacent.x, adjacent.y, adjacent.z, blockType.id);
+    this.#emit('blockPlaced', {
+      position: { x: adjacent.x, y: adjacent.y, z: adjacent.z },
+      blockType
+    });
     return true;
+  }
+
+  #emit(event, payload) {
+    for (const listener of this.#listeners.get(event) ?? []) listener(payload);
+  }
+
+  #resetBreaking() {
+    this.breakingBlock = null;
+    this.breakProgress = 0;
+    this.#breakingElapsed = 0;
+  }
+
+  #sameBlock(first, second) {
+    return first === second || (
+      first !== null &&
+      second !== null &&
+      first.x === second.x &&
+      first.y === second.y &&
+      first.z === second.z
+    );
   }
 
   /** True si la celda de bloque se superpone con la caja de colisión del jugador. */

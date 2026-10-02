@@ -66,7 +66,7 @@ export function uninstallDomStub() {
 
 /** Doble de p5 que cuenta las primitivas de dibujo emitidas por frame. */
 export function createP5Stub() {
-  const calls = { box: 0, camera: 0, background: 0, material: 0 };
+  const calls = { box: 0, camera: 0, background: 0, material: 0, clearDepth: 0 };
   const noop = () => {};
 
   return {
@@ -85,7 +85,11 @@ export function createP5Stub() {
     push: noop,
     pop: noop,
     noStroke: noop,
+    noFill: noop,
+    stroke: noop,
+    strokeWeight: noop,
     translate: noop,
+    clearDepth: () => { calls.clearDepth += 1; },
     texture: noop,
     fill: noop,
     ambientMaterial: () => { calls.material += 1; },

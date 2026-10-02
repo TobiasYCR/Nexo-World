@@ -12,6 +12,15 @@ export class Renderer {
     this.blockRenderer = blockRenderer;
     this.lighting = new LightingManager(p, config);
     this.backgroundColor = config.BACKGROUND_COLOR;
+    this.overlays = new Set();
+  }
+
+  addOverlay(overlay) {
+    if (typeof overlay?.draw !== 'function') {
+      throw new TypeError('Renderer.addOverlay requiere un objeto con draw(p, camera).');
+    }
+    this.overlays.add(overlay);
+    return () => this.overlays.delete(overlay);
   }
 
   render(world, camera) {
@@ -20,6 +29,7 @@ export class Renderer {
     camera.applyTo(p);
     this.lighting.apply();
     this.blockRenderer.render(world, camera.position);
+    for (const overlay of this.overlays) overlay.draw(p, camera);
   }
 
   /** Punto de entrada para Configuración: radio en bloques, sin recargar. */

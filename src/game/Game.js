@@ -20,6 +20,10 @@ import { HUD } from '../ui/HUD.js';
 import { SaveManager } from '../persistence/SaveManager.js';
 import { InputActions } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
+import { BlockHighlight } from '../viewmodel/BlockHighlight.js';
+import { BreakOverlay } from '../viewmodel/BreakOverlay.js';
+import { BlockParticles } from '../viewmodel/BlockParticles.js';
+import { HandRenderer } from '../viewmodel/HandRenderer.js';
 
 /**
  * Coordinador de sistemas. Game construye las dependencias, define el orden de
@@ -27,6 +31,8 @@ import { MathUtils } from '../utils/MathUtils.js';
  * física ni dibujado. Cada sistema es reemplazable de forma aislada.
  */
 export class Game {
+  #viewmodelState = { isBreaking: false, horizontalSpeed: 0, isOnGround: false };
+
   constructor(p, config = GameConfig) {
     this.p = p;
     this.config = config;
@@ -51,6 +57,29 @@ export class Game {
 
     this.hotbar = new Hotbar(config.inventory.HOTBAR_SIZE);
     this.blockInteraction = new BlockInteraction(this.world, this.player, this.hotbar, this.raycast, config);
+    this.blockHighlight = new BlockHighlight(config.viewmodel.highlight, config.world.BLOCK_SIZE);
+    this.breakOverlay = new BreakOverlay(p, config.viewmodel.breakOverlay, config.world.BLOCK_SIZE);
+    this.blockParticles = new BlockParticles(config.viewmodel.particles);
+    this.handRenderer = new HandRenderer(
+      this.textureManager,
+      this.camera,
+      config.viewmodel.hand,
+      config.camera,
+      config.viewmodel.viewBob
+    );
+    this.renderer.addOverlay(this.blockHighlight);
+    this.renderer.addOverlay(this.breakOverlay);
+    this.renderer.addOverlay(this.blockParticles);
+    this.renderer.addOverlay(this.handRenderer);
+    this.blockInteraction.on('blockBroken', ({ position, blockType }) => {
+      this.handRenderer.notifyBlockBroken();
+      const size = config.world.BLOCK_SIZE;
+      this.blockParticles.spawn(
+        { x: (position.x + 0.5) * size, y: (position.y + 0.5) * size, z: (position.z + 0.5) * size },
+        blockType.color
+      );
+    });
+    this.blockInteraction.on('blockPlaced', () => this.handRenderer.notifyBlockPlaced());
     this.audio = new AudioManager(config.assets);
     this.hud = new HUD();
     this.saveManager = new SaveManager();
@@ -82,12 +111,13 @@ export class Game {
     if (this.state.isRunning) {
       this.playerController.update();
       this.blockInteraction.update(this.player.eyePosition, this.camera.lookDirection);
-      this.#handleBlockInteractions();
+      this.#handleBlockInteractions(deltaTime);
       this.playerPhysics.update(deltaTime);
       this.#syncCameraToPlayer();
       this.#handleHotbarSelection();
     }
 
+    this.#updateViewmodel(deltaTime);
     this.hud.update(deltaTime, this.#buildDebugStats());
     this.input.endFrame();
   }
@@ -118,16 +148,39 @@ export class Game {
   #handleHotbarSelection() {
     const requestedSlot = this.input.requestedHotbarSlot();
     if (requestedSlot >= 0) this.hotbar.select(requestedSlot);
+    const requestedCycle = this.input.requestedHotbarCycle();
+    if (requestedCycle !== 0) this.hotbar.cycle(requestedCycle);
   }
 
   /**
    * Romper y colocar solo con el puntero capturado: el primer clic sobre el
    * canvas pide Pointer Lock y no debe contar como interacción.
    */
-  #handleBlockInteractions() {
-    if (!this.input.isPointerLocked) return;
-    if (this.input.wasBreakRequested()) this.blockInteraction.tryBreak();
+  #handleBlockInteractions(deltaTime) {
+    if (!this.input.isPointerLocked) {
+      this.blockInteraction.updateBreaking(deltaTime, false);
+      return;
+    }
+    this.blockInteraction.updateBreaking(deltaTime, this.input.isBreakDown());
     if (this.input.wasPlaceRequested()) this.blockInteraction.tryPlace();
+  }
+
+  #updateViewmodel(deltaTime) {
+    if (!this.state.isRunning) this.blockInteraction.updateBreaking(deltaTime, false);
+    this.blockHighlight.update(this.state.isRunning ? this.blockInteraction.targetedBlock : null);
+    this.breakOverlay.update(
+      this.state.isRunning ? this.blockInteraction.breakingBlock : null,
+      this.blockInteraction.breakProgress
+    );
+    this.blockParticles.update(deltaTime);
+    const horizontalSpeed = this.state.isRunning
+      ? Math.hypot(this.player.velocity.x, this.player.velocity.z)
+      : 0;
+    this.handRenderer.setSelectedSlot(this.hotbar.selectedIndex, this.hotbar.selectedBlockType);
+    this.#viewmodelState.isBreaking = this.state.isRunning && this.blockInteraction.breakingBlock !== null;
+    this.#viewmodelState.horizontalSpeed = horizontalSpeed;
+    this.#viewmodelState.isOnGround = this.state.isRunning && this.player.isOnGround;
+    this.handRenderer.update(deltaTime, this.#viewmodelState);
   }
 
   #syncCameraToPlayer() {
