@@ -102,6 +102,7 @@ export class HotbarView {
         if (slotUI.icon.style) {
           slotUI.icon.style.backgroundColor = 'transparent';
         }
+        slotUI.icon.hidden = true;
         slotUI.count.textContent = '';
       }
     }

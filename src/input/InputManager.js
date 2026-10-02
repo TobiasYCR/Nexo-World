@@ -1,6 +1,7 @@
 import { KeyboardInput } from './KeyboardInput.js';
 import { MouseInput } from './MouseInput.js';
 import { GameConfig } from '../game/GameConfig.js';
+import { MouseButtons } from '../utils/Constants.js';
 
 /**
  * Fachada de entrada del juego. Traduce teclas y botones crudos a ACCIONES
@@ -52,6 +53,11 @@ export class InputManager {
     return this.mouse.leftJustPressed;
   }
 
+  /** Indica si el botón izquierdo sigue presionado en este frame. */
+  isBreakDown() {
+    return this.mouse.isButtonDown(MouseButtons.LEFT);
+  }
+
   /**
    * Pedido de colocar bloque en este frame (borde de subida del clic derecho).
    */
@@ -65,6 +71,11 @@ export class InputManager {
       if (this.keyboard.wasJustPressed(`${this.config.HOTBAR_KEY_PREFIX}${slot}`)) return slot - 1;
     }
     return -1;
+  }
+
+  /** Dirección de desplazamiento de la rueda para selección cíclica, o 0. */
+  requestedHotbarCycle() {
+    return Math.sign(this.mouse.wheelDelta);
   }
 
   get lookDeltaX() {

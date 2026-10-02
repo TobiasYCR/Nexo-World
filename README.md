@@ -40,7 +40,10 @@ npm run dev      # servidor de desarrollo en http://localhost:5173
 npm run build    # build de producción en dist/
 npm run preview  # sirve el build de producción
 npm test         # tests unitarios y de integración
+npm run benchmark:viewmodel # coste de CPU del viewmodel con 64 partículas
 ```
+
+El benchmark instrumenta las llamadas de dibujo para medir el coste JavaScript; no mide el trabajo de la GPU.
 
 Al abrir el juego se ve una superficie de bloques generada por ruido. Los controles disponibles en esta etapa:
 
@@ -52,6 +55,9 @@ Al abrir el juego se ve una superficie de bloques generada por ruido. Los contro
 | `Espacio` | Ascender |
 | `Shift` izq. | Correr |
 | `1`–`9` | Seleccionar slot de la hotbar |
+| Rueda del mouse | Cambiar slot de la hotbar |
+| Clic izquierdo mantenido | Romper el bloque apuntado |
+| Clic derecho | Colocar el bloque seleccionado |
 | `F3` | Mostrar/ocultar el panel de depuración |
 | `Esc` | Pausar |
 
@@ -193,12 +199,13 @@ Más detalle en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y [`docs/CONVENCI
 - Render 3D de los bloques visibles, con recorte por distancia y descarte de bloques totalmente enterrados.
 - Cámara en primera persona con Pointer Lock, movimiento libre y aparición sobre la superficie.
 - Panel de depuración con FPS, posición X/Y/Z, bloques dibujados y estado del juego.
-- Pausa, alternado del panel y selección de hotbar con `1`–`9`.
-- 29 tests en verde, incluido un test de integración que ejerce el ciclo completo sin navegador.
+- Pausa, alternado del panel y selección de hotbar con `1`–`9` o la rueda.
+- Viewmodel con bloque/mano, resaltado del bloque apuntado, progreso de grietas y partículas al romper.
+- Suite automatizada con tests unitarios y de integración del ciclo completo sin navegador.
 
-**Preparado pero sin implementar:** colisiones, física del jugador, raycast contra bloques, texturas, audio, guardado, sistema de chunks dinámico e inventario completo tienen su clase y su contrato definidos, y están conectados donde corresponde.
+**Preparado parcialmente:** la resolución completa de colisiones y la física con gravedad/salto, el sistema de chunks dinámico y el inventario completo siguen pendientes. La interacción de bloques, el raycast, las texturas, el audio y el guardado ya tienen implementación.
 
-**No implementado todavía:** movimiento con colisiones, romper y colocar bloques, generación procedural avanzada (cuevas, biomas, estructuras), crafting, guardado real, multijugador, entidades, combate y supervivencia.
+**No implementado todavía:** movimiento con colisiones, generación procedural avanzada (cuevas, biomas, estructuras), crafting, guardado real, multijugador, entidades, combate y supervivencia.
 
 ---
 
@@ -206,7 +213,7 @@ Más detalle en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y [`docs/CONVENCI
 
 1. Completar `CollisionSystem` con resolución por eje y conectarlo a `PlayerPhysics`.
 2. Activar la gravedad y el salto.
-3. Romper y colocar bloques usando el `Raycast` ya disponible.
+3. Completar el movimiento con colisiones y seguir ampliando la interacción con bloques.
 4. Sumar las texturas de bloque y validar el pipeline de `TextureManager`.
 5. Interfaz de hotbar visible e inventario completo.
 6. Guardado y carga con `SaveManager`.

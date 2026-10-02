@@ -138,21 +138,6 @@ export class HUD {
     this.crosshair.setVisible(false);
     this.hotbarView.setVisible(false);
 
-    // Inicializar hotbar con datos visuales por defecto
-    this.hotbarView.update({
-      selectedIndex: 0,
-      slots: [
-        { blockType: { name: 'Pasto', color: [106, 170, 80] }, count: 64 },
-        { blockType: { name: 'Tierra', color: [134, 96, 67] }, count: 64 },
-        { blockType: { name: 'Piedra', color: [128, 128, 132] }, count: 64 },
-        { blockType: { name: 'Madera', color: [168, 114, 52] }, count: 32 },
-        { blockType: { name: 'Tablones', color: [198, 148, 80] }, count: 32 },
-        { blockType: { name: 'Hojas', color: [84, 150, 52] }, count: 16 },
-        { blockType: { name: 'Vidrio', color: [186, 226, 240] }, count: 16 },
-        { blockType: { name: 'Ladrillo', color: [176, 78, 56] }, count: 16 },
-        { blockType: { name: 'Obsidiana', color: [32, 24, 44] }, count: 8 }
-      ]
-    });
   }
 
   toggleDebug() {
@@ -163,9 +148,11 @@ export class HUD {
    * Actualización periódica desde Game.update.
    * @param {number} deltaTime
    * @param {{fps:number, position:{x:number,y:number,z:number}, renderedBlocks:number, state:string}} stats
+   * @param {{selectedIndex:number, slots:Array<{blockType:Object|null,count:number}>}} hotbar
    */
-  update(deltaTime, stats) {
+  update(deltaTime, stats, hotbar) {
     this.debugOverlay.update(deltaTime, stats);
+    this.hotbarView.update(hotbar);
 
     if (stats?.state) {
       this.#lastKnownState = stats.state;

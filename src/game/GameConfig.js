@@ -70,7 +70,8 @@ export const GameConfig = Object.freeze({
 
   inventory: Object.freeze({
     HOTBAR_SIZE: 9,
-    SLOT_MAX_STACK: 64
+    SLOT_MAX_STACK: 64,
+    STARTER_BLOCK_COUNT: 64
   }),
 
   assets: Object.freeze({
@@ -119,12 +120,23 @@ export const GameConfig = Object.freeze({
       /** Cuánto baja la mano al cambiar de slot, en unidades de mundo. */
       SLOT_CHANGE_DROP: 5,
       /** Offset en reposo respecto al ojo de la cámara fija (x: derecha, y: arriba, z: adelante). */
-      IDLE_OFFSET: Object.freeze({ x: 9, y: -7, z: -15 }),
+      IDLE_OFFSET: Object.freeze({ x: 9, y: -3, z: -15 }),
       /** Lado del cubo que representa el bloque en la mano. */
-      BLOCK_SCALE: 5,
+      BLOCK_SCALE: 3,
       ARM_WIDTH: 3.5,
       ARM_LENGTH: 11,
-      ARM_COLOR: Object.freeze([214, 168, 132])
+      ARM_COLOR: Object.freeze([214, 168, 132]),
+      PICKAXE: Object.freeze({
+        HANDLE_COLOR: Object.freeze([116, 76, 42]),
+        HEAD_COLOR: Object.freeze([150, 158, 166]),
+        HANDLE_WIDTH: 1.2,
+        HANDLE_LENGTH: 8,
+        HEAD_WIDTH: 9,
+        HEAD_HEIGHT: 1.8,
+        HEAD_DEPTH: 1.6,
+        SWING_ROTATION: 0.85,
+        OFFSET: Object.freeze({ x: -2, y: 3, z: -1 })
+      })
     }),
 
     highlight: Object.freeze({
@@ -137,6 +149,8 @@ export const GameConfig = Object.freeze({
     breakOverlay: Object.freeze({
       STAGE_COUNT: 10,
       TEXTURE_BASE_PATH: '/textures/effects/',
+      /** Segundos necesarios por punto de dureza del bloque para completar una rotura. */
+      BREAK_DURATION_PER_HARDNESS: 0.25,
       /** Igual criterio que highlight.EXPANSION: evita z-fighting contra las caras del bloque. */
       EXPANSION: 0.01,
       /** Oscurecimiento de respaldo por etapa mientras la textura no cargó (0 a 1). */

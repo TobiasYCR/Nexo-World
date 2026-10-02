@@ -45,9 +45,10 @@ test('un frame completo dibuja bloques sin lanzar excepciones', async () => {
   game.render();
 
   assert.equal(p.calls.background, 1);
-  assert.equal(p.calls.camera, 1);
+  assert.equal(p.calls.camera, 2, 'el overlay de la mano aplica su cámara fija');
   assert.ok(p.calls.box > 0, 'el renderer debería emitir geometría');
-  assert.equal(p.calls.box, game.renderer.stats.renderedBlocks);
+  assert.ok(p.calls.box >= game.renderer.stats.renderedBlocks + 1, 'la mano añade geometría al mundo');
+  assert.equal(p.calls.clearDepth, 1);
 });
 
 test('el recorte por distancia y por oclusión reduce los bloques dibujados', async () => {
@@ -87,6 +88,42 @@ test('las teclas 1-9 seleccionan slots de la hotbar', async () => {
   dom.window.dispatch('keydown', { code: 'Digit3' });
   game.update(1 / 60);
   assert.equal(game.hotbar.selectedIndex, 2);
+});
+
+test('la hotbar inicia con pilas utilizables para cada tipo registrado y refleja el inventario real', async () => {
+  const game = await startGame();
+  game.update(1 / 60);
+  const placeableTypes = game.blockRegistry.placeableTypes();
+
+  assert.deepEqual(placeableTypes.map((type) => type.name), ['Grass', 'Dirt', 'Stone']);
+  for (let index = 0; index < placeableTypes.length; index += 1) {
+    const slot = game.hotbar.getSlot(index);
+    assert.equal(slot.blockType, placeableTypes[index]);
+    assert.equal(slot.count, game.config.inventory.STARTER_BLOCK_COUNT);
+    assert.equal(game.hud.hotbarView.barElement.children[index].children[2].textContent, '64');
+  }
+  for (let index = placeableTypes.length; index < game.hotbar.size; index += 1) {
+    assert.equal(game.hotbar.getSlot(index).isEmpty, true);
+    assert.equal(game.hud.hotbarView.barElement.children[index].children[1].hidden, true);
+  }
+});
+
+test('la cantidad de la hotbar visible se actualiza después de colocar un bloque', async () => {
+  const game = await startGame();
+  game.update(1 / 60);
+  const target = plantBlockInView(game);
+  const adjacent = { x: target.x, y: target.y, z: target.z + 1 };
+  const grassType = game.blockRegistry.placeableTypes().find((type) => type.name === 'Grass');
+  const grassIndex = game.blockRegistry.placeableTypes().indexOf(grassType);
+  game.hotbar.select(grassIndex);
+
+  dom.canvas.requestPointerLock();
+  dom.canvas.dispatch('mousedown', { button: 2 });
+  game.update(1 / 60);
+
+  assert.equal(game.hotbar.getSlot(grassIndex).count, game.config.inventory.STARTER_BLOCK_COUNT - 1);
+  assert.equal(game.hud.hotbarView.barElement.children[grassIndex].children[2].textContent, '63');
+  assert.equal(game.world.getBlockId(adjacent.x, adjacent.y, adjacent.z), grassType.id);
 });
 
 test('la cámara sigue a los ojos del jugador', async () => {
@@ -157,10 +194,59 @@ test('romper requiere y respeta el puntero capturado', async () => {
 
   dom.canvas.requestPointerLock();
   dom.canvas.dispatch('mousedown', { button: 0 });
-  game.update(1 / 60);
+  const frameDelta = 1 / 60;
+  const maxBreakFrames = Math.ceil(
+    (game.blockRegistry.get(BlockIds.STONE).hardness *
+      game.config.viewmodel.breakOverlay.BREAK_DURATION_PER_HARDNESS) /
+      frameDelta
+  ) + 10;
+  for (
+    let frame = 0;
+    frame < maxBreakFrames && game.world.getBlockId(target.x, target.y, target.z) === BlockIds.STONE;
+    frame += 1
+  ) {
+    game.update(1 / 60);
+  }
 
   assert.equal(game.world.getBlockId(target.x, target.y, target.z), BlockIds.AIR);
   assert.ok(game.hotbar.countOf(game.blockRegistry.get(BlockIds.STONE)) >= 1, 'el bloque roto entra al hotbar');
+  assert.ok(game.blockParticles.activeCount > 0, 'romper crea partículas visuales');
+  dom.window.dispatch('mouseup', { button: 0 });
+  game.update(1 / 60);
+  assert.ok(game.handRenderer.swingAmount > 0, 'romper dispara el swing');
+});
+
+test('el progreso de rotura se refleja y se reinicia al soltar', async () => {
+  const game = await startGame();
+  const target = plantBlockInView(game);
+  dom.canvas.requestPointerLock();
+  dom.canvas.dispatch('mousedown', { button: 0 });
+  game.update(0.1);
+
+  assert.equal(game.renderer.overlays.size, 4);
+  assert.deepEqual(
+    { x: game.blockHighlight.targetedBlock.x, y: game.blockHighlight.targetedBlock.y, z: game.blockHighlight.targetedBlock.z },
+    target
+  );
+  assert.deepEqual(
+    { x: game.breakOverlay.breakingBlock.x, y: game.breakOverlay.breakingBlock.y, z: game.breakOverlay.breakingBlock.z },
+    target
+  );
+  assert.equal(
+    game.breakOverlay.stage,
+    Math.floor((0.1 / (game.blockRegistry.get(BlockIds.STONE).hardness * game.config.viewmodel.breakOverlay.BREAK_DURATION_PER_HARDNESS)) * 10)
+  );
+
+  dom.window.dispatch('mouseup', { button: 0 });
+  game.update(1 / 60);
+  assert.equal(game.breakOverlay.stage, -1, 'al soltar el botón desaparece la grieta');
+});
+
+test('la rueda cambia cíclicamente el slot activo del hotbar', async () => {
+  const game = await startGame();
+  dom.canvas.dispatch('wheel', { deltaY: 1 });
+  game.update(1 / 60);
+  assert.equal(game.hotbar.selectedIndex, 1);
 });
 
 test('colocar con clic derecho agrega el bloque en la celda adyacente', async () => {
@@ -177,4 +263,6 @@ test('colocar con clic derecho agrega el bloque en la celda adyacente', async ()
   const adjacent = { x: target.x, y: target.y, z: target.z + 1 };
   assert.equal(game.world.getBlockId(adjacent.x, adjacent.y, adjacent.z), BlockIds.STONE);
   assert.equal(game.world.getBlockId(target.x, target.y, target.z), BlockIds.STONE, 'el bloque apuntado no se ve afectado');
+  game.update(1 / 60);
+  assert.ok(game.handRenderer.swingAmount > 0, 'colocar dispara el swing');
 });
