@@ -21,6 +21,7 @@ export class HandRenderer {
   #swingLoop = false;
   #isBreaking = false;
   #pickaxeSwing = false;
+  #swingJustStarted = false;
 
   #slotChangeTime = null;
 
@@ -71,6 +72,7 @@ export class HandRenderer {
   #startSwing() {
     this.#swingActive = true;
     this.#swingTime = 0;
+    this.#swingJustStarted = true;
   }
 
   /**
@@ -90,6 +92,10 @@ export class HandRenderer {
   }
 
   #advanceSwing(deltaTime) {
+    if (this.#swingJustStarted) {
+      this.#swingJustStarted = false;
+      return;
+    }
     if (!this.#swingActive && !this.#swingLoop) return;
     if (!this.#swingActive && this.#swingLoop) this.#swingActive = true;
 
@@ -199,6 +205,7 @@ export class HandRenderer {
 
     p.fill(...PICKAXE.HEAD_COLOR);
     p.ambientMaterial(...PICKAXE.HEAD_COLOR);
+    p.translate(0, -PICKAXE.HANDLE_LENGTH / 2, 0);
     p.box(PICKAXE.HEAD_WIDTH, PICKAXE.HEAD_HEIGHT, PICKAXE.HEAD_DEPTH);
     p.pop();
   }

@@ -168,6 +168,7 @@ export class Game {
     if (this.input.wasPlaceRequested()) this.blockInteraction.tryPlace();
   }
 
+  /** Sincroniza los datos de interacción del juego con los efectos visuales. */
   #updateViewmodel(deltaTime) {
     if (!this.state.isRunning) this.blockInteraction.updateBreaking(deltaTime, false);
     this.blockHighlight.update(this.state.isRunning ? this.blockInteraction.targetedBlock : null);

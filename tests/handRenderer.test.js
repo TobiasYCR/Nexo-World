@@ -6,7 +6,7 @@ import { BlockIds } from '../src/utils/Constants.js';
 
 /** Doble mínimo de p5 para ejercer draw() sin depender de domStub (que no tiene noFill/stroke/clearDepth). */
 function createHandP5Stub() {
-  const calls = { box: 0, texture: 0, fill: 0 };
+  const calls = { box: 0, texture: 0, fill: 0, translations: [] };
   const noop = () => {};
   return {
     width: 1280,
@@ -17,7 +17,7 @@ function createHandP5Stub() {
     clearDepth: noop,
     frustum: noop,
     camera: noop,
-    translate: noop,
+    translate: (...coordinates) => { calls.translations.push(coordinates); },
     noStroke: noop,
     rotateZ: noop,
     fill: () => { calls.fill += 1; },
@@ -139,4 +139,43 @@ test('el pico queda visible durante el swing final de rotura', () => {
   hand.update(1 / 60, { isBreaking: false });
   hand.draw(p);
   assert.equal(p.calls.box, 3, 'el swing de rotura conserva el pico visible');
+});
+
+test('la cabeza del pico queda ubicada en el extremo del mango', () => {
+  const hand = new HandRenderer(fakeTextureManager());
+  const p = createHandP5Stub();
+  hand.setSelectedSlot(0, createDefaultBlockRegistry().get(BlockIds.STONE));
+  hand.update(1 / 60, { isBreaking: true });
+  hand.draw(p);
+
+  assert.ok(
+    p.calls.translations.some((coordinates) => (
+      coordinates[0] === 0 &&
+      coordinates[1] === -hand.config.PICKAXE.HANDLE_LENGTH / 2 &&
+      coordinates[2] === 0
+    )),
+    'la cabeza se dibuja en la punta del eje longitudinal del mango'
+  );
+});
+
+test('el primer frame conserva el swing aunque deltaTime exceda su duración', () => {
+  const hand = new HandRenderer(fakeTextureManager());
+  const p = createHandP5Stub();
+  hand.setSelectedSlot(0, createDefaultBlockRegistry().get(BlockIds.STONE));
+  hand.notifyBlockBroken();
+
+  hand.update(hand.config.SWING_DURATION * 2, { isBreaking: false });
+  hand.draw(p);
+  assert.equal(p.calls.box, 3, 'el primer frame debe conservar brazo y pico');
+  assert.equal(hand.swingAmount, 0, 'el swing empieza en cero');
+
+  p.calls.box = 0;
+  hand.update(1 / 60, { isBreaking: false });
+  hand.draw(p);
+  assert.equal(p.calls.box, 3, 'el siguiente frame avanza el swing normalmente');
+
+  p.calls.box = 0;
+  hand.update(hand.config.SWING_DURATION, { isBreaking: false });
+  hand.draw(p);
+  assert.equal(p.calls.box, 1, 'el swing finalizado vuelve a mostrar el bloque');
 });

@@ -194,13 +194,25 @@ test('romper requiere y respeta el puntero capturado', async () => {
 
   dom.canvas.requestPointerLock();
   dom.canvas.dispatch('mousedown', { button: 0 });
-  while (game.world.getBlockId(target.x, target.y, target.z) === BlockIds.STONE) {
+  const frameDelta = 1 / 60;
+  const maxBreakFrames = Math.ceil(
+    (game.blockRegistry.get(BlockIds.STONE).hardness *
+      game.config.viewmodel.breakOverlay.BREAK_DURATION_PER_HARDNESS) /
+      frameDelta
+  ) + 10;
+  for (
+    let frame = 0;
+    frame < maxBreakFrames && game.world.getBlockId(target.x, target.y, target.z) === BlockIds.STONE;
+    frame += 1
+  ) {
     game.update(1 / 60);
   }
 
   assert.equal(game.world.getBlockId(target.x, target.y, target.z), BlockIds.AIR);
   assert.ok(game.hotbar.countOf(game.blockRegistry.get(BlockIds.STONE)) >= 1, 'el bloque roto entra al hotbar');
   assert.ok(game.blockParticles.activeCount > 0, 'romper crea partículas visuales');
+  dom.window.dispatch('mouseup', { button: 0 });
+  game.update(1 / 60);
   assert.ok(game.handRenderer.swingAmount > 0, 'romper dispara el swing');
 });
 
@@ -251,5 +263,6 @@ test('colocar con clic derecho agrega el bloque en la celda adyacente', async ()
   const adjacent = { x: target.x, y: target.y, z: target.z + 1 };
   assert.equal(game.world.getBlockId(adjacent.x, adjacent.y, adjacent.z), BlockIds.STONE);
   assert.equal(game.world.getBlockId(target.x, target.y, target.z), BlockIds.STONE, 'el bloque apuntado no se ve afectado');
+  game.update(1 / 60);
   assert.ok(game.handRenderer.swingAmount > 0, 'colocar dispara el swing');
 });

@@ -15,6 +15,11 @@ export class Renderer {
     this.overlays = new Set();
   }
 
+  /**
+   * Registra un overlay que se dibuja después del mundo.
+   * @param {{draw: (p: object, camera: object) => void}} overlay
+   * @returns {() => boolean} función para retirar el overlay
+   */
   addOverlay(overlay) {
     if (typeof overlay?.draw !== 'function') {
       throw new TypeError('Renderer.addOverlay requiere un objeto con draw(p, camera).');

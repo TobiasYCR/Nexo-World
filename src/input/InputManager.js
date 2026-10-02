@@ -53,6 +53,7 @@ export class InputManager {
     return this.mouse.leftJustPressed;
   }
 
+  /** Indica si el botón izquierdo sigue presionado en este frame. */
   isBreakDown() {
     return this.mouse.isButtonDown(MouseButtons.LEFT);
   }

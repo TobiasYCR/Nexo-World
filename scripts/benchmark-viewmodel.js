@@ -16,7 +16,7 @@ const particles = new BlockParticles({
   MIN_COUNT: PARTICLE_COUNT / 4,
   MAX_COUNT: PARTICLE_COUNT / 4,
   MAX_PARTICLES: PARTICLE_COUNT,
-  LIFETIME_SECONDS: 600,
+  LIFETIME_SECONDS: (WARMUP_FRAMES + BATCH_COUNT * FRAMES_PER_BATCH) / 60 + 1,
   GRAVITY: 0
 });
 for (let spawn = 0; spawn < PARTICLE_COUNT / 16; spawn += 1) {
@@ -37,6 +37,7 @@ const p = {
   stroke: () => { calls.drawCalls += 1; },
   strokeWeight: () => { calls.drawCalls += 1; },
   translate: (x, y, z) => { calls.vertices += x + y + z; },
+  rotateZ: () => { calls.drawCalls += 1; },
   fill: () => { calls.drawCalls += 1; },
   ambientMaterial: () => { calls.drawCalls += 1; },
   box: (size) => { calls.vertices += size; },
