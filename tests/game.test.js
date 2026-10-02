@@ -90,6 +90,42 @@ test('las teclas 1-9 seleccionan slots de la hotbar', async () => {
   assert.equal(game.hotbar.selectedIndex, 2);
 });
 
+test('la hotbar inicia con pilas utilizables para cada tipo registrado y refleja el inventario real', async () => {
+  const game = await startGame();
+  game.update(1 / 60);
+  const placeableTypes = game.blockRegistry.placeableTypes();
+
+  assert.deepEqual(placeableTypes.map((type) => type.name), ['Grass', 'Dirt', 'Stone']);
+  for (let index = 0; index < placeableTypes.length; index += 1) {
+    const slot = game.hotbar.getSlot(index);
+    assert.equal(slot.blockType, placeableTypes[index]);
+    assert.equal(slot.count, game.config.inventory.STARTER_BLOCK_COUNT);
+    assert.equal(game.hud.hotbarView.barElement.children[index].children[2].textContent, '64');
+  }
+  for (let index = placeableTypes.length; index < game.hotbar.size; index += 1) {
+    assert.equal(game.hotbar.getSlot(index).isEmpty, true);
+    assert.equal(game.hud.hotbarView.barElement.children[index].children[1].hidden, true);
+  }
+});
+
+test('la cantidad de la hotbar visible se actualiza después de colocar un bloque', async () => {
+  const game = await startGame();
+  game.update(1 / 60);
+  const target = plantBlockInView(game);
+  const adjacent = { x: target.x, y: target.y, z: target.z + 1 };
+  const grassType = game.blockRegistry.placeableTypes().find((type) => type.name === 'Grass');
+  const grassIndex = game.blockRegistry.placeableTypes().indexOf(grassType);
+  game.hotbar.select(grassIndex);
+
+  dom.canvas.requestPointerLock();
+  dom.canvas.dispatch('mousedown', { button: 2 });
+  game.update(1 / 60);
+
+  assert.equal(game.hotbar.getSlot(grassIndex).count, game.config.inventory.STARTER_BLOCK_COUNT - 1);
+  assert.equal(game.hud.hotbarView.barElement.children[grassIndex].children[2].textContent, '63');
+  assert.equal(game.world.getBlockId(adjacent.x, adjacent.y, adjacent.z), grassType.id);
+});
+
 test('la cámara sigue a los ojos del jugador', async () => {
   const game = await startGame();
   game.update(1 / 60);

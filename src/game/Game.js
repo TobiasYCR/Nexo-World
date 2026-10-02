@@ -118,7 +118,10 @@ export class Game {
     }
 
     this.#updateViewmodel(deltaTime);
-    this.hud.update(deltaTime, this.#buildDebugStats());
+    this.hud.update(deltaTime, this.#buildDebugStats(), {
+      selectedIndex: this.hotbar.selectedIndex,
+      slots: this.hotbar.slots.map(({ blockType, count }) => ({ blockType, count }))
+    });
     this.input.endFrame();
   }
 
@@ -206,7 +209,7 @@ export class Game {
   /** Hotbar inicial con los tipos disponibles, útil para probar la interfaz. */
   #fillStarterHotbar() {
     for (const blockType of this.blockRegistry.placeableTypes()) {
-      this.hotbar.add(blockType, 1);
+      this.hotbar.add(blockType, this.config.inventory.STARTER_BLOCK_COUNT);
     }
   }
 

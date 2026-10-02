@@ -70,7 +70,8 @@ export const GameConfig = Object.freeze({
 
   inventory: Object.freeze({
     HOTBAR_SIZE: 9,
-    SLOT_MAX_STACK: 64
+    SLOT_MAX_STACK: 64,
+    STARTER_BLOCK_COUNT: 64
   }),
 
   assets: Object.freeze({
