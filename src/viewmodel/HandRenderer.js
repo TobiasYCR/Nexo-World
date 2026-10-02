@@ -19,6 +19,8 @@ export class HandRenderer {
   #swingActive = false;
   #swingTime = 0;
   #swingLoop = false;
+  #isBreaking = false;
+  #pickaxeSwing = false;
 
   #slotChangeTime = null;
 
@@ -56,11 +58,13 @@ export class HandRenderer {
 
   /** Dispara un swing único (ease-out): llamar al recibir blockBroken. */
   notifyBlockBroken() {
+    this.#pickaxeSwing = true;
     this.#startSwing();
   }
 
   /** Dispara un swing único (ease-out): llamar al recibir blockPlaced. */
   notifyBlockPlaced() {
+    this.#pickaxeSwing = false;
     this.#startSwing();
   }
 
@@ -79,7 +83,9 @@ export class HandRenderer {
   update(deltaTime, { isBreaking = false, horizontalSpeed = 0, isOnGround = false } = {}) {
     this.viewBob.update(deltaTime, horizontalSpeed, isOnGround);
     this.#swingLoop = isBreaking;
+    this.#isBreaking = isBreaking;
     this.#advanceSwing(deltaTime);
+    if (!this.#swingActive) this.#pickaxeSwing = false;
     this.#advanceSlotChange(deltaTime);
   }
 
@@ -137,7 +143,10 @@ export class HandRenderer {
     p.translate(x, y, z);
     p.noStroke();
 
-    if (this.#blockType) {
+    if (this.#isBreaking || (this.#pickaxeSwing && this.#swingActive)) {
+      this.#drawArm(p);
+      this.#drawPickaxe(p, swing);
+    } else if (this.#blockType) {
       this.#drawBlock(p);
     } else {
       this.#drawArm(p);
@@ -176,5 +185,21 @@ export class HandRenderer {
     p.fill(...this.config.ARM_COLOR);
     p.ambientMaterial(...this.config.ARM_COLOR);
     p.box(this.config.ARM_WIDTH, this.config.ARM_WIDTH, this.config.ARM_LENGTH);
+  }
+
+  #drawPickaxe(p, swing) {
+    const { PICKAXE } = this.config;
+    p.push();
+    p.translate(PICKAXE.OFFSET.x, PICKAXE.OFFSET.y, PICKAXE.OFFSET.z);
+    p.rotateZ(-PICKAXE.SWING_ROTATION * swing);
+
+    p.fill(...PICKAXE.HANDLE_COLOR);
+    p.ambientMaterial(...PICKAXE.HANDLE_COLOR);
+    p.box(PICKAXE.HANDLE_WIDTH, PICKAXE.HANDLE_LENGTH, PICKAXE.HANDLE_WIDTH);
+
+    p.fill(...PICKAXE.HEAD_COLOR);
+    p.ambientMaterial(...PICKAXE.HEAD_COLOR);
+    p.box(PICKAXE.HEAD_WIDTH, PICKAXE.HEAD_HEIGHT, PICKAXE.HEAD_DEPTH);
+    p.pop();
   }
 }

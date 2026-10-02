@@ -125,7 +125,18 @@ export const GameConfig = Object.freeze({
       BLOCK_SCALE: 3,
       ARM_WIDTH: 3.5,
       ARM_LENGTH: 11,
-      ARM_COLOR: Object.freeze([214, 168, 132])
+      ARM_COLOR: Object.freeze([214, 168, 132]),
+      PICKAXE: Object.freeze({
+        HANDLE_COLOR: Object.freeze([116, 76, 42]),
+        HEAD_COLOR: Object.freeze([150, 158, 166]),
+        HANDLE_WIDTH: 1.2,
+        HANDLE_LENGTH: 8,
+        HEAD_WIDTH: 9,
+        HEAD_HEIGHT: 1.8,
+        HEAD_DEPTH: 1.6,
+        SWING_ROTATION: 0.85,
+        OFFSET: Object.freeze({ x: -2, y: 3, z: -1 })
+      })
     }),
 
     highlight: Object.freeze({

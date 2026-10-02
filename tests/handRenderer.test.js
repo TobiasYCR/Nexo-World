@@ -19,6 +19,7 @@ function createHandP5Stub() {
     camera: noop,
     translate: noop,
     noStroke: noop,
+    rotateZ: noop,
     fill: () => { calls.fill += 1; },
     ambientMaterial: noop,
     texture: () => { calls.texture += 1; },
@@ -111,4 +112,31 @@ test('dibuja el bloque de la ranura activa con su color de respaldo', () => {
   hand.draw(p);
   assert.equal(p.calls.box, 1);
   assert.equal(p.calls.fill, 1, 'sin textura cargada, debe usar el color de respaldo');
+});
+
+test('muestra un pico mientras se mina y vuelve al bloque seleccionado al soltar', () => {
+  const hand = new HandRenderer(fakeTextureManager());
+  const p = createHandP5Stub();
+  const stone = createDefaultBlockRegistry().get(BlockIds.STONE);
+  hand.setSelectedSlot(0, stone);
+
+  hand.update(1 / 60, { isBreaking: true });
+  hand.draw(p);
+  assert.equal(p.calls.box, 3, 'dibuja brazo, mango y cabeza del pico');
+
+  p.calls.box = 0;
+  hand.update(1 / 60, { isBreaking: false });
+  hand.draw(p);
+  assert.equal(p.calls.box, 1, 'vuelve a dibujar solo el bloque seleccionado');
+});
+
+test('el pico queda visible durante el swing final de rotura', () => {
+  const hand = new HandRenderer(fakeTextureManager());
+  const p = createHandP5Stub();
+  hand.setSelectedSlot(0, createDefaultBlockRegistry().get(BlockIds.STONE));
+  hand.notifyBlockBroken();
+
+  hand.update(1 / 60, { isBreaking: false });
+  hand.draw(p);
+  assert.equal(p.calls.box, 3, 'el swing de rotura conserva el pico visible');
 });
