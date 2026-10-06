@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { createDefaultBlockRegistry, BlockRegistry } from '../src/blocks/BlockRegistry.js';
 import { BlockIds } from '../src/utils/Constants.js';
 
-test('el registro por defecto contiene los cuatro tipos base', () => {
+test('el registro por defecto contiene los tipos base del mundo', () => {
   const registry = createDefaultBlockRegistry();
   assert.deepEqual(
     registry.values().map((type) => type.name),
-    ['Air', 'Grass', 'Dirt', 'Stone']
+    ['Air', 'Grass', 'Dirt', 'Stone', 'Log', 'Leaves', 'Planks', 'Sand', 'Cobblestone', 'Glass']
   );
 });
 
@@ -21,7 +21,7 @@ test('el aire no es sólido y los demás sí', () => {
 test('los tipos colocables excluyen al aire', () => {
   const registry = createDefaultBlockRegistry();
   assert.equal(registry.placeableTypes().some((type) => type.id === BlockIds.AIR), false);
-  assert.equal(registry.placeableTypes().length, 3);
+  assert.equal(registry.placeableTypes().length, 9);
 });
 
 test('no se permiten ids ni nombres duplicados', () => {
@@ -38,5 +38,17 @@ test('un id desconocido falla de forma explícita', () => {
 
 test('textureNames devuelve solo texturas declaradas y sin repetir', () => {
   const registry = createDefaultBlockRegistry();
-  assert.deepEqual(registry.textureNames(), ['grass.png', 'dirt.png', 'stone.png']);
+  assert.deepEqual(registry.textureNames(), [
+    'grass_top.png',
+    'grass_side.png',
+    'dirt.png',
+    'stone.png',
+    'log_side.png',
+    'log_top.png',
+    'leaves.png',
+    'planks.png',
+    'sand.png',
+    'cobblestone.png',
+    'glass.png'
+  ]);
 });

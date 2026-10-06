@@ -8,7 +8,13 @@ export const BlockIds = Object.freeze({
   AIR: 0,
   GRASS: 1,
   DIRT: 2,
-  STONE: 3
+  STONE: 3,
+  LOG: 4,
+  LEAVES: 5,
+  PLANKS: 6,
+  SAND: 7,
+  COBBLESTONE: 8,
+  GLASS: 9
 });
 
 /** Acciones lógicas del juego. El input se expresa en acciones, nunca en teclas. */

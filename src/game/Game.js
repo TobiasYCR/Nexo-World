@@ -16,9 +16,10 @@ import { BlockRenderer } from '../rendering/BlockRenderer.js';
 import { Renderer } from '../rendering/Renderer.js';
 import { Hotbar } from '../inventory/Hotbar.js';
 import { AudioManager } from '../audio/AudioManager.js';
+import { GameEvents, GameEventTypes } from './GameEvents.js';
 import { HUD } from '../ui/HUD.js';
 import { SaveManager } from '../persistence/SaveManager.js';
-import { InputActions } from '../utils/Constants.js';
+import { InputActions, SoundIds } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 import { BlockHighlight } from '../viewmodel/BlockHighlight.js';
 import { BreakOverlay } from '../viewmodel/BreakOverlay.js';
@@ -50,13 +51,14 @@ export class Game {
     this.input = new InputManager(config.input);
     this.playerController = new PlayerController(this.player, this.camera, this.input);
     this.playerPhysics = new PlayerPhysics(this.player, this.collisionSystem, config.player);
+    this.events = new GameEvents();
 
     this.textureManager = new TextureManager(p, config.assets);
     this.blockRenderer = new BlockRenderer(p, this.blockRegistry, this.textureManager, config);
     this.renderer = new Renderer(p, this.blockRenderer, config.rendering);
 
     this.hotbar = new Hotbar(config.inventory.HOTBAR_SIZE);
-    this.blockInteraction = new BlockInteraction(this.world, this.player, this.hotbar, this.raycast, config);
+    this.blockInteraction = new BlockInteraction(this.world, this.player, this.hotbar, this.raycast, config, this.events);
     this.blockHighlight = new BlockHighlight(config.viewmodel.highlight, config.world.BLOCK_SIZE);
     this.breakOverlay = new BreakOverlay(p, config.viewmodel.breakOverlay, config.world.BLOCK_SIZE);
     this.blockParticles = new BlockParticles(config.viewmodel.particles);
@@ -71,7 +73,7 @@ export class Game {
     this.renderer.addOverlay(this.breakOverlay);
     this.renderer.addOverlay(this.blockParticles);
     this.renderer.addOverlay(this.handRenderer);
-    this.blockInteraction.on('blockBroken', ({ position, blockType }) => {
+    this.events.on(GameEventTypes.BLOCK_BROKEN, ({ position, blockType }) => {
       this.handRenderer.notifyBlockBroken();
       const size = config.world.BLOCK_SIZE;
       this.blockParticles.spawn(
@@ -79,8 +81,10 @@ export class Game {
         blockType.color
       );
     });
-    this.blockInteraction.on('blockPlaced', () => this.handRenderer.notifyBlockPlaced());
+    this.events.on(GameEventTypes.BLOCK_PLACED, () => this.handRenderer.notifyBlockPlaced());
     this.audio = new AudioManager(config.assets);
+    this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
+    this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
     this.hud = new HUD();
     this.saveManager = new SaveManager();
   }
@@ -99,6 +103,7 @@ export class Game {
 
     // Deliberadamente sin await: el mundo se dibuja con colores hasta que lleguen.
     this.textureManager.loadAll(this.blockRegistry.textureNames());
+    this.audio.preload().catch(() => {});
   }
 
   /**
@@ -112,7 +117,12 @@ export class Game {
       this.playerController.update();
       this.blockInteraction.update(this.player.eyePosition, this.camera.lookDirection);
       this.#handleBlockInteractions(deltaTime);
+      const wasOnGround = this.player.isOnGround;
       this.playerPhysics.update(deltaTime);
+      if (!wasOnGround && this.player.isOnGround) {
+        this.events.emit(GameEventTypes.PLAYER_LANDED, { position: this.player.position });
+      }
+      this.#handleVoidFall();
       this.#syncCameraToPlayer();
       this.#handleHotbarSelection();
     }
@@ -143,6 +153,28 @@ export class Game {
     this.state.set(this.state.isRunning ? GameStates.PAUSED : GameStates.RUNNING);
   }
 
+  pause() {
+    this.state.set(GameStates.PAUSED);
+  }
+
+  resume() {
+    this.state.set(GameStates.RUNNING);
+  }
+
+  get isPaused() {
+    return this.state.isPaused;
+  }
+
+  saveGame(slot) {
+    return this.saveManager.save(slot, this.world, this.player);
+  }
+
+  loadGame(slot) {
+    const result = this.saveManager.load(slot, this.world, this.player);
+    if (result.ok) this.#syncCameraToPlayer();
+    return result;
+  }
+
   /** Bloque bajo la mira, expuesto para que el renderer dibuje el resaltado. */
   get targetedBlock() {
     return this.blockInteraction.targetedBlock;
@@ -166,6 +198,11 @@ export class Game {
     }
     this.blockInteraction.updateBreaking(deltaTime, this.input.isBreakDown());
     if (this.input.wasPlaceRequested()) this.blockInteraction.tryPlace();
+  }
+
+  #handleVoidFall() {
+    if (this.player.position.y >= this.config.player.VOID_Y) return;
+    this.#placePlayerOnSurface();
   }
 
   /** Sincroniza los datos de interacción del juego con los efectos visuales. */

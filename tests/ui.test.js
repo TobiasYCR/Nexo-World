@@ -169,7 +169,7 @@ test('InventoryScreen permite seleccionar un bloque y emite intención', () => {
 
   inv.selectIndex(3);
   assert.ok(emitted !== null);
-  assert.equal(emitted.blockType.name, 'Madera');
+  assert.equal(emitted.blockType.name, 'Log');
 });
 
 test('ControlsScreen lista todas las categorías y teclas configuradas', () => {

@@ -29,6 +29,10 @@ export class GameState {
     return this.#current === GameStates.RUNNING;
   }
 
+  get isPaused() {
+    return this.#current === GameStates.PAUSED;
+  }
+
   set(next) {
     if (next === this.#current) return;
     const previous = this.#current;

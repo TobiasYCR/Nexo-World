@@ -63,16 +63,64 @@ export class BlockRegistry {
 
   /** Nombres de textura únicos, para que TextureManager sepa qué precargar. */
   textureNames() {
-    return [...new Set(this.values().map((type) => type.texture).filter(Boolean))];
+    const names = [];
+    for (const type of this.values()) {
+      if (type.texture) names.push(type.texture);
+      names.push(...Object.values(type.textures ?? {}).filter(Boolean));
+    }
+    return [...new Set(names)];
   }
 }
 
 /** Definiciones base de Nexo World. Para sumar un bloque, agregar acá su entrada. */
 const DEFAULT_BLOCK_DEFINITIONS = [
-  { id: BlockIds.AIR, name: 'Air', solid: false, transparent: true, texture: null, color: [0, 0, 0], breakable: false },
-  { id: BlockIds.GRASS, name: 'Grass', solid: true, texture: 'grass.png', color: [106, 170, 80], hardness: 1 },
-  { id: BlockIds.DIRT, name: 'Dirt', solid: true, texture: 'dirt.png', color: [134, 96, 67], hardness: 1 },
-  { id: BlockIds.STONE, name: 'Stone', solid: true, texture: 'stone.png', color: [128, 128, 132], hardness: 3 }
+  { id: BlockIds.AIR, name: 'Air', label: 'Aire', solid: false, transparent: true, texture: null, color: [0, 0, 0], breakable: false, drops: [] },
+  {
+    id: BlockIds.GRASS,
+    name: 'Grass',
+    label: 'Cesped',
+    solid: true,
+    texture: 'grass_top.png',
+    textures: { top: 'grass_top.png', side: 'grass_side.png', bottom: 'dirt.png' },
+    color: [106, 170, 80],
+    hardness: 1
+  },
+  { id: BlockIds.DIRT, name: 'Dirt', label: 'Tierra', solid: true, texture: 'dirt.png', color: [134, 96, 67], hardness: 1 },
+  {
+    id: BlockIds.STONE,
+    name: 'Stone',
+    label: 'Piedra',
+    solid: true,
+    texture: 'stone.png',
+    color: [128, 128, 132],
+    hardness: 3,
+    drops: [BlockIds.COBBLESTONE]
+  },
+  {
+    id: BlockIds.LOG,
+    name: 'Log',
+    label: 'Tronco',
+    solid: true,
+    texture: 'log_side.png',
+    textures: { top: 'log_top.png', side: 'log_side.png', bottom: 'log_top.png' },
+    color: [132, 88, 48],
+    hardness: 2
+  },
+  {
+    id: BlockIds.LEAVES,
+    name: 'Leaves',
+    label: 'Hojas',
+    solid: true,
+    transparent: true,
+    texture: 'leaves.png',
+    color: [70, 135, 52],
+    hardness: 0.4,
+    drops: []
+  },
+  { id: BlockIds.PLANKS, name: 'Planks', label: 'Tablones', solid: true, texture: 'planks.png', color: [154, 111, 62], hardness: 1.5 },
+  { id: BlockIds.SAND, name: 'Sand', label: 'Arena', solid: true, texture: 'sand.png', color: [224, 204, 150], hardness: 0.8 },
+  { id: BlockIds.COBBLESTONE, name: 'Cobblestone', label: 'Piedra partida', solid: true, texture: 'cobblestone.png', color: [116, 116, 122], hardness: 3 },
+  { id: BlockIds.GLASS, name: 'Glass', label: 'Vidrio', solid: true, transparent: true, texture: 'glass.png', color: [170, 218, 230], hardness: 0.3 }
 ];
 
 export function createDefaultBlockRegistry() {

@@ -45,7 +45,51 @@ test('la generación llena el terreno y deja aire arriba', () => {
 
   const surface = world.getSurfaceHeight(0, 0);
   assert.ok(surface > 0 && surface < world.height);
-  assert.equal(world.getBlockId(0, surface - 1, 0), BlockIds.GRASS);
+  assert.notEqual(world.getBlockId(0, surface - 1, 0), BlockIds.AIR);
+});
+
+test('la arena aparece en columnas bajo el nivel configurado', () => {
+  const world = new WorldGenerator(GameConfig.world).generate(buildWorld());
+  let checkedBeach = false;
+
+  for (let x = 0; x < world.width; x += 1) {
+    for (let z = 0; z < world.depth; z += 1) {
+      const surfaceBlockY = world.getSurfaceHeight(x, z) - 1;
+      if (surfaceBlockY < GameConfig.world.SAND_LEVEL) {
+        checkedBeach = true;
+        assert.equal(world.getBlockId(x, surfaceBlockY, z), BlockIds.SAND);
+      }
+    }
+  }
+
+  assert.equal(checkedBeach, true);
+});
+
+test('los arboles son deterministas y no se cortan en el borde del mundo', () => {
+  const first = new WorldGenerator(GameConfig.world).generate(buildWorld());
+  const second = new WorldGenerator(GameConfig.world).generate(buildWorld());
+  let leaves = 0;
+  let logs = 0;
+
+  for (let x = 0; x < first.width; x += 1) {
+    for (let y = 0; y < first.height; y += 1) {
+      for (let z = 0; z < first.depth; z += 1) {
+        const blockId = first.getBlockId(x, y, z);
+        assert.equal(blockId, second.getBlockId(x, y, z), `${x},${y},${z}`);
+        if (blockId === BlockIds.LOG) {
+          logs += 1;
+          assert.ok(x > 0 && x < first.width - 1 && z > 0 && z < first.depth - 1);
+        }
+        if (blockId === BlockIds.LEAVES) {
+          leaves += 1;
+          assert.ok(x > 0 && x < first.width - 1 && z > 0 && z < first.depth - 1);
+        }
+      }
+    }
+  }
+
+  assert.ok(logs > 0, 'deberia generar troncos');
+  assert.ok(leaves > 0, 'deberia generar hojas');
 });
 
 test('un bloque enterrado se considera oculto y uno de superficie no', () => {

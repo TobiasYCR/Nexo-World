@@ -21,7 +21,7 @@ function decodePng(buffer) {
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const offset = y * (width * 4 + 1) + 1 + x * 4;
-      pixels.push([raw[offset], raw[offset + 1], raw[offset + 2]]);
+      pixels.push([raw[offset], raw[offset + 1], raw[offset + 2], raw[offset + 3]]);
     }
   }
   return { width, height, pixels };
@@ -38,14 +38,31 @@ test('las texturas generadas son deterministas', () => {
   for (const [name, png] of first) assert.ok(png.equals(second.get(name)), name);
 });
 
-test('se generan las cinco texturas en PNG de 16x16', () => {
+test('se generan las texturas de bloques en PNG de 16x16', () => {
   const textures = generateBlockTextures();
-  assert.deepEqual([...textures.keys()].sort(), ['dirt.png', 'grass.png', 'sand.png', 'stone.png', 'wood.png']);
+  assert.deepEqual([...textures.keys()].sort(), [
+    'cobblestone.png',
+    'dirt.png',
+    'glass.png',
+    'grass_side.png',
+    'grass_top.png',
+    'leaves.png',
+    'log_side.png',
+    'log_top.png',
+    'planks.png',
+    'sand.png',
+    'stone.png'
+  ]);
   for (const [name, png] of textures) {
     assert.equal(png.subarray(1, 4).toString('ascii'), 'PNG', name);
     const { width, height } = decodePng(png);
     assert.deepEqual([width, height], [16, 16], name);
   }
+});
+
+test('el vidrio generado tiene transparencia', () => {
+  const glass = decodePng(generateBlockTextures().get('glass.png'));
+  assert.ok(glass.pixels.some((pixel) => pixel[3] < 255));
 });
 
 test('las texturas se distinguen entre sí por color medio y no son planas', () => {

@@ -1,6 +1,8 @@
 import { AABB } from '../physics/AABB.js';
 import { GameConfig } from '../game/GameConfig.js';
 import { BlockIds } from '../utils/Constants.js';
+import { BlockBreaker } from './BlockBreaker.js';
+import { GameEventTypes } from '../game/GameEvents.js';
 
 /**
  * Romper y colocar bloques. Aislada de Player y Game a propósito: el jugador
@@ -10,18 +12,25 @@ import { BlockIds } from '../utils/Constants.js';
  * acá nunca se compara ids a mano.
  */
 export class BlockInteraction {
-  #breakingElapsed = 0;
   #listeners = new Map();
 
-  constructor(world, player, hotbar, raycast, config = GameConfig) {
+  constructor(world, player, hotbar, raycast, config = GameConfig, events = null) {
     this.world = world;
     this.player = player;
     this.hotbar = hotbar;
     this.raycast = raycast;
     this.config = config;
+    this.events = events;
+    this.breaker = new BlockBreaker(world, config);
     this.hit = null;
-    this.breakingBlock = null;
-    this.breakProgress = 0;
+  }
+
+  get breakingBlock() {
+    return this.breaker.breakingBlock;
+  }
+
+  get breakProgress() {
+    return this.breaker.breakProgress;
   }
 
   /** Bloque apuntado este frame, para que el renderer pueda resaltarlo. */
@@ -32,7 +41,7 @@ export class BlockInteraction {
   /** Refresca la mira. Game la llama cada frame con ojo del jugador y cámara. */
   update(origin, direction) {
     this.hit = this.raycast.cast(origin, direction, this.config.blocks.REACH_DISTANCE);
-    if (!this.#sameBlock(this.breakingBlock, this.targetedBlock)) this.#resetBreaking();
+    if (!this.#sameBlock(this.breakingBlock, this.targetedBlock)) this.breaker.reset();
   }
 
   on(event, listener) {
@@ -43,28 +52,15 @@ export class BlockInteraction {
 
   /** Acumula el progreso de rotura mientras se mantiene pulsado sobre el mismo bloque. */
   updateBreaking(deltaTime, isHeld) {
-    const block = this.targetedBlock;
-    const type = block ? this.world.getBlockType(block.x, block.y, block.z) : null;
-    if (!isHeld || !block || !type?.breakable) {
-      this.#resetBreaking();
-      return false;
-    }
-
-    if (!this.#sameBlock(this.breakingBlock, block)) {
-      this.#resetBreaking();
-      this.breakingBlock = { x: block.x, y: block.y, z: block.z };
-    }
-
-    this.#breakingElapsed += deltaTime;
-    const duration = Math.max(
-      Number.EPSILON,
-      type.hardness * this.config.viewmodel.breakOverlay.BREAK_DURATION_PER_HARDNESS
-    );
-    this.breakProgress = Math.min(1, this.#breakingElapsed / duration);
-    if (this.breakProgress < 1) return false;
+    const completed = this.breaker.update(this.targetedBlock, deltaTime, isHeld);
+    this.#emit(GameEventTypes.BREAK_PROGRESS, {
+      position: this.breakingBlock,
+      progress: this.breakProgress
+    });
+    if (!completed) return false;
 
     this.tryBreak();
-    this.#resetBreaking();
+    this.breaker.reset();
     return true;
   }
 
@@ -77,8 +73,8 @@ export class BlockInteraction {
     if (!type.breakable) return false;
 
     this.world.setBlockId(hit.block.x, hit.block.y, hit.block.z, BlockIds.AIR);
-    this.hotbar.add(type);
-    this.#emit('blockBroken', {
+    for (const dropId of type.drops) this.hotbar.add(this.world.blockRegistry.get(dropId));
+    this.#emit(GameEventTypes.BLOCK_BROKEN, {
       position: { x: hit.block.x, y: hit.block.y, z: hit.block.z },
       blockType: type
     });
@@ -106,7 +102,7 @@ export class BlockInteraction {
     const blockType = slot.blockType;
     if (this.hotbar.removeAt(this.hotbar.selectedIndex, 1) === 0) return false;
     this.world.setBlockId(adjacent.x, adjacent.y, adjacent.z, blockType.id);
-    this.#emit('blockPlaced', {
+    this.#emit(GameEventTypes.BLOCK_PLACED, {
       position: { x: adjacent.x, y: adjacent.y, z: adjacent.z },
       blockType
     });
@@ -114,13 +110,8 @@ export class BlockInteraction {
   }
 
   #emit(event, payload) {
+    this.events?.emit(event, payload);
     for (const listener of this.#listeners.get(event) ?? []) listener(payload);
-  }
-
-  #resetBreaking() {
-    this.breakingBlock = null;
-    this.breakProgress = 0;
-    this.#breakingElapsed = 0;
   }
 
   #sameBlock(first, second) {

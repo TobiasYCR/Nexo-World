@@ -6,13 +6,16 @@ export class BlockType {
   constructor({
     id,
     name,
+    label = name,
     solid = true,
     texture = null,
+    textures = null,
     /** Color de respaldo usado mientras la textura no está disponible. */
     color = [255, 255, 255],
     transparent = false,
     breakable = true,
-    hardness = 1
+    hardness = 1,
+    drops = undefined
   }) {
     if (!Number.isInteger(id) || id < 0) {
       throw new TypeError(`BlockType "${name}": id debe ser un entero >= 0.`);
@@ -23,12 +26,19 @@ export class BlockType {
 
     this.id = id;
     this.name = name;
+    this.label = label;
     this.solid = solid;
     this.texture = texture;
+    this.textures = Object.freeze({
+      top: textures?.top ?? texture,
+      side: textures?.side ?? texture,
+      bottom: textures?.bottom ?? texture
+    });
     this.color = Object.freeze([...color]);
     this.transparent = transparent;
     this.breakable = breakable;
     this.hardness = hardness;
+    this.drops = Object.freeze(drops === undefined ? [id] : [...drops]);
 
     Object.freeze(this);
   }

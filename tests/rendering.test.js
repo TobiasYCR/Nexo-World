@@ -47,8 +47,16 @@ test('TextureManager carga lo que declara el BlockRegistry', async (t) => {
   const textures = new TextureManager(p, ASSETS);
   await textures.loadForRegistry(createDefaultBlockRegistry());
   assert.deepEqual(requested.sort(), [
+    '/textures/blocks/cobblestone.png',
     '/textures/blocks/dirt.png',
-    '/textures/blocks/grass.png',
+    '/textures/blocks/glass.png',
+    '/textures/blocks/grass_side.png',
+    '/textures/blocks/grass_top.png',
+    '/textures/blocks/leaves.png',
+    '/textures/blocks/log_side.png',
+    '/textures/blocks/log_top.png',
+    '/textures/blocks/planks.png',
+    '/textures/blocks/sand.png',
     '/textures/blocks/stone.png'
   ]);
 });
@@ -125,7 +133,7 @@ function countingStub() {
 test('BlockRenderer cambia de material una vez por tipo, no por bloque', () => {
   const world = buildTerrain();
   const p = countingStub();
-  const textures = { get: (name) => (name === 'grass.png' ? { name } : null) };
+  const textures = { get: (name) => (name === 'grass_top.png' ? { name } : null) };
   const renderer = new BlockRenderer(p, world.blockRegistry, textures, GameConfig);
 
   renderer.render(world, worldCenter(world));
@@ -135,7 +143,7 @@ test('BlockRenderer cambia de material una vez por tipo, no por bloque', () => {
   assert.ok(renderer.renderedBlocks > typesDrawn.size);
   assert.equal(p.calls.box, renderer.renderedBlocks);
   assert.equal(p.calls.texture + p.calls.material, typesDrawn.size);
-  assert.equal(p.calls.texture, 1, 'solo el césped tiene textura en este doble');
+  assert.equal(p.calls.texture, 1, 'solo el cesped tiene textura en este doble');
 });
 
 test('sin textura disponible, el bloque se dibuja con el color del BlockType', () => {

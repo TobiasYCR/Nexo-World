@@ -16,6 +16,11 @@ export const GameConfig = Object.freeze({
     TERRAIN_AMPLITUDE: 3,
     /** Escala del ruido: valores chicos generan colinas más amplias. */
     NOISE_SCALE: 0.08,
+    SAND_LEVEL: 6,
+    TREE_DENSITY: 0.08,
+    TREE_MIN_DISTANCE: 5,
+    TREE_MIN_HEIGHT: 4,
+    TREE_MAX_HEIGHT: 6,
     SEED: 20260904
   }),
 
@@ -31,6 +36,7 @@ export const GameConfig = Object.freeze({
     JUMP_FORCE: 150,
     /** Velocidad de caída máxima: evita atravesar bloques a bajo framerate. */
     MAX_FALL_SPEED: 600,
+    VOID_Y: -80,
     /** Dimensiones de la caja de colisión, en unidades de mundo. */
     WIDTH: 12,
     HEIGHT: 34,
@@ -47,7 +53,15 @@ export const GameConfig = Object.freeze({
 
   blocks: Object.freeze({
     /** Alcance máximo del raycast de interacción, en unidades de mundo. */
-    REACH_DISTANCE: 80
+    REACH_DISTANCE: 80,
+    BREAK_TIME_PER_HARDNESS: 0.25
+  }),
+
+  audio: Object.freeze({
+    MASTER_VOLUME: 1,
+    SFX_VOLUME: 1,
+    MUSIC_VOLUME: 0.6,
+    AMBIENT_VOLUME: 0.8
   }),
 
   camera: Object.freeze({

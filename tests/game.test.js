@@ -95,7 +95,17 @@ test('la hotbar inicia con pilas utilizables para cada tipo registrado y refleja
   game.update(1 / 60);
   const placeableTypes = game.blockRegistry.placeableTypes();
 
-  assert.deepEqual(placeableTypes.map((type) => type.name), ['Grass', 'Dirt', 'Stone']);
+  assert.deepEqual(placeableTypes.map((type) => type.name), [
+    'Grass',
+    'Dirt',
+    'Stone',
+    'Log',
+    'Leaves',
+    'Planks',
+    'Sand',
+    'Cobblestone',
+    'Glass'
+  ]);
   for (let index = 0; index < placeableTypes.length; index += 1) {
     const slot = game.hotbar.getSlot(index);
     assert.equal(slot.blockType, placeableTypes[index]);
@@ -209,7 +219,7 @@ test('romper requiere y respeta el puntero capturado', async () => {
   }
 
   assert.equal(game.world.getBlockId(target.x, target.y, target.z), BlockIds.AIR);
-  assert.ok(game.hotbar.countOf(game.blockRegistry.get(BlockIds.STONE)) >= 1, 'el bloque roto entra al hotbar');
+  assert.ok(game.hotbar.countOf(game.blockRegistry.get(BlockIds.COBBLESTONE)) >= 1, 'piedra dropea piedra partida');
   assert.ok(game.blockParticles.activeCount > 0, 'romper crea partículas visuales');
   dom.window.dispatch('mouseup', { button: 0 });
   game.update(1 / 60);
@@ -265,4 +275,81 @@ test('colocar con clic derecho agrega el bloque en la celda adyacente', async ()
   assert.equal(game.world.getBlockId(target.x, target.y, target.z), BlockIds.STONE, 'el bloque apuntado no se ve afectado');
   game.update(1 / 60);
   assert.ok(game.handRenderer.swingAmount > 0, 'colocar dispara el swing');
+});
+
+test('pause/resume detienen la simulacion y exponen isPaused', async () => {
+  const game = await startGame();
+  dom.canvas.requestPointerLock();
+  dom.window.dispatch('keydown', { code: 'KeyW' });
+  game.pause();
+
+  const pausedZ = game.player.position.z;
+  game.update(0.2);
+  assert.equal(game.isPaused, true);
+  assert.equal(game.player.position.z, pausedZ);
+
+  game.resume();
+  game.update(0.2);
+  assert.equal(game.isPaused, false);
+  assert.notEqual(game.player.position.z, pausedZ);
+});
+
+test('caer por debajo de VOID_Y reaparece al jugador en la superficie del spawn', async () => {
+  const game = await startGame();
+  game.player.teleportTo(game.player.position.x, game.config.player.VOID_Y - 10, game.player.position.z);
+  game.update(1 / 60);
+
+  const feet = game.world.worldToBlock(game.player.position.x, game.player.position.y, game.player.position.z);
+  assert.equal(game.world.isSolid(feet.x, feet.y - 1, feet.z), true);
+  assert.equal(game.camera.position.y, game.player.eyePosition.y);
+});
+
+test('Game emite eventos de rotura, progreso y colocacion', async () => {
+  const game = await startGame();
+  const events = [];
+  game.events.on('breakProgress', ({ progress }) => events.push(['progress', progress]));
+  game.events.on('blockBroken', ({ blockType }) => events.push(['broken', blockType.id]));
+  game.events.on('blockPlaced', ({ blockType }) => events.push(['placed', blockType.id]));
+
+  const target = plantBlockInView(game);
+  dom.canvas.requestPointerLock();
+  dom.canvas.dispatch('mousedown', { button: 0 });
+  for (let frame = 0; frame < 60 && game.world.getBlockId(target.x, target.y, target.z) !== BlockIds.AIR; frame += 1) {
+    game.update(1 / 60);
+  }
+  dom.window.dispatch('mouseup', { button: 0 });
+
+  const cobbleSlot = game.blockRegistry.placeableTypes().indexOf(game.blockRegistry.get(BlockIds.COBBLESTONE));
+  game.hotbar.select(cobbleSlot);
+  plantBlockInView(game);
+  dom.canvas.dispatch('mousedown', { button: 2 });
+  game.update(1 / 60);
+
+  assert.ok(events.some(([type, progress]) => type === 'progress' && progress > 0));
+  assert.ok(events.some(([type, id]) => type === 'broken' && id === BlockIds.STONE));
+  assert.ok(events.some(([type, id]) => type === 'placed' && id === BlockIds.COBBLESTONE));
+});
+
+test('saveGame/loadGame devuelven SaveResult y sincronizan camara', async () => {
+  const storage = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, value),
+    removeItem: (key) => storage.delete(key)
+  };
+
+  try {
+    const game = await startGame();
+    const originalX = game.player.position.x;
+    const saved = game.saveGame('slot-a');
+    assert.equal(saved.ok, true);
+
+    game.player.teleportTo(originalX + 40, game.player.position.y + 20, game.player.position.z);
+    const loaded = game.loadGame('slot-a');
+    assert.equal(loaded.ok, true);
+    assert.equal(game.player.position.x, originalX);
+    assert.equal(game.camera.position.y, game.player.eyePosition.y);
+  } finally {
+    delete globalThis.localStorage;
+  }
 });

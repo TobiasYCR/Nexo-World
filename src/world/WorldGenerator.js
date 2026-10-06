@@ -1,4 +1,5 @@
 import { NoiseGenerator } from './NoiseGenerator.js';
+import { TreeFeature } from './TreeFeature.js';
 import { BlockIds } from '../utils/Constants.js';
 import { GameConfig } from '../game/GameConfig.js';
 
@@ -11,6 +12,8 @@ export class WorldGenerator {
   constructor(config = GameConfig.world) {
     this.config = config;
     this.noise = new NoiseGenerator(config.SEED);
+    this.treeNoise = new NoiseGenerator((config.SEED + 0x9e3779b9) >>> 0);
+    this.treeFeature = new TreeFeature(config);
   }
 
   /** Altura de terreno, en bloques, para una columna del mundo. */
@@ -29,21 +32,56 @@ export class WorldGenerator {
         this.#generateColumn(world, x, z);
       }
     }
+    this.#generateTrees(world);
     return world;
   }
 
   #generateColumn(world, x, z) {
     const surfaceY = Math.min(this.columnHeight(x, z), world.height - 1);
 
+    const isBeach = surfaceY < this.config.SAND_LEVEL;
     for (let y = 0; y <= surfaceY; y += 1) {
-      world.setBlockId(x, y, z, this.#blockIdForDepth(surfaceY - y));
+      world.setBlockId(x, y, z, this.#blockIdForDepth(surfaceY - y, isBeach));
     }
   }
 
   /** Capas: césped en la superficie, tierra debajo, piedra en profundidad. */
-  #blockIdForDepth(depthFromSurface) {
+  #blockIdForDepth(depthFromSurface, isBeach) {
+    if (isBeach && depthFromSurface <= 2) return BlockIds.SAND;
     if (depthFromSurface === 0) return BlockIds.GRASS;
     if (depthFromSurface <= 3) return BlockIds.DIRT;
     return BlockIds.STONE;
+  }
+
+  #generateTrees(world) {
+    const trees = [];
+    const margin = TreeFeature.CANOPY_RADIUS + 1;
+    for (let z = margin; z < world.depth - margin; z += 1) {
+      for (let x = margin; x < world.width - margin; x += 1) {
+        if (!this.#shouldTryTree(x, z)) continue;
+        if (!this.#isFarEnoughFromTrees(x, z, trees)) continue;
+        const surfaceY = world.getSurfaceHeight(x, z);
+        const trunkHeight = this.#treeHeightAt(x, z);
+        if (!this.treeFeature.place(world, x, surfaceY, z, trunkHeight)) continue;
+        trees.push({ x, z });
+      }
+    }
+  }
+
+  #shouldTryTree(x, z) {
+    const sample = this.treeNoise.noise2D(x * 0.43, z * 0.43);
+    return sample < this.config.TREE_DENSITY;
+  }
+
+  #treeHeightAt(x, z) {
+    const min = this.config.TREE_MIN_HEIGHT;
+    const max = this.config.TREE_MAX_HEIGHT;
+    const span = Math.max(0, max - min);
+    return min + Math.floor(this.treeNoise.noise2D(x + 17.31, z - 9.73) * (span + 1));
+  }
+
+  #isFarEnoughFromTrees(x, z, trees) {
+    const minDistance = this.config.TREE_MIN_DISTANCE;
+    return trees.every((tree) => Math.hypot(tree.x - x, tree.z - z) >= minDistance);
   }
 }
