@@ -174,9 +174,10 @@
   border-radius: var(--nx-radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   text-transform: uppercase;
   text-decoration: none;
+  box-shadow: none;
 }
 
 .nx-btn:focus-visible {
@@ -188,41 +189,45 @@
   background: var(--nx-emerald-base);
   color: #064e3b;
   border-color: rgba(52, 211, 153, 0.4);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  box-shadow: none;
 }
 
 .nx-btn-primary:hover:not(:disabled) {
   background: var(--nx-emerald-light);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.4);
+  box-shadow: none;
 }
 
 .nx-btn-secondary {
   background: #1e293b;
   color: var(--nx-text-primary);
   border-color: #334155;
+  box-shadow: none;
 }
 
 .nx-btn-secondary:hover:not(:disabled) {
   background: #334155;
   color: #ffffff;
+  box-shadow: none;
 }
 
 .nx-btn-secondary.is-active {
   background: #064e3b;
   color: var(--nx-emerald-light);
   border-color: var(--nx-emerald-base);
+  box-shadow: none;
 }
 
 .nx-btn-danger {
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: none;
 }
 
 .nx-btn-danger:hover:not(:disabled) {
   background: var(--nx-danger-base);
   color: #ffffff;
+  box-shadow: none;
 }
 
 .nx-btn-small {
@@ -528,7 +533,7 @@
 .nx-block-card.is-selected {
   background: #1e3a5f;
   border-color: var(--nx-emerald-light);
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+  box-shadow: none;
 }
 
 .nx-block-card:focus-visible {
@@ -630,7 +635,7 @@
 .nx-world-card.is-selected {
   border-color: var(--nx-emerald-light);
   background: #172a45;
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.3);
+  box-shadow: none;
 }
 
 .nx-world-card-header {
