@@ -1,5 +1,6 @@
 import p5 from 'p5';
 import { Game } from './game/Game.js';
+import { GameUiBridge } from './ui/GameUiBridge.js';
 
 /**
  * Punto de entrada. p5 se usa en modo instancia: no hay variables globales y el
@@ -9,6 +10,7 @@ import { Game } from './game/Game.js';
  */
 const sketch = (p) => {
   let game = null;
+  let uiBridge = null;
 
   p.setup = () => {
     const canvas = p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
@@ -16,6 +18,10 @@ const sketch = (p) => {
 
     game = new Game(p);
     game.start(canvas.elt);
+
+    if (game.hud) {
+      uiBridge = new GameUiBridge(game, game.hud, game.hud.intentBus);
+    }
   };
 
   p.draw = () => {

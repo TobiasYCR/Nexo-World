@@ -1,24 +1,30 @@
 import { ScreenType } from './ScreenType.js';
+import { UiStateManager } from './UiStateManager.js';
 
 /**
  * Gestor de navegación y ciclo de vida de pantallas de Nexo World.
- * Mantiene una sola pantalla activa a la vez, gestiona el historial de navegación
- * y coordina la liberación/captura de puntero y eventos del DOM.
+ * Mantiene una sola pantalla activa a la vez, gestiona el historial de navegación,
+ * coordina la liberación/captura de puntero, eventos del DOM y restauración de foco.
  */
 export class ScreenManager {
   /**
    * @param {HTMLElement} container Contenedor donde se montan las pantallas (#ui-root)
    * @param {import('./IntentBus.js').IntentBus} [intentBus]
+   * @param {UiStateManager} [stateManager]
    */
-  constructor(container, intentBus = null) {
+  constructor(container, intentBus = null, stateManager = null) {
     this.container = container;
     this.intentBus = intentBus;
+    this.stateManager = stateManager || new UiStateManager();
     this.screens = new Map();
     this.history = [];
     this.currentScreenType = null;
     this.currentScreen = null;
     this.listeners = new Set();
+    this.#lastFocusedElement = null;
   }
+
+  #lastFocusedElement = null;
 
   /**
    * Registra una pantalla en el gestor.
@@ -66,6 +72,11 @@ export class ScreenManager {
   open(screenType, params = {}) {
     if (this.currentScreenType === screenType) return;
 
+    // Guardar foco previo
+    if (typeof document !== 'undefined' && document.activeElement) {
+      this.#lastFocusedElement = document.activeElement;
+    }
+
     const previousType = this.currentScreenType;
 
     // Si pasamos de una pantalla con overlay a otra pantalla, registrar en historial
@@ -82,6 +93,7 @@ export class ScreenManager {
     }
 
     this.currentScreenType = screenType;
+    this.stateManager?.setActiveScreen(screenType);
 
     // Si es modo juego directo (sin overlay)
     if (screenType === ScreenType.PLAYING) {
@@ -91,7 +103,7 @@ export class ScreenManager {
     }
 
     // Liberar puntero de mouse para poder interactuar con la interfaz
-    if (document.exitPointerLock) {
+    if (typeof document !== 'undefined' && document.exitPointerLock) {
       try {
         document.exitPointerLock();
       } catch (_) {
@@ -118,7 +130,6 @@ export class ScreenManager {
   back() {
     if (this.history.length > 0) {
       const prev = this.history.pop();
-      // Abrir sin volver a apilar en historial
       this.#openWithoutHistory(prev);
     } else if (this.currentScreenType === ScreenType.PAUSE) {
       this.open(ScreenType.PLAYING);
@@ -135,6 +146,7 @@ export class ScreenManager {
     }
 
     this.currentScreenType = screenType;
+    this.stateManager?.setActiveScreen(screenType);
 
     if (screenType === ScreenType.PLAYING) {
       this.#updateContainerState(false);
