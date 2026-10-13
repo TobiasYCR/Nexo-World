@@ -7,6 +7,9 @@ import { TilingNoise } from './TilingNoise.js';
  * cuantizado a una paleta corta (pixel art, no ruido continuo) con un rasgo
  * propio que lo distingue de lejos: hojas en el césped, piedritas en la tierra,
  * grietas en la piedra, tablas en la madera y grano fino en la arena.
+ *
+ * Los minerales reutilizan la piedra como base y le suman pepitas de su color:
+ * así se leen como "piedra con algo adentro" y comparten estilo entre sí.
  */
 export class BlockTextureFactory {
   static SIZE = 16;
@@ -19,8 +22,18 @@ export class BlockTextureFactory {
     bark: [[72, 47, 27], [96, 61, 34], [122, 78, 44], [148, 96, 55]],
     leaves: [[36, 88, 34], [47, 110, 41], [62, 135, 49], [82, 158, 61]],
     sand: [[208, 186, 128], [218, 198, 140], [227, 208, 152], [235, 219, 168]],
-    glass: [[134, 190, 210], [168, 220, 235], [205, 242, 248]]
+    glass: [[134, 190, 210], [168, 220, 235], [205, 242, 248]],
+    sandstone: [[188, 156, 98], [202, 170, 110], [214, 184, 122], [226, 198, 138]],
+    bedrock: [[30, 30, 33], [52, 52, 56], [78, 78, 83], [108, 108, 113]],
+    /** Minerales: [sombra, color principal, brillo]. */
+    coal: [[8, 8, 10], [18, 18, 21], [58, 58, 64]],
+    iron: [[176, 104, 62], [232, 146, 90], [246, 192, 150]],
+    gold: [[200, 160, 20], [255, 232, 40], [255, 250, 170]],
+    diamond: [[40, 170, 168], [92, 226, 222], [196, 255, 250]]
   });
+
+  /** Pepitas por textura de mineral: cubren cerca de un tercio de la cara. */
+  static ORE_CLUSTERS = 15;
 
   /** @returns {Map<string, PixelCanvas>} nombre de archivo -> lienzo */
   static createAll() {
@@ -35,7 +48,13 @@ export class BlockTextureFactory {
       ['planks.png', BlockTextureFactory.planks()],
       ['sand.png', BlockTextureFactory.sand()],
       ['cobblestone.png', BlockTextureFactory.cobblestone()],
-      ['glass.png', BlockTextureFactory.glass()]
+      ['glass.png', BlockTextureFactory.glass()],
+      ['sandstone.png', BlockTextureFactory.sandstone()],
+      ['bedrock.png', BlockTextureFactory.bedrock()],
+      ['coal_ore.png', BlockTextureFactory.ore('coal_ore', BlockTextureFactory.PALETTES.coal)],
+      ['iron_ore.png', BlockTextureFactory.ore('iron_ore', BlockTextureFactory.PALETTES.iron)],
+      ['gold_ore.png', BlockTextureFactory.ore('gold_ore', BlockTextureFactory.PALETTES.gold)],
+      ['diamond_ore.png', BlockTextureFactory.ore('diamond_ore', BlockTextureFactory.PALETTES.diamond)]
     ]);
   }
 
@@ -196,6 +215,65 @@ export class BlockTextureFactory {
     });
     for (let i = 2; i < 8; i += 1) canvas.set(i, i, BlockTextureFactory.PALETTES.glass[2], 210);
     for (let i = 9; i < 14; i += 1) canvas.set(i, i - 3, BlockTextureFactory.PALETTES.glass[2], 190);
+    return canvas;
+  }
+
+  /** Estratos horizontales: franjas claras arriba y juntas oscuras cada 5 filas. */
+  static sandstone() {
+    const random = SeededRandom.fromString('sandstone');
+    const palette = BlockTextureFactory.PALETTES.sandstone;
+    const size = BlockTextureFactory.SIZE;
+    const strata = new TilingNoise(random, 4, 1);
+    const canvas = new PixelCanvas(size, size);
+    canvas.forEach((x, y) => {
+      const band = y < 3 ? 1 : 0;
+      const value = strata.sample(x / size, 0) * 0.6 + random.next() * 0.4;
+      const level = Math.min(palette.length - 1, band + Math.floor(value * (palette.length - 1)));
+      canvas.set(x, y, palette[level]);
+    });
+    for (let y = 4; y < size; y += 5) {
+      for (let x = 0; x < size; x += 1) canvas.shade(x, y, random.next() < 0.8 ? 0.82 : 0.9);
+    }
+    return canvas;
+  }
+
+  /** Roca madre: manchas grandes y contraste alto, sin rasgo repetitivo. */
+  static bedrock() {
+    const random = SeededRandom.fromString('bedrock');
+    const canvas = BlockTextureFactory.#noiseFill(random, BlockTextureFactory.PALETTES.bedrock, 5, 0.45);
+    for (let flake = 0; flake < 10; flake += 1) {
+      const x = random.int(BlockTextureFactory.SIZE);
+      const y = random.int(BlockTextureFactory.SIZE);
+      canvas.set(x, y, BlockTextureFactory.PALETTES.bedrock[3]);
+      canvas.set(x + 1, y + 1, BlockTextureFactory.PALETTES.bedrock[0]);
+    }
+    return canvas;
+  }
+
+  /**
+   * Mineral: piedra base con pepitas de 2x2 a 3x3 del color del mineral, brillo
+   * arriba a la izquierda y sombra abajo a la derecha de cada pepita.
+   * @param {string} name semilla del diseño, distinta por mineral
+   * @param {number[][]} palette [sombra, principal, brillo]
+   */
+  static ore(name, [shadow, main, light]) {
+    const random = SeededRandom.fromString(name);
+    const canvas = BlockTextureFactory.stone();
+    for (let cluster = 0; cluster < BlockTextureFactory.ORE_CLUSTERS; cluster += 1) {
+      const originX = random.int(BlockTextureFactory.SIZE);
+      const originY = random.int(BlockTextureFactory.SIZE);
+      const width = 2 + random.int(2);
+      const height = 2 + random.int(2);
+      for (let dy = 0; dy < height; dy += 1) {
+        for (let dx = 0; dx < width; dx += 1) {
+          const corner = (dx === 0 || dx === width - 1) && (dy === 0 || dy === height - 1);
+          if (corner && width > 2 && height > 2) continue;
+          canvas.set(originX + dx, originY + dy, main);
+        }
+      }
+      canvas.set(originX, originY, light);
+      canvas.set(originX + width - 1, originY + height - 1, shadow);
+    }
     return canvas;
   }
 

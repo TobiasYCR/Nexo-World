@@ -47,16 +47,22 @@ test('TextureManager carga lo que declara el BlockRegistry', async (t) => {
   const textures = new TextureManager(p, ASSETS);
   await textures.loadForRegistry(createDefaultBlockRegistry());
   assert.deepEqual(requested.sort(), [
+    '/textures/blocks/bedrock.png',
+    '/textures/blocks/coal_ore.png',
     '/textures/blocks/cobblestone.png',
+    '/textures/blocks/diamond_ore.png',
     '/textures/blocks/dirt.png',
     '/textures/blocks/glass.png',
+    '/textures/blocks/gold_ore.png',
     '/textures/blocks/grass_side.png',
     '/textures/blocks/grass_top.png',
+    '/textures/blocks/iron_ore.png',
     '/textures/blocks/leaves.png',
     '/textures/blocks/log_side.png',
     '/textures/blocks/log_top.png',
     '/textures/blocks/planks.png',
     '/textures/blocks/sand.png',
+    '/textures/blocks/sandstone.png',
     '/textures/blocks/stone.png'
   ]);
 });
@@ -135,11 +141,15 @@ test('BlockRenderer cambia de material una vez por tipo, no por bloque', () => {
   const p = countingStub();
   const textures = { get: (name) => (name === 'grass_top.png' ? { name } : null) };
   const renderer = new BlockRenderer(p, world.blockRegistry, textures, GameConfig);
+  // Radio que cubre todo el mundo: así los tipos dibujados son los de los bloques visibles.
+  renderer.setRenderDistance(world.width + world.depth);
 
   renderer.render(world, worldCenter(world));
 
   const typesDrawn = new Set();
-  world.forEachSolidBlock((x, y, z, id) => typesDrawn.add(id));
+  world.forEachSolidBlock((x, y, z, id) => {
+    if (!world.isBlockHidden(x, y, z)) typesDrawn.add(id);
+  });
   assert.ok(renderer.renderedBlocks > typesDrawn.size);
   assert.equal(p.calls.box, renderer.renderedBlocks);
   assert.equal(p.calls.texture + p.calls.material, typesDrawn.size);

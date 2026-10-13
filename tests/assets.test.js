@@ -41,16 +41,22 @@ test('las texturas generadas son deterministas', () => {
 test('se generan las texturas de bloques en PNG de 16x16', () => {
   const textures = generateBlockTextures();
   assert.deepEqual([...textures.keys()].sort(), [
+    'bedrock.png',
+    'coal_ore.png',
     'cobblestone.png',
+    'diamond_ore.png',
     'dirt.png',
     'glass.png',
+    'gold_ore.png',
     'grass_side.png',
     'grass_top.png',
+    'iron_ore.png',
     'leaves.png',
     'log_side.png',
     'log_top.png',
     'planks.png',
     'sand.png',
+    'sandstone.png',
     'stone.png'
   ]);
   for (const [name, png] of textures) {
@@ -63,6 +69,25 @@ test('se generan las texturas de bloques en PNG de 16x16', () => {
 test('el vidrio generado tiene transparencia', () => {
   const glass = decodePng(generateBlockTextures().get('glass.png'));
   assert.ok(glass.pixels.some((pixel) => pixel[3] < 255));
+});
+
+test('los bloques opacos nuevos no tienen transparencia en su textura', () => {
+  const textures = generateBlockTextures();
+  for (const name of ['sandstone.png', 'bedrock.png', 'coal_ore.png', 'iron_ore.png', 'gold_ore.png', 'diamond_ore.png']) {
+    const { pixels } = decodePng(textures.get(name));
+    assert.ok(pixels.every((pixel) => pixel[3] === 255), name);
+  }
+});
+
+test('cada textura de mineral conserva la piedra de base y suma su color propio', () => {
+  const textures = generateBlockTextures();
+  const stoneColors = new Set(decodePng(textures.get('stone.png')).pixels.map((rgb) => rgb.slice(0, 3).join()));
+  for (const name of ['coal_ore.png', 'iron_ore.png', 'gold_ore.png', 'diamond_ore.png']) {
+    const pixels = decodePng(textures.get(name)).pixels.map((rgb) => rgb.slice(0, 3).join());
+    const fromStone = pixels.filter((rgb) => stoneColors.has(rgb)).length;
+    assert.ok(fromStone > pixels.length * 0.4, `${name}: debería seguir leyéndose como piedra`);
+    assert.ok(fromStone < pixels.length * 0.8, `${name}: el mineral debería verse`);
+  }
 });
 
 test('las texturas se distinguen entre sí por color medio y no son planas', () => {

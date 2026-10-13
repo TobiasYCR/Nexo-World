@@ -16,7 +16,7 @@ export class BlockBreaker {
 
   update(block, deltaTime, isHeld) {
     const type = block ? this.world.getBlockType(block.x, block.y, block.z) : null;
-    if (!isHeld || !block || !type?.breakable) {
+    if (!isHeld || !block || !type?.isBreakable) {
       this.reset();
       return false;
     }

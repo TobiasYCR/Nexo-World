@@ -2,7 +2,10 @@ export const GameEventTypes = Object.freeze({
   BLOCK_BROKEN: 'blockBroken',
   BLOCK_PLACED: 'blockPlaced',
   BREAK_PROGRESS: 'breakProgress',
-  PLAYER_LANDED: 'playerLanded'
+  PLAYER_LANDED: 'playerLanded',
+  PLAYER_DAMAGED: 'playerDamaged',
+  PLAYER_DIED: 'playerDied',
+  PLAYER_RESPAWNED: 'playerRespawned'
 });
 
 /** Bus chico e intencional para desacoplar reglas, feedback visual y audio. */

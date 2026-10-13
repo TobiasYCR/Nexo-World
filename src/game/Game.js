@@ -7,6 +7,7 @@ import { Player } from '../player/Player.js';
 import { PlayerController } from '../player/PlayerController.js';
 import { PlayerPhysics } from '../player/PlayerPhysics.js';
 import { BlockInteraction } from '../player/BlockInteraction.js';
+import { PlayerHealth, DamageCauses } from '../player/PlayerHealth.js';
 import { FirstPersonCamera } from '../camera/FirstPersonCamera.js';
 import { CollisionSystem } from '../physics/CollisionSystem.js';
 import { Raycast } from '../physics/Raycast.js';
@@ -34,14 +35,19 @@ import { HandRenderer } from '../viewmodel/HandRenderer.js';
 export class Game {
   #viewmodelState = { isBreaking: false, horizontalSpeed: 0, isOnGround: false };
 
-  constructor(p, config = GameConfig) {
+  /**
+   * @param {object} p instancia de p5
+   * @param {object} [config] GameConfig
+   * @param {{seed?: number}} [options] seed reemplaza a config.world.SEED para esta partida
+   */
+  constructor(p, config = GameConfig, options = {}) {
     this.p = p;
     this.config = config;
     this.state = new GameState(GameStates.LOADING);
 
     this.blockRegistry = createDefaultBlockRegistry();
     this.world = new World(this.blockRegistry, config);
-    this.worldGenerator = new WorldGenerator(config.world);
+    this.worldGenerator = new WorldGenerator(config, { seed: options.seed });
 
     this.collisionSystem = new CollisionSystem(this.world);
     this.raycast = new Raycast(this.world);
@@ -52,6 +58,7 @@ export class Game {
     this.playerController = new PlayerController(this.player, this.camera, this.input);
     this.playerPhysics = new PlayerPhysics(this.player, this.collisionSystem, config.player);
     this.events = new GameEvents();
+    this.playerHealth = new PlayerHealth(config.survival, this.events);
 
     this.textureManager = new TextureManager(p, config.assets);
     this.blockRenderer = new BlockRenderer(p, this.blockRegistry, this.textureManager, config);
@@ -118,11 +125,15 @@ export class Game {
       this.blockInteraction.update(this.player.eyePosition, this.camera.lookDirection);
       this.#handleBlockInteractions(deltaTime);
       const wasOnGround = this.player.isOnGround;
+      const previousVelocityY = this.player.velocity.y;
       this.playerPhysics.update(deltaTime);
       if (!wasOnGround && this.player.isOnGround) {
-        this.events.emit(GameEventTypes.PLAYER_LANDED, { position: this.player.position });
+        const impactSpeed = this.#landingImpactSpeed(previousVelocityY, deltaTime);
+        this.events.emit(GameEventTypes.PLAYER_LANDED, { position: this.player.position, impactSpeed });
+        this.playerHealth.applyFallImpact(impactSpeed);
       }
       this.#handleVoidFall();
+      if (this.playerHealth.isDead) this.#respawn();
       this.#syncCameraToPlayer();
       this.#handleHotbarSelection();
     }
@@ -200,9 +211,31 @@ export class Game {
     if (this.input.wasPlaceRequested()) this.blockInteraction.tryPlace();
   }
 
+  /** Caer al vacío mata una sola vez; la reaparición la resuelve #respawn en el mismo frame. */
   #handleVoidFall() {
     if (this.player.position.y >= this.config.player.VOID_Y) return;
+    if (!this.playerHealth.kill(DamageCauses.VOID)) this.#placePlayerOnSurface();
+  }
+
+  #respawn() {
     this.#placePlayerOnSurface();
+    this.blockInteraction.updateBreaking(0, false);
+    this.playerHealth.reset();
+    this.events.emit(GameEventTypes.PLAYER_RESPAWNED, {
+      position: this.player.position,
+      health: this.playerHealth.current,
+      maxHealth: this.playerHealth.max
+    });
+  }
+
+  /**
+   * Velocidad vertical (positiva hacia abajo) con la que el jugador tocó el suelo.
+   * PlayerPhysics anula velocity.y al chocar, así que se reconstruye con la misma
+   * integración que aplicó en este frame: gravedad y velocidad de caída límite.
+   */
+  #landingImpactSpeed(previousVelocityY, deltaTime) {
+    const { GRAVITY, MAX_FALL_SPEED } = this.config.player;
+    return -Math.max(previousVelocityY + GRAVITY * deltaTime, -MAX_FALL_SPEED);
   }
 
   /** Sincroniza los datos de interacción del juego con los efectos visuales. */
@@ -244,9 +277,12 @@ export class Game {
     this.#syncCameraToPlayer();
   }
 
-  /** Hotbar inicial con los tipos disponibles, útil para probar la interfaz. */
+  /**
+   * Hotbar inicial con los bloques marcados como starter en el registro. Deja
+   * ranuras libres para lo que el jugador recolecta (minerales, arenisca...).
+   */
   #fillStarterHotbar() {
-    for (const blockType of this.blockRegistry.placeableTypes()) {
+    for (const blockType of this.blockRegistry.starterTypes()) {
       this.hotbar.add(blockType, this.config.inventory.STARTER_BLOCK_COUNT);
     }
   }

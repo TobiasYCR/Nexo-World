@@ -14,7 +14,13 @@ export const BlockIds = Object.freeze({
   PLANKS: 6,
   SAND: 7,
   COBBLESTONE: 8,
-  GLASS: 9
+  GLASS: 9,
+  SANDSTONE: 10,
+  BEDROCK: 11,
+  COAL_ORE: 12,
+  IRON_ORE: 13,
+  GOLD_ORE: 14,
+  DIAMOND_ORE: 15
 });
 
 /** Acciones lógicas del juego. El input se expresa en acciones, nunca en teclas. */
