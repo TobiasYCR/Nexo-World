@@ -83,7 +83,7 @@ export class ScreenManager {
     if (previousType && previousType !== ScreenType.PLAYING && screenType !== ScreenType.PLAYING) {
       this.history.push(previousType);
     } else if (previousType === ScreenType.PLAYING && screenType !== ScreenType.PLAYING) {
-      this.history = []; // Inicia pila limpia desde partida
+      this.history = [ScreenType.PLAYING]; // Inicia historial volviendo a la partida
     }
 
     // Ocultar pantalla previa
@@ -97,6 +97,7 @@ export class ScreenManager {
 
     // Si es modo juego directo (sin overlay)
     if (screenType === ScreenType.PLAYING) {
+      this.history = [];
       this.#updateContainerState(false);
       this.#notifyChange(ScreenType.PLAYING, previousType);
       return;
@@ -128,11 +129,13 @@ export class ScreenManager {
    * Regresa a la pantalla anterior del historial o a la pantalla base.
    */
   back() {
+    if (this.currentScreenType === ScreenType.PAUSE || this.currentScreenType === ScreenType.INVENTORY) {
+      this.open(ScreenType.PLAYING);
+      return;
+    }
     if (this.history.length > 0) {
       const prev = this.history.pop();
       this.#openWithoutHistory(prev);
-    } else if (this.currentScreenType === ScreenType.PAUSE) {
-      this.open(ScreenType.PLAYING);
     } else if (this.currentScreenType !== ScreenType.MENU) {
       this.open(ScreenType.MENU);
     }

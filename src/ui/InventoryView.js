@@ -64,20 +64,25 @@ export function classifyBlockCategory(block) {
 export class InventoryView {
   #blockRegistry;
   #onSelect;
+  #onEquip;
   #activeCategory = 'all';
   #searchQuery = '';
   #selectedBlock = null;
   #filteredBlocks = [];
   #cardElements = [];
+  #popupBlock = null;
+  #suppressOutsideClick = false;
 
   /**
    * @param {Object} options
    * @param {import('../blocks/BlockRegistry.js').BlockRegistry} options.blockRegistry
    * @param {Function} [options.onSelect]
+   * @param {Function} [options.onEquip]
    */
-  constructor({ blockRegistry, onSelect = null }) {
+  constructor({ blockRegistry, onSelect = null, onEquip = null }) {
     this.#blockRegistry = blockRegistry;
     this.#onSelect = onSelect;
+    this.#onEquip = onEquip;
     this.element = document.createElement('div');
     this.element.className = 'nx-inventory-view';
 
@@ -145,6 +150,140 @@ export class InventoryView {
     this.detailsPanel = document.createElement('div');
     this.detailsPanel.className = 'nx-inventory-details';
     this.element.appendChild(this.detailsPanel);
+
+    // 4. Popup flotante para elegir ranura de la hotbar (sin blur de fondo)
+    this.slotPopup = document.createElement('div');
+    this.slotPopup.className = 'nx-slot-popup';
+    this.slotPopup.setAttribute('role', 'dialog');
+    this.slotPopup.setAttribute('aria-label', 'Colocar en ranura de la hotbar');
+    this.slotPopup.hidden = true;
+    this.slotPopup.addEventListener('click', (e) => {
+      e.stopPropagation?.();
+    });
+    this.element.appendChild(this.slotPopup);
+
+    // Cerrar el popup al hacer clic fuera de él
+    this.element.addEventListener('click', () => {
+      if (this.#suppressOutsideClick) {
+        this.#suppressOutsideClick = false;
+        return;
+      }
+      this.hideSlotPopup();
+    });
+
+    // Cerrar el popup si se hace scroll en la grilla (quedaría desalineado)
+    this.gridElement.addEventListener('scroll', () => this.hideSlotPopup());
+  }
+
+  /** @returns {boolean} */
+  get isSlotPopupOpen() {
+    return !this.slotPopup.hidden;
+  }
+
+  hideSlotPopup() {
+    if (!this.slotPopup || this.slotPopup.hidden) return;
+    this.slotPopup.hidden = true;
+    this.slotPopup.innerHTML = '';
+    this.#popupBlock = null;
+  }
+
+  #showSlotPopup(card, block) {
+    this.#popupBlock = block;
+    this.slotPopup.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'nx-slot-popup-header';
+
+    const title = document.createElement('span');
+    title.className = 'nx-slot-popup-title';
+    title.textContent = 'Colocar en ranura de la Hotbar:';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'nx-slot-popup-close';
+    closeBtn.textContent = '✕';
+    closeBtn.setAttribute('aria-label', 'Cerrar');
+    closeBtn.addEventListener('click', () => {
+      this.hideSlotPopup();
+      card.focus?.();
+    });
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    const slotButtonsRow = document.createElement('div');
+    slotButtonsRow.className = 'nx-details-slots-row';
+
+    for (let s = 0; s < 9; s++) {
+      const slotBtn = document.createElement('button');
+      slotBtn.type = 'button';
+      slotBtn.className = 'nx-btn nx-btn-secondary nx-btn-slot-pick';
+      slotBtn.dataset.slotIndex = String(s);
+      slotBtn.innerHTML = `<span class="nx-slot-pick-num">${s + 1}</span><span class="nx-slot-pick-label">Slot ${s + 1}</span>`;
+      slotBtn.setAttribute('aria-label', `Colocar ${block.label || block.name} en ranura ${s + 1}`);
+      slotBtn.addEventListener('click', () => {
+        this.equipBlock(block, s);
+        this.hideSlotPopup();
+        card.focus?.();
+      });
+      slotButtonsRow.appendChild(slotBtn);
+    }
+
+    const footer = document.createElement('div');
+    footer.className = 'nx-slot-popup-footer';
+
+    const activeBtn = document.createElement('button');
+    activeBtn.type = 'button';
+    activeBtn.className = 'nx-btn nx-btn-primary nx-btn-small nx-btn-equip-active';
+    activeBtn.textContent = 'CARGAR EN RANURA ACTIVA (64)';
+    activeBtn.addEventListener('click', () => {
+      this.equipBlock(block, null);
+      this.hideSlotPopup();
+      card.focus?.();
+    });
+
+    const hint = document.createElement('span');
+    hint.className = 'nx-slot-popup-hint';
+    hint.textContent = '(o presiona teclas 1 a 9)';
+
+    footer.appendChild(activeBtn);
+    footer.appendChild(hint);
+
+    this.slotPopup.appendChild(header);
+    this.slotPopup.appendChild(slotButtonsRow);
+    this.slotPopup.appendChild(footer);
+    this.slotPopup.hidden = false;
+
+    this.#positionSlotPopup(card);
+  }
+
+  #positionSlotPopup(card) {
+    if (typeof card.getBoundingClientRect !== 'function' ||
+        typeof this.element.getBoundingClientRect !== 'function') {
+      return;
+    }
+    const viewRect = this.element.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const popupW = this.slotPopup.offsetWidth || 420;
+    const popupH = this.slotPopup.offsetHeight || 130;
+    const gap = 8;
+
+    let top = cardRect.top - viewRect.top - popupH - gap;
+    let placement = 'above';
+    if (top < 0) {
+      // Sin espacio arriba dentro del inventario: mostrar debajo del bloque
+      top = cardRect.bottom - viewRect.top + gap;
+      placement = 'below';
+    }
+
+    const cardCenter = cardRect.left - viewRect.left + cardRect.width / 2;
+    let left = cardCenter - popupW / 2;
+    left = Math.max(0, Math.min(viewRect.width - popupW, left));
+
+    this.slotPopup.style.top = `${Math.round(top)}px`;
+    this.slotPopup.style.left = `${Math.round(left)}px`;
+    this.slotPopup.style.setProperty?.('--nx-arrow-x', `${Math.round(cardCenter - left)}px`);
+    this.slotPopup.dataset.placement = placement;
   }
 
   setCategory(categoryId) {
@@ -154,6 +293,7 @@ export class InventoryView {
       btn.classList.toggle('is-active', isCur);
       btn.setAttribute('aria-selected', String(isCur));
     });
+    this.hideSlotPopup();
     this.refresh();
   }
 
@@ -180,6 +320,7 @@ export class InventoryView {
       return true;
     });
 
+    this.hideSlotPopup();
     this.#renderGrid();
     this.#renderDetails();
   }
@@ -233,7 +374,14 @@ export class InventoryView {
       card.appendChild(label);
 
       card.addEventListener('click', () => {
+        this.#suppressOutsideClick = true;
+        const wasOpenForThis = this.isSlotPopupOpen && this.#popupBlock?.id === block.id;
         this.selectBlock(block);
+        if (wasOpenForThis) {
+          this.hideSlotPopup();
+        } else {
+          this.#showSlotPopup(card, block);
+        }
       });
 
       card.addEventListener('keydown', (e) => {
@@ -260,6 +408,14 @@ export class InventoryView {
 
     if (this.#onSelect) {
       this.#onSelect(block);
+    }
+  }
+
+  equipBlock(block = null, slotIndex = null) {
+    const targetBlock = block ?? this.#selectedBlock;
+    if (!targetBlock) return;
+    if (this.#onEquip) {
+      this.#onEquip(targetBlock, slotIndex);
     }
   }
 
@@ -302,22 +458,22 @@ export class InventoryView {
       specs.appendChild(item);
     });
 
-    const actionBtn = document.createElement('button');
-    actionBtn.type = 'button';
-    actionBtn.className = 'nx-btn nx-btn-primary nx-btn-small';
-    actionBtn.textContent = 'CARGAR PILA EN HOTBAR (64)';
-    actionBtn.addEventListener('click', () => {
-      if (this.#onSelect) {
-        this.#onSelect(block);
-      }
-    });
-
     this.detailsPanel.appendChild(header);
     this.detailsPanel.appendChild(specs);
-    this.detailsPanel.appendChild(actionBtn);
   }
 
   #handleCardKey(e, index) {
+    if (e.key >= '1' && e.key <= '9') {
+      const slotIndex = Number(e.key) - 1;
+      const block = this.#filteredBlocks[index];
+      if (block) {
+        this.equipBlock(block, slotIndex);
+        this.hideSlotPopup();
+      }
+      e.preventDefault();
+      return;
+    }
+
     const total = this.#filteredBlocks.length;
     let nextIndex = index;
     const columns = 6;
@@ -346,6 +502,9 @@ export class InventoryView {
       case 'Enter':
       case ' ':
         this.selectBlock(this.#filteredBlocks[index]);
+        if (this.#cardElements[index]) {
+          this.#showSlotPopup(this.#cardElements[index], this.#filteredBlocks[index]);
+        }
         e.preventDefault();
         return;
       default:

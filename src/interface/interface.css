@@ -482,6 +482,7 @@
    ========================================================================== */
 
 .nx-inventory-view {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -593,6 +594,137 @@
   background: rgba(255, 255, 255, 0.04);
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+/* Popup flotante de selección de ranura (sin blur de fondo) */
+.nx-slot-popup {
+  position: absolute;
+  z-index: 100;
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #0b1329;
+  border: 1px solid var(--nx-emerald);
+  border-radius: var(--nx-radius-sm);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(16, 185, 129, 0.15);
+  animation: nx-slot-popup-in 0.14s ease-out;
+}
+
+.nx-slot-popup[hidden] {
+  display: none !important;
+}
+
+/* Flecha que apunta al bloque */
+.nx-slot-popup::after {
+  content: '';
+  position: absolute;
+  left: var(--nx-arrow-x, 50%);
+  width: 10px;
+  height: 10px;
+  background: #0b1329;
+  border: 1px solid var(--nx-emerald);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.nx-slot-popup[data-placement='above']::after {
+  bottom: -6px;
+  border-top: none;
+  border-left: none;
+}
+
+.nx-slot-popup[data-placement='below']::after {
+  top: -6px;
+  border-bottom: none;
+  border-right: none;
+}
+
+@keyframes nx-slot-popup-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.nx-slot-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nx-slot-popup-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--nx-emerald-light);
+}
+
+.nx-slot-popup-close {
+  background: transparent;
+  border: none;
+  color: var(--nx-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.nx-slot-popup-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nx-slot-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nx-slot-popup-hint {
+  font-size: 0.72rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-details-slots-row {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+}
+
+.nx-btn-slot-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+  border-radius: var(--nx-radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--nx-border-dialog);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nx-btn-slot-pick:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--nx-emerald);
+  transform: translateY(-1px);
+}
+
+.nx-slot-pick-num {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--nx-emerald-light);
+}
+
+.nx-slot-pick-label {
+  font-size: 0.65rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-btn-equip-active {
+  margin: 0;
 }
 
 .nx-inventory-empty {

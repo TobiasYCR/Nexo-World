@@ -23,6 +23,19 @@ export class GameUiBridge {
   }
 
   #bindIntents() {
+    // Sincronizar el ciclo de vida del juego con las pantallas activas
+    this.hud?.screenManager?.onChange((current) => {
+      if (current === ScreenType.PLAYING) {
+        this.game?.resume?.();
+      } else {
+        this.game?.pause?.();
+      }
+    });
+
+    if (this.hud?.screenManager?.hasActiveOverlay) {
+      this.game?.pause?.();
+    }
+
     // Reanudar partida
     this.intentBus.on(IntentBus.Events.RESUME_GAME, () => {
       this.game?.resume?.();
@@ -74,10 +87,16 @@ export class GameUiBridge {
     // Cambiar bloque de hotbar
     this.intentBus.on(IntentBus.Events.SET_HOTBAR_BLOCK, (payload) => {
       if (payload?.blockType && this.game?.hotbar) {
-        const activeIndex = this.game.hotbar.selectedIndex;
+        const targetIndex = typeof payload.slotIndex === 'number'
+          ? Math.max(0, Math.min(this.game.hotbar.size - 1, payload.slotIndex))
+          : this.game.hotbar.selectedIndex;
+
         const stackCount = payload.count ?? this.game.config?.inventory?.STARTER_BLOCK_COUNT ?? 64;
-        this.game.hotbar.set(activeIndex, payload.blockType, stackCount);
-        this.toast.info(`Equipado ${payload.blockType.label || payload.blockType.name} en slot ${activeIndex + 1}.`, 1500);
+        const blockType = this.game.blockRegistry?.get?.(payload.blockType.id) ?? payload.blockType;
+
+        this.game.hotbar.set(targetIndex, blockType, stackCount);
+        const name = blockType.label || blockType.name || `Bloque ${blockType.id}`;
+        this.toast.success(`Equipado ${name} (${stackCount}) en ranura ${targetIndex + 1}.`, 2000);
       }
     });
 

@@ -34,7 +34,8 @@ export class InventoryScreen extends Screen {
 
     this.inventoryView = new InventoryView({
       blockRegistry: this.blockRegistry,
-      onSelect: (block) => this.#onBlockSelected(block)
+      onSelect: (_block) => {},
+      onEquip: (block, slotIndex) => this.#onBlockEquipped(block, slotIndex)
     });
 
     this.modal.addBodyItem(this.inventoryView.element);
@@ -50,11 +51,12 @@ export class InventoryScreen extends Screen {
     this.element.appendChild(this.modal.element);
   }
 
-  #onBlockSelected(block) {
+  #onBlockEquipped(block, slotIndex) {
     if (this.intentBus) {
       this.intentBus.emit(IntentBus.Events.SET_HOTBAR_BLOCK, {
         blockType: block,
-        count: 64
+        count: 64,
+        slotIndex
       });
     }
   }
@@ -62,17 +64,31 @@ export class InventoryScreen extends Screen {
   /**
    * Selecciona un bloque por índice o referencia (para compatibilidad de tests).
    */
-  selectIndex(index) {
+  selectIndex(index, slotIndex) {
     const placeable = this.blockRegistry.placeableTypes();
     if (placeable[index]) {
       this.inventoryView.selectBlock(placeable[index]);
+      this.#onBlockEquipped(placeable[index], slotIndex);
     }
   }
 
   handleBack() {
     if (this.screenManager) {
-      this.screenManager.back();
+      this.screenManager.open(ScreenType.PLAYING);
     }
+  }
+
+  onKeyDown(event) {
+    if (event.key === 'Escape' || event.code === 'Escape') {
+      event.preventDefault?.();
+      if (this.inventoryView.isSlotPopupOpen) {
+        this.inventoryView.hideSlotPopup();
+        return;
+      }
+      this.handleBack();
+      return;
+    }
+    super.onKeyDown(event);
   }
 
   show(params = {}) {

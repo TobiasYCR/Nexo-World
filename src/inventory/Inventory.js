@@ -37,9 +37,28 @@ export class Inventory {
     return this.getSlot(index)?.remove(amount) ?? 0;
   }
 
+  /**
+   * Reemplaza directamente el contenido de una ranura con el bloque y cantidad dados.
+   * @param {number} index
+   * @param {import('../blocks/BlockType.js').BlockType|null} blockType
+   * @param {number} [amount=1]
+   * @returns {boolean}
+   */
+  set(index, blockType, amount = 1) {
+    const slot = this.getSlot(index);
+    if (!slot) return false;
+    slot.set(blockType, amount);
+    return true;
+  }
+
   countOf(blockType) {
+    if (!blockType) return 0;
     return this.slots.reduce(
-      (total, slot) => total + (slot.blockType === blockType ? slot.count : 0),
+      (total, slot) => total + (
+        slot.blockType && (slot.blockType === blockType || slot.blockType.id === blockType.id)
+          ? slot.count
+          : 0
+      ),
       0
     );
   }

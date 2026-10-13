@@ -150,7 +150,18 @@ export class HUD {
           this.toggleDebug();
         }
       } else if (this.screenManager.currentScreenType === ScreenType.INVENTORY) {
-        if (e.code === 'KeyE' || e.code === 'Escape') {
+        const isEditingText = e.target && (
+          e.target.tagName === 'INPUT' ||
+          e.target.tagName === 'TEXTAREA' ||
+          Boolean(e.target.isContentEditable)
+        );
+
+        if (e.code === 'KeyE') {
+          if (!isEditingText) {
+            e.preventDefault?.();
+            this.screenManager.open(ScreenType.PLAYING);
+          }
+        } else if (e.code === 'Escape') {
           e.preventDefault?.();
           this.screenManager.open(ScreenType.PLAYING);
         }
