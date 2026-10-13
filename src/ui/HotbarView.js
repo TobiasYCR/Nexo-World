@@ -53,6 +53,7 @@ export class HotbarView {
 
       const icon = document.createElement('div');
       icon.className = 'hud-slot-icon';
+      icon.hidden = true;
 
       const count = document.createElement('span');
       count.className = 'hud-slot-count';

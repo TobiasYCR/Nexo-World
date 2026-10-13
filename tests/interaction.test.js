@@ -63,13 +63,44 @@ test('BlockBreaker respeta hardness y reinicia al soltar o cambiar de bloque', (
 
 test('romper consulta la propiedad breakable del registro', () => {
   const registry = createDefaultBlockRegistry();
-  registry.register({ id: 50, name: 'Bedrock', solid: true, breakable: false });
+  registry.register({ id: 50, name: 'TestUnbreakable', solid: true, breakable: false });
   const { world, interaction } = buildScene({ registry });
   world.setBlockId(2, 0, 2, 50);
 
   interaction.update({ x: 10, y: 10, z: 45 }, { x: 1, y: 0, z: 0 });
   assert.equal(interaction.tryBreak(), false);
   assert.equal(world.getBlockId(2, 0, 2), 50);
+});
+
+test('la roca madre no se rompe ni con el botón mantenido y no dropea nada', () => {
+  const { world, hotbar, interaction } = buildScene();
+  world.setBlockId(2, 0, 2, BlockIds.BEDROCK);
+
+  interaction.update({ x: 10, y: 10, z: 45 }, { x: 1, y: 0, z: 0 });
+  for (let frame = 0; frame < 600; frame += 1) {
+    assert.equal(interaction.updateBreaking(1 / 60, true), false);
+  }
+  assert.equal(interaction.breakProgress, 0, 'sin progreso de rotura');
+  assert.equal(interaction.tryBreak(), false);
+  assert.equal(world.getBlockId(2, 0, 2), BlockIds.BEDROCK);
+  assert.equal(hotbar.slots.every((slot) => slot.isEmpty), true);
+});
+
+test('los minerales respetan la rotura progresiva y entregan el drop del registro', () => {
+  const { world, hotbar, interaction } = buildScene();
+  const registry = world.blockRegistry;
+  for (const oreId of [BlockIds.COAL_ORE, BlockIds.IRON_ORE, BlockIds.GOLD_ORE, BlockIds.DIAMOND_ORE]) {
+    const ore = registry.get(oreId);
+    world.setBlockId(2, 0, 2, oreId);
+    interaction.update({ x: 10, y: 10, z: 45 }, { x: 1, y: 0, z: 0 });
+
+    const seconds = ore.hardness * GameConfig.blocks.BREAK_TIME_PER_HARDNESS;
+    assert.equal(interaction.updateBreaking(seconds * 0.5, true), false, `${ore.name} no se rompe antes de tiempo`);
+    assert.ok(interaction.breakProgress > 0.45 && interaction.breakProgress < 0.55);
+    assert.equal(interaction.updateBreaking(seconds * 0.5 + 1e-9, true), true);
+    assert.equal(world.getBlockId(2, 0, 2), BlockIds.AIR);
+    for (const dropId of ore.drops) assert.equal(hotbar.countOf(registry.get(dropId)), 1, ore.name);
+  }
 });
 
 test('colocar un bloque en la celda libre adyacente a la cara apuntada', () => {

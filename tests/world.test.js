@@ -48,21 +48,16 @@ test('la generación llena el terreno y deja aire arriba', () => {
   assert.notEqual(world.getBlockId(0, surface - 1, 0), BlockIds.AIR);
 });
 
-test('la arena aparece en columnas bajo el nivel configurado', () => {
-  const world = new WorldGenerator(GameConfig.world).generate(buildWorld());
-  let checkedBeach = false;
-
-  for (let x = 0; x < world.width; x += 1) {
-    for (let z = 0; z < world.depth; z += 1) {
-      const surfaceBlockY = world.getSurfaceHeight(x, z) - 1;
-      if (surfaceBlockY < GameConfig.world.SAND_LEVEL) {
-        checkedBeach = true;
-        assert.equal(world.getBlockId(x, surfaceBlockY, z), BlockIds.SAND);
+test('el constructor heredado con solo la sección world genera el mismo mundo', () => {
+  const legacy = new WorldGenerator(GameConfig.world).generate(buildWorld());
+  const current = new WorldGenerator(GameConfig).generate(buildWorld());
+  for (let x = 0; x < legacy.width; x += 3) {
+    for (let z = 0; z < legacy.depth; z += 3) {
+      for (let y = 0; y < legacy.height; y += 1) {
+        assert.equal(legacy.getBlockId(x, y, z), current.getBlockId(x, y, z), `${x},${y},${z}`);
       }
     }
   }
-
-  assert.equal(checkedBeach, true);
 });
 
 test('los arboles son deterministas y no se cortan en el borde del mundo', () => {
@@ -92,12 +87,39 @@ test('los arboles son deterministas y no se cortan en el borde del mundo', () =>
   assert.ok(leaves > 0, 'deberia generar hojas');
 });
 
+test('los arboles solo crecen sobre bloques que los admiten', () => {
+  const world = new WorldGenerator(GameConfig).generate(buildWorld());
+  const registry = world.blockRegistry;
+  let trunks = 0;
+  for (let x = 0; x < world.width; x += 1) {
+    for (let z = 0; z < world.depth; z += 1) {
+      for (let y = 1; y < world.height; y += 1) {
+        if (world.getBlockId(x, y, z) !== BlockIds.LOG || world.getBlockId(x, y - 1, z) === BlockIds.LOG) continue;
+        trunks += 1;
+        assert.equal(registry.get(world.getBlockId(x, y - 1, z)).sustainsTrees, true, `tronco en ${x},${y},${z}`);
+      }
+    }
+  }
+  assert.ok(trunks > 0);
+});
+
 test('un bloque enterrado se considera oculto y uno de superficie no', () => {
   const world = new WorldGenerator(GameConfig.world).generate(buildWorld());
   const surface = world.getSurfaceHeight(5, 5);
 
   assert.equal(world.isBlockHidden(5, surface - 1, 5), false);
-  assert.equal(world.isBlockHidden(5, 1, 5), true);
+  // Las cuevas pueden dejar huecos en cualquier columna: se busca un bloque rodeado.
+  let buried = null;
+  for (let y = 1; y < surface - 1 && !buried; y += 1) {
+    for (let x = 1; x < world.width - 1 && !buried; x += 1) {
+      const neighbours = [[x + 1, y, 5], [x - 1, y, 5], [x, y + 1, 5], [x, y - 1, 5], [x, y, 6], [x, y, 4]];
+      if (world.isSolid(x, y, 5) && neighbours.every(([nx, ny, nz]) => world.blockRegistry.isOpaque(world.getBlockId(nx, ny, nz)))) {
+        buried = { x, y };
+      }
+    }
+  }
+  assert.ok(buried, 'debería existir algún bloque totalmente enterrado');
+  assert.equal(world.isBlockHidden(buried.x, buried.y, 5), true);
 
   // El borde inferior del mundo se trata como aire, así que y=0 nunca está oculto.
   assert.equal(world.isBlockHidden(5, 0, 5), false);
@@ -131,6 +153,6 @@ test('la generación produce relieve, no una plancha plana', () => {
     }
   }
 
-  assert.ok(heights.size > 1, `debería haber más de una altura de superficie (solo: ${[...heights].join(', ')})`);
-  assert.ok(Math.min(...heights) < GameConfig.world.BASE_TERRAIN_HEIGHT, 'la amplitud también debe hundir el terreno');
+  assert.ok(heights.size > 3, `debería haber varias alturas de superficie (solo: ${[...heights].join(', ')})`);
+  assert.ok(Math.max(...heights) < world.height, 'el terreno entra en la altura del mundo');
 });

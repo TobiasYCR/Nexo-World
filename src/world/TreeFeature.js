@@ -1,7 +1,11 @@
 import { BlockIds } from '../utils/Constants.js';
 import { GameConfig } from '../game/GameConfig.js';
 
-/** Genera un arbol compacto de tronco vertical y copa redondeada. */
+/**
+ * Genera un arbol compacto de tronco vertical y copa redondeada.
+ * Solo ocupa celdas de aire: nunca reemplaza terreno ni otro árbol, así que una
+ * copa que roza una ladera queda recortada en vez de perforarla.
+ */
 export class TreeFeature {
   static CANOPY_RADIUS = 2;
 
@@ -11,14 +15,20 @@ export class TreeFeature {
 
   canPlace(world, x, surfaceY, z, trunkHeight) {
     const radius = TreeFeature.CANOPY_RADIUS;
-    return (
-      x > radius &&
-      z > radius &&
-      x < world.width - radius - 1 &&
-      z < world.depth - radius - 1 &&
-      surfaceY >= 1 &&
-      surfaceY + trunkHeight + radius < world.height
-    );
+    if (
+      x <= radius ||
+      z <= radius ||
+      x >= world.width - radius - 1 ||
+      z >= world.depth - radius - 1 ||
+      surfaceY < 1 ||
+      surfaceY + trunkHeight + radius >= world.height
+    ) {
+      return false;
+    }
+    for (let y = surfaceY; y < surfaceY + trunkHeight; y += 1) {
+      if (world.getBlockId(x, y, z) !== BlockIds.AIR) return false;
+    }
+    return true;
   }
 
   place(world, x, surfaceY, z, trunkHeight) {
@@ -39,6 +49,7 @@ export class TreeFeature {
           const leafY = topY + dy;
           const leafZ = z + dz;
           if (leafX === x && leafZ === z && leafY < topY + 1) continue;
+          if (world.getBlockId(leafX, leafY, leafZ) !== BlockIds.AIR) continue;
           world.setBlockId(leafX, leafY, leafZ, BlockIds.LEAVES);
         }
       }

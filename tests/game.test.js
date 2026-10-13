@@ -90,29 +90,20 @@ test('las teclas 1-9 seleccionan slots de la hotbar', async () => {
   assert.equal(game.hotbar.selectedIndex, 2);
 });
 
-test('la hotbar inicia con pilas utilizables para cada tipo registrado y refleja el inventario real', async () => {
+test('la hotbar inicia con pilas de los bloques starter y deja ranuras libres para lo recolectado', async () => {
   const game = await startGame();
   game.update(1 / 60);
-  const placeableTypes = game.blockRegistry.placeableTypes();
+  const starterTypes = game.blockRegistry.starterTypes();
 
-  assert.deepEqual(placeableTypes.map((type) => type.name), [
-    'Grass',
-    'Dirt',
-    'Stone',
-    'Log',
-    'Leaves',
-    'Planks',
-    'Sand',
-    'Cobblestone',
-    'Glass'
-  ]);
-  for (let index = 0; index < placeableTypes.length; index += 1) {
+  assert.deepEqual(starterTypes.map((type) => type.name), ['Grass', 'Dirt', 'Stone', 'Planks', 'Glass']);
+  assert.ok(starterTypes.length < game.hotbar.size, 'debe quedar lugar para minerales y otros drops');
+  for (let index = 0; index < starterTypes.length; index += 1) {
     const slot = game.hotbar.getSlot(index);
-    assert.equal(slot.blockType, placeableTypes[index]);
+    assert.equal(slot.blockType, starterTypes[index]);
     assert.equal(slot.count, game.config.inventory.STARTER_BLOCK_COUNT);
     assert.equal(game.hud.hotbarView.barElement.children[index].children[2].textContent, '64');
   }
-  for (let index = placeableTypes.length; index < game.hotbar.size; index += 1) {
+  for (let index = starterTypes.length; index < game.hotbar.size; index += 1) {
     assert.equal(game.hotbar.getSlot(index).isEmpty, true);
     assert.equal(game.hud.hotbarView.barElement.children[index].children[1].hidden, true);
   }
@@ -123,8 +114,8 @@ test('la cantidad de la hotbar visible se actualiza después de colocar un bloqu
   game.update(1 / 60);
   const target = plantBlockInView(game);
   const adjacent = { x: target.x, y: target.y, z: target.z + 1 };
-  const grassType = game.blockRegistry.placeableTypes().find((type) => type.name === 'Grass');
-  const grassIndex = game.blockRegistry.placeableTypes().indexOf(grassType);
+  const grassType = game.blockRegistry.get(BlockIds.GRASS);
+  const grassIndex = hotbarIndexOf(game, grassType);
   game.hotbar.select(grassIndex);
 
   dom.canvas.requestPointerLock();
@@ -159,6 +150,11 @@ test('las acciones de un frame no persisten al siguiente', async () => {
   assert.equal(game.hud.debugOverlay.isVisible, afterFirst);
   assert.equal(game.input.wasActionJustPressed(InputActions.TOGGLE_DEBUG), false);
 });
+
+/** Ranura de la hotbar que contiene el tipo de bloque, o -1. */
+function hotbarIndexOf(game, blockType) {
+  return game.hotbar.slots.findIndex((slot) => slot.blockType === blockType);
+}
 
 /** Planta piedra en la celda que apunta la mirada inicial (hacia -Z). */
 function plantBlockInView(game) {
@@ -263,7 +259,7 @@ test('colocar con clic derecho agrega el bloque en la celda adyacente', async ()
   const game = await startGame();
   const target = plantBlockInView(game);
   // La cara golpeada mira hacia +Z: la celda adyacente q=15 es aire.
-  const stoneSlot = game.blockRegistry.placeableTypes().indexOf(game.blockRegistry.get(BlockIds.STONE));
+  const stoneSlot = hotbarIndexOf(game, game.blockRegistry.get(BlockIds.STONE));
   game.hotbar.select(stoneSlot);
 
   dom.canvas.requestPointerLock();
@@ -319,7 +315,8 @@ test('Game emite eventos de rotura, progreso y colocacion', async () => {
   }
   dom.window.dispatch('mouseup', { button: 0 });
 
-  const cobbleSlot = game.blockRegistry.placeableTypes().indexOf(game.blockRegistry.get(BlockIds.COBBLESTONE));
+  const cobbleSlot = hotbarIndexOf(game, game.blockRegistry.get(BlockIds.COBBLESTONE));
+  assert.ok(cobbleSlot >= 0, 'la piedra partida recolectada ocupa una ranura libre');
   game.hotbar.select(cobbleSlot);
   plantBlockInView(game);
   dom.canvas.dispatch('mousedown', { button: 2 });

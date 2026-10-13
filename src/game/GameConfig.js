@@ -1,4 +1,4 @@
-import { InputActions } from '../utils/Constants.js';
+import { InputActions, BlockIds } from '../utils/Constants.js';
 
 /**
  * Fuente única de verdad para todos los valores ajustables del juego.
@@ -55,6 +55,75 @@ export const GameConfig = Object.freeze({
     /** Alcance máximo del raycast de interacción, en unidades de mundo. */
     REACH_DISTANCE: 80,
     BREAK_TIME_PER_HARDNESS: 0.25
+  }),
+
+  /**
+   * Generación del mundo (Backend 2). Las alturas en bloques de las secciones
+   * worldGeneration, caves y ores están pensadas para un mundo de
+   * REFERENCE_HEIGHT bloques y se escalan a la altura real (world.WORLD_HEIGHT).
+   */
+  worldGeneration: Object.freeze({
+    REFERENCE_HEIGHT: 48,
+    /** Frecuencia del ruido que reparte biomas: más chico, regiones más grandes. */
+    BIOME_SCALE: 0.02,
+    /** Ancho de la franja de mezcla de alturas entre biomas, en unidades de puntaje de bioma. */
+    HEIGHT_SMOOTHING: 0.14,
+    /** Capas inferiores con roca madre: y=0 siempre, las siguientes con probabilidad decreciente. */
+    BEDROCK_LAYERS: 3,
+    /** Bloques libres que se garantizan sobre el punto más alto del terreno. */
+    SKY_MARGIN: 4,
+    /** Frecuencia del ruido que agrupa árboles y abre claros en los bosques. */
+    TREE_CLUSTER_SCALE: 0.08
+  }),
+
+  /** Peso relativo de cada bioma en el reparto del mapa (0 lo desactiva). */
+  biomes: Object.freeze({
+    PLAINS_WEIGHT: 1,
+    FOREST_WEIGHT: 1,
+    DESERT_WEIGHT: 1,
+    MOUNTAINS_WEIGHT: 1
+  }),
+
+  caves: Object.freeze({
+    ENABLED: true,
+    /** Frecuencia del ruido de túneles: más alto, túneles más cortos y retorcidos. */
+    FREQUENCY: 0.07,
+    /** Grosor de los túneles (distancia a 0.5 en ambos campos de ruido). */
+    TUNNEL_RADIUS: 0.035,
+    /** Frecuencia del ruido de cavernas: más chico, salas más grandes. */
+    CAVERN_FREQUENCY: 0.045,
+    /** Umbral de cavernas: más alto, menos y más chicas. */
+    THRESHOLD: 0.7,
+    /** Estira las cuevas en horizontal (>1 = más chatas). */
+    VERTICAL_SQUASH: 1.7,
+    /** Altura (y) mínima y máxima donde puede haber cuevas. */
+    MIN_DEPTH: 4,
+    MAX_DEPTH: 36,
+    /** Bloques de techo que se respetan bajo la superficie fuera de las entradas. */
+    SURFACE_MARGIN: 4,
+    /** Entradas: zonas donde la cueva puede abrirse al exterior. */
+    ENTRANCE_SCALE: 0.06,
+    ENTRANCE_THRESHOLD: 0.78
+  }),
+
+  /**
+   * Vetas de mineral. MIN_Y/MAX_Y: rango de altura; VEINS_PER_CHUNK: vetas por
+   * cada 16x16 columnas; MIN_SIZE/MAX_SIZE: bloques por veta. El orden importa:
+   * los declarados después pisan a los anteriores donde se cruzan.
+   */
+  ores: Object.freeze({
+    COAL: Object.freeze({ BLOCK: BlockIds.COAL_ORE, MIN_Y: 5, MAX_Y: 40, VEINS_PER_CHUNK: 9, MIN_SIZE: 4, MAX_SIZE: 10 }),
+    IRON: Object.freeze({ BLOCK: BlockIds.IRON_ORE, MIN_Y: 3, MAX_Y: 28, VEINS_PER_CHUNK: 6, MIN_SIZE: 3, MAX_SIZE: 7 }),
+    GOLD: Object.freeze({ BLOCK: BlockIds.GOLD_ORE, MIN_Y: 2, MAX_Y: 14, VEINS_PER_CHUNK: 2, MIN_SIZE: 3, MAX_SIZE: 6 }),
+    DIAMOND: Object.freeze({ BLOCK: BlockIds.DIAMOND_ORE, MIN_Y: 1, MAX_Y: 9, VEINS_PER_CHUNK: 0.6, MIN_SIZE: 2, MAX_SIZE: 4 })
+  }),
+
+  survival: Object.freeze({
+    MAX_HEALTH: 20,
+    /** Velocidad vertical de impacto (unidades/s) desde la que hay daño: ~3,5 bloques de caída. */
+    FALL_DAMAGE_THRESHOLD: 190,
+    /** Puntos de vida por cada unidad/s de impacto sobre el umbral. */
+    FALL_DAMAGE_MULTIPLIER: 0.05
   }),
 
   audio: Object.freeze({
