@@ -15,17 +15,22 @@ import { InventoryScreen } from '../interface/screens/InventoryScreen.js';
 import { WorldSelectionScreen } from '../interface/screens/WorldSelectionScreen.js';
 import { WorldCreationScreen } from '../interface/screens/WorldCreationScreen.js';
 import { SettingsModel } from '../interface/models/SettingsModel.js';
+import { AuthService } from '../auth/AuthService.js';
+import { LoginScreen } from '../interface/screens/LoginScreen.js';
+import { RegisterScreen } from '../interface/screens/RegisterScreen.js';
+import { ProfileScreen } from '../interface/screens/ProfileScreen.js';
+import { PasswordRecoveryScreen } from '../interface/screens/PasswordRecoveryScreen.js';
 
 /**
  * Capa de interfaz de usuario de Nexo World.
  * Coordina el HUD durante el juego (Crosshair, Hotbar, HealthBar, DebugOverlay, Toast),
- * el gestor de pantallas (ScreenManager), el bus de intenciones (IntentBus)
- * y la navegación entre menús, inventario y creación/selección de mundos.
+ * el gestor de pantallas (ScreenManager), el bus de intenciones (IntentBus),
+ * la autenticación y la navegación entre menús, inventario y creación/selección de mundos.
  */
 export class HUD {
   #lastKnownState = 'running';
 
-  constructor(containerId = 'ui-root') {
+  constructor(containerId = 'ui-root', options = {}) {
     this.container = document.getElementById(containerId);
     if (!this.container) {
       throw new Error(`No existe el contenedor de interfaz "#${containerId}".`);
@@ -35,6 +40,8 @@ export class HUD {
     this.uiStateManager = new UiStateManager(ScreenType.MENU);
     this.screenManager = new ScreenManager(this.container, this.intentBus, this.uiStateManager);
     this.settingsModel = new SettingsModel();
+    this.authService = options.authService ?? new AuthService({ intentBus: this.intentBus });
+    this.backend2Service = options.backend2Service ?? null;
 
     // Elementos del HUD in-game
     this.crosshair = new Crosshair({
@@ -52,7 +59,7 @@ export class HUD {
   }
 
   #registerScreens() {
-    this.menuScreen = new MenuScreen(this.screenManager, this.intentBus);
+    this.menuScreen = new MenuScreen(this.screenManager, this.intentBus, this.authService);
     this.pauseScreen = new PauseScreen(this.screenManager, this.intentBus);
     this.worldSelectionScreen = new WorldSelectionScreen(null, this.screenManager, this.intentBus);
     this.worldCreationScreen = new WorldCreationScreen(this.screenManager, this.intentBus);
@@ -61,6 +68,11 @@ export class HUD {
     this.controlsScreen = new ControlsScreen(this.screenManager, this.intentBus);
     this.inventoryScreen = new InventoryScreen(null, this.screenManager, this.intentBus);
 
+    this.loginScreen = new LoginScreen(this.authService, this.screenManager, this.intentBus);
+    this.registerScreen = new RegisterScreen(this.authService, this.screenManager, this.intentBus);
+    this.profileScreen = new ProfileScreen(this.authService, this.backend2Service, this.screenManager, this.intentBus);
+    this.passwordRecoveryScreen = new PasswordRecoveryScreen(this.authService, this.screenManager, this.intentBus);
+
     this.screenManager.register(ScreenType.MENU, this.menuScreen);
     this.screenManager.register(ScreenType.WORLD_SELECTION, this.worldSelectionScreen);
     this.screenManager.register(ScreenType.WORLD_CREATION, this.worldCreationScreen);
@@ -68,6 +80,10 @@ export class HUD {
     this.screenManager.register(ScreenType.SETTINGS, this.settingsScreen);
     this.screenManager.register(ScreenType.CONTROLS, this.controlsScreen);
     this.screenManager.register(ScreenType.INVENTORY, this.inventoryScreen);
+    this.screenManager.register(ScreenType.LOGIN, this.loginScreen);
+    this.screenManager.register(ScreenType.REGISTER, this.registerScreen);
+    this.screenManager.register(ScreenType.PROFILE, this.profileScreen);
+    this.screenManager.register(ScreenType.PASSWORD_RECOVERY, this.passwordRecoveryScreen);
   }
 
   #setupIntentListeners() {

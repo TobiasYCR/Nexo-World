@@ -21,7 +21,11 @@ export class IntentBus {
     LOAD_GAME: 'intent:loadGame',
     DELETE_WORLD: 'intent:deleteWorld',
     CREATE_WORLD: 'intent:createWorld',
-    SHOW_TOAST: 'intent:showToast'
+    SHOW_TOAST: 'intent:showToast',
+    AUTH_STATE_CHANGED: 'intent:authStateChanged',
+    AUTH_SESSION_EXPIRED: 'intent:authSessionExpired',
+    LOGIN_REQUESTED: 'intent:loginRequested',
+    LOGOUT_REQUESTED: 'intent:logoutRequested'
   });
 
   #listeners = new Map();
