@@ -27,6 +27,7 @@ export class BreakOverlay {
    * @param {number} breakProgress progreso de rotura en [0, 1)
    */
   update(breakingBlock, breakProgress) {
+    if (!BreakOverlay.#sameBlock(this.breakingBlock, breakingBlock)) this.stage = -1;
     this.breakingBlock = breakingBlock;
 
     if (!breakingBlock) {
@@ -37,6 +38,13 @@ export class BreakOverlay {
     const clamped = MathUtils.clamp01(breakProgress);
     this.stage = MathUtils.clamp(Math.floor(clamped * this.config.STAGE_COUNT), 0, this.config.STAGE_COUNT - 1);
     this.#ensureLoaded(this.stage);
+  }
+
+  static #sameBlock(first, second) {
+    return first === second || (
+      first !== null && second !== null &&
+      first.x === second.x && first.y === second.y && first.z === second.z
+    );
   }
 
   draw(p, _camera) {

@@ -104,7 +104,8 @@ export class BlockInteraction {
     this.world.setBlockId(adjacent.x, adjacent.y, adjacent.z, blockType.id);
     this.#emit(GameEventTypes.BLOCK_PLACED, {
       position: { x: adjacent.x, y: adjacent.y, z: adjacent.z },
-      blockType
+      blockType,
+      face: { ...hit.face }
     });
     return true;
   }

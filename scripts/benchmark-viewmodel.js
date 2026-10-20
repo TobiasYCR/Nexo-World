@@ -3,6 +3,9 @@ import { BlockParticles } from '../src/viewmodel/BlockParticles.js';
 import { BlockHighlight } from '../src/viewmodel/BlockHighlight.js';
 import { BreakOverlay } from '../src/viewmodel/BreakOverlay.js';
 import { HandRenderer } from '../src/viewmodel/HandRenderer.js';
+import { AmbientParticles } from '../src/viewmodel/AmbientParticles.js';
+import { DamageEffect } from '../src/viewmodel/DamageEffect.js';
+import { CameraEffects } from '../src/viewmodel/CameraEffects.js';
 import { GameConfig } from '../src/game/GameConfig.js';
 import { createDefaultBlockRegistry } from '../src/blocks/BlockRegistry.js';
 
@@ -45,6 +48,9 @@ const p = {
   clearDepth: () => { calls.drawCalls += 1; },
   frustum: () => { calls.drawCalls += 1; },
   camera: () => { calls.drawCalls += 1; }
+  ,resetMatrix: () => { calls.drawCalls += 1; }
+  ,rectMode: () => { calls.drawCalls += 1; }
+  ,rect: () => { calls.drawCalls += 1; }
 };
 
 const highlight = new BlockHighlight(GameConfig.viewmodel.highlight, GameConfig.world.BLOCK_SIZE);
@@ -62,9 +68,23 @@ const hand = new HandRenderer(
 const heldBlock = createDefaultBlockRegistry().placeableTypes()[0];
 const handState = { isBreaking: true, horizontalSpeed: 80, isOnGround: true };
 hand.setSelectedSlot(0, heldBlock);
+const ambient = new AmbientParticles({
+  ...GameConfig.viewmodel.ambientParticles,
+  MAX_PARTICLES: 64,
+  SPAWN_RATE: 128,
+  DENSITY_FOREST: 1,
+  PARTICLE_LIFETIME: 120
+}, { random: () => 0.5 });
+const damage = new DamageEffect(GameConfig.viewmodel.damage);
+const cameraEffects = new CameraEffects(GameConfig.viewmodel.cameraEffects);
+damage.trigger(8, 20);
+cameraEffects.trigger({ amplitude: 1, duration: 10, rotation: 0.01 });
 
 function frame() {
   particles.update(1 / 60);
+  ambient.update(1 / 60, { playerPosition: { x: 0, y: 40, z: 0 }, biome: { name: 'Forest' } });
+  damage.update(1 / 60);
+  cameraEffects.update(1 / 60);
   highlight.update(targetBlock);
   breakOverlay.update(targetBlock, 0.5);
   hand.setSelectedSlot(0, heldBlock);
@@ -72,6 +92,8 @@ function frame() {
   highlight.draw(p);
   breakOverlay.draw(p);
   particles.draw(p);
+  ambient.draw(p);
+  damage.draw(p);
   hand.draw(p);
 }
 
@@ -88,9 +110,9 @@ for (let batch = 0; batch < BATCH_COUNT; batch += 1) {
 }
 
 const averageFrameMs = elapsedTotal / (BATCH_COUNT * FRAMES_PER_BATCH);
-console.log(`64 partículas y cuatro overlays activos; update + draw() (p5 instrumentado, sin GPU)`);
+console.log(`64 partículas de bloques + 64 ambientales y efectos de pantalla; update + draw() (p5 instrumentado, sin GPU)`);
 console.log(`Promedio: ${averageFrameMs.toFixed(5)} ms/frame`);
 console.log(`Peor promedio por lote: ${slowestBatchFrameMs.toFixed(5)} ms/frame`);
-console.log(`Umbral < 1 ms: ${averageFrameMs < 1 ? 'CUMPLE' : 'NO CUMPLE'}`);
+console.log(`Umbral < 2 ms: ${averageFrameMs < 2 ? 'CUMPLE' : 'NO CUMPLE'}`);
 console.log(`Llamadas instrumentadas: ${calls.drawCalls}; acumulador: ${calls.vertices.toFixed(0)}`);
-if (averageFrameMs >= 1) process.exitCode = 1;
+if (averageFrameMs >= 2) process.exitCode = 1;
