@@ -151,6 +151,24 @@ export const GameConfig = Object.freeze({
     LIGHT_DIRECTION: Object.freeze({ x: -0.4, y: 1, z: -0.6 })
   }),
 
+  users: Object.freeze({
+    USERNAME_MIN_LENGTH: 3,
+    USERNAME_MAX_LENGTH: 20,
+    /** Letras, números, guion y guion bajo. Sin espacios ni símbolos: el nombre se usa como clave. */
+    USERNAME_PATTERN: /^[A-Za-z0-9_-]+$/,
+    PASSWORD_MIN_LENGTH: 8,
+    /** Tope alto para no derivar PBKDF2 sobre una entrada enorme y colgar la pestaña. */
+    PASSWORD_MAX_LENGTH: 128,
+    /**
+     * Costo de PBKDF2. Más iteraciones encarecen la fuerza bruta y también el
+     * login legítimo; 210.000 es la recomendación de OWASP para PBKDF2-SHA-256
+     * y tarda decenas de milisegundos en un equipo de escritorio.
+     */
+    PBKDF2_ITERATIONS: 210000,
+    SALT_BYTES: 16,
+    DERIVED_KEY_BYTES: 32
+  }),
+
   inventory: Object.freeze({
     HOTBAR_SIZE: 9,
     SLOT_MAX_STACK: 64,
