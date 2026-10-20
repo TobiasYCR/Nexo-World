@@ -143,18 +143,28 @@ export class RegisterScreen extends Screen {
     this.passwordInput.addEventListener('keydown', handleKeyEnter);
     this.confirmPasswordInput.addEventListener('keydown', handleKeyEnter);
 
-    this.modal.addBodyItem(body);
-
-    // Botones del pie
+    // Botón de acción principal: CREAR CUENTA (ancho completo)
     this.submitBtn = new Button({
       text: 'CREAR CUENTA',
       variant: 'primary',
       id: 'register-btn-submit',
       onClick: () => this.submit()
     });
+    this.submitBtn.element.className += ' nx-auth-btn-full nx-auth-submit-btn';
+    body.appendChild(this.submitBtn.element);
+
+    // Divisor visual
+    const divider = document.createElement('div');
+    divider.className = 'nx-auth-divider';
+    divider.innerHTML = '<span>¿ya tienes una cuenta?</span>';
+    body.appendChild(divider);
+
+    // Acciones secundarias en cuadrícula balanceada
+    const secondaryRow = document.createElement('div');
+    secondaryRow.className = 'nx-auth-grid-actions';
 
     this.loginBtn = new Button({
-      text: 'YA TENGO CUENTA',
+      text: 'INICIAR SESIÓN',
       variant: 'secondary',
       id: 'register-btn-go-login',
       onClick: () => {
@@ -163,15 +173,17 @@ export class RegisterScreen extends Screen {
     });
 
     this.backBtn = new Button({
-      text: 'VOLVER',
+      text: 'VOLVER AL MENÚ',
       variant: 'secondary',
       id: 'register-btn-back',
       onClick: () => this.handleBack()
     });
 
-    this.modal.addFooterItem(this.submitBtn);
-    this.modal.addFooterItem(this.loginBtn);
-    this.modal.addFooterItem(this.backBtn);
+    secondaryRow.appendChild(this.loginBtn.element);
+    secondaryRow.appendChild(this.backBtn.element);
+    body.appendChild(secondaryRow);
+
+    this.modal.addBodyItem(body);
 
     this.element.appendChild(this.modal.element);
   }

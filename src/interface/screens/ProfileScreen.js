@@ -4,6 +4,7 @@ import { IntentBus } from '../../ui/IntentBus.js';
 import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { AuthService } from '../../auth/AuthService.js';
+import { Icons } from '../../ui/Icons.js';
 
 /**
  * Pantalla de Perfil de Usuario en Nexo World.
@@ -59,7 +60,7 @@ export class ProfileScreen extends Screen {
 
     this.avatarEl = document.createElement('div');
     this.avatarEl.className = 'nx-profile-avatar';
-    this.avatarEl.textContent = '👾';
+    this.avatarEl.innerHTML = Icons.avatar;
 
     const infoContainer = document.createElement('div');
     infoContainer.className = 'nx-profile-info';

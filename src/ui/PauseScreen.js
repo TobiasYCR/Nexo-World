@@ -1,6 +1,7 @@
 import { Screen } from './Screen.js';
 import { ScreenType } from './ScreenType.js';
 import { IntentBus } from './IntentBus.js';
+import { Icons } from './Icons.js';
 
 /**
  * Overlay del Menú de Pausa Mejorado.
@@ -37,7 +38,7 @@ export class PauseScreen extends Screen {
     this.resumeBtn.className = 'nx-btn nx-btn-primary nx-btn-large';
     this.resumeBtn.id = 'pause-btn-resume';
     this.resumeBtn.innerHTML = `
-      <span class="nx-btn-icon">▶</span>
+      <span class="nx-btn-icon">${Icons.play}</span>
       <span class="nx-btn-text">REANUDAR PARTIDA</span>
     `;
     this.resumeBtn.addEventListener('click', () => this.handleResume());
@@ -48,7 +49,7 @@ export class PauseScreen extends Screen {
     this.saveBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.saveBtn.id = 'pause-btn-save';
     this.saveBtn.innerHTML = `
-      <span class="nx-btn-icon">💾</span>
+      <span class="nx-btn-icon">${Icons.save}</span>
       <span class="nx-btn-text">GUARDAR PARTIDA</span>
     `;
     this.saveBtn.addEventListener('click', () => this.handleSave());
@@ -59,7 +60,7 @@ export class PauseScreen extends Screen {
     this.loadBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.loadBtn.id = 'pause-btn-load';
     this.loadBtn.innerHTML = `
-      <span class="nx-btn-icon">📂</span>
+      <span class="nx-btn-icon">${Icons.load}</span>
       <span class="nx-btn-text">CARGAR PARTIDA</span>
     `;
     this.loadBtn.addEventListener('click', () => this.handleLoad());
@@ -70,7 +71,7 @@ export class PauseScreen extends Screen {
     this.settingsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.settingsBtn.id = 'pause-btn-settings';
     this.settingsBtn.innerHTML = `
-      <span class="nx-btn-icon">⚙</span>
+      <span class="nx-btn-icon">${Icons.settings}</span>
       <span class="nx-btn-text">CONFIGURACIÓN</span>
     `;
     this.settingsBtn.addEventListener('click', () => this.handleSettings());
@@ -81,7 +82,7 @@ export class PauseScreen extends Screen {
     this.controlsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.controlsBtn.id = 'pause-btn-controls';
     this.controlsBtn.innerHTML = `
-      <span class="nx-btn-icon">⌨</span>
+      <span class="nx-btn-icon">${Icons.controls}</span>
       <span class="nx-btn-text">CONTROLES</span>
     `;
     this.controlsBtn.addEventListener('click', () => this.handleControls());
@@ -92,7 +93,7 @@ export class PauseScreen extends Screen {
     this.menuBtn.className = 'nx-btn nx-btn-danger nx-btn-large';
     this.menuBtn.id = 'pause-btn-menu';
     this.menuBtn.innerHTML = `
-      <span class="nx-btn-icon">⎋</span>
+      <span class="nx-btn-icon">${Icons.logout}</span>
       <span class="nx-btn-text">VOLVER AL MENÚ</span>
     `;
     this.menuBtn.addEventListener('click', () => this.handleBackToMenu());

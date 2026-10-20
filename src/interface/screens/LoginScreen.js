@@ -113,22 +113,25 @@ export class LoginScreen extends Screen {
     this.identifierInput.addEventListener('keydown', handleKeyEnter);
     this.passwordInput.addEventListener('keydown', handleKeyEnter);
 
-    this.modal.addBodyItem(body);
-
-    // Botones de acción principales
+    // Botón de acción principal: INGRESAR (ancho completo)
     this.submitBtn = new Button({
       text: 'INGRESAR',
       variant: 'primary',
       id: 'login-btn-submit',
       onClick: () => this.submit()
     });
+    this.submitBtn.element.className += ' nx-auth-btn-full nx-auth-submit-btn';
+    body.appendChild(this.submitBtn.element);
 
-    this.guestBtn = new Button({
-      text: 'JUGAR COMO INVITADO',
-      variant: 'secondary',
-      id: 'login-btn-guest',
-      onClick: () => this.handlePlayAsGuest()
-    });
+    // Divisor visual elegante
+    const divider = document.createElement('div');
+    divider.className = 'nx-auth-divider';
+    divider.innerHTML = '<span>o también</span>';
+    body.appendChild(divider);
+
+    // Acciones secundarias en cuadrícula balanceada (2 columnas)
+    const secondaryRow = document.createElement('div');
+    secondaryRow.className = 'nx-auth-grid-actions';
 
     this.registerBtn = new Button({
       text: 'CREAR CUENTA',
@@ -139,16 +142,28 @@ export class LoginScreen extends Screen {
       }
     });
 
+    this.guestBtn = new Button({
+      text: 'MODO INVITADO',
+      variant: 'secondary',
+      id: 'login-btn-guest',
+      onClick: () => this.handlePlayAsGuest()
+    });
+
+    secondaryRow.appendChild(this.registerBtn.element);
+    secondaryRow.appendChild(this.guestBtn.element);
+    body.appendChild(secondaryRow);
+
+    this.modal.addBodyItem(body);
+
+    // Botón de pie: Volver al Menú
     this.backBtn = new Button({
-      text: 'VOLVER',
+      text: 'VOLVER AL MENÚ',
       variant: 'secondary',
       id: 'login-btn-back',
       onClick: () => this.handleBack()
     });
+    this.backBtn.element.className += ' nx-auth-btn-full';
 
-    this.modal.addFooterItem(this.submitBtn);
-    this.modal.addFooterItem(this.registerBtn);
-    this.modal.addFooterItem(this.guestBtn);
     this.modal.addFooterItem(this.backBtn);
 
     this.element.appendChild(this.modal.element);

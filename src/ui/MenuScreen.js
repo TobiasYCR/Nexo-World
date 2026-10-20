@@ -1,6 +1,7 @@
 import { Screen } from './Screen.js';
 import { ScreenType } from './ScreenType.js';
 import { IntentBus } from './IntentBus.js';
+import { Icons } from './Icons.js';
 
 /**
  * Pantalla del Menú Principal.
@@ -72,7 +73,7 @@ export class MenuScreen extends Screen {
     this.playBtn.className = 'nx-btn nx-btn-primary nx-btn-large';
     this.playBtn.id = 'menu-btn-play';
     this.playBtn.innerHTML = `
-      <span class="nx-btn-icon">▶</span>
+      <span class="nx-btn-icon">${Icons.play}</span>
       <span class="nx-btn-text">JUGAR / MUNDOS</span>
     `;
     this.playBtn.addEventListener('click', () => this.handlePlay());
@@ -89,7 +90,7 @@ export class MenuScreen extends Screen {
     this.settingsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.settingsBtn.id = 'menu-btn-settings';
     this.settingsBtn.innerHTML = `
-      <span class="nx-btn-icon">⚙</span>
+      <span class="nx-btn-icon">${Icons.settings}</span>
       <span class="nx-btn-text">CONFIGURACIÓN</span>
     `;
     this.settingsBtn.addEventListener('click', () => this.handleSettings());
@@ -99,7 +100,7 @@ export class MenuScreen extends Screen {
     this.controlsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
     this.controlsBtn.id = 'menu-btn-controls';
     this.controlsBtn.innerHTML = `
-      <span class="nx-btn-icon">⌨</span>
+      <span class="nx-btn-icon">${Icons.controls}</span>
       <span class="nx-btn-text">CONTROLES</span>
     `;
     this.controlsBtn.addEventListener('click', () => this.handleControls());
@@ -144,9 +145,19 @@ export class MenuScreen extends Screen {
     this.userBadge.appendChild(dot);
     this.userBadge.appendChild(textSpan);
 
-    const icon = isAuth ? '👤' : '🔑';
+    const iconSvg = isAuth ? Icons.user : Icons.login;
     const label = isAuth ? 'MI PERFIL' : 'INICIAR SESIÓN / REGISTRO';
-    this.authActionBtn.textContent = `${icon} ${label}`;
+
+    this.authActionBtn.innerHTML = '';
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'nx-btn-icon';
+    iconSpan.innerHTML = iconSvg;
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'nx-btn-text';
+    labelSpan.textContent = label;
+
+    this.authActionBtn.appendChild(iconSpan);
+    this.authActionBtn.appendChild(labelSpan);
   }
 
   handleAuthAction() {
