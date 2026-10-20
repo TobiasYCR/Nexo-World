@@ -5,7 +5,13 @@ export const GameEventTypes = Object.freeze({
   PLAYER_LANDED: 'playerLanded',
   PLAYER_DAMAGED: 'playerDamaged',
   PLAYER_DIED: 'playerDied',
-  PLAYER_RESPAWNED: 'playerRespawned'
+  PLAYER_RESPAWNED: 'playerRespawned',
+  /** Cambió la puntuación local: { score, delta, reason, breakdown }. */
+  SCORE_CHANGED: 'scoreChanged',
+  /** El servidor aceptó el progreso: { score, rank }. */
+  PROGRESS_SYNCED: 'progressSynced',
+  /** No se pudo sincronizar: { reason, message }. El progreso sigue guardado localmente. */
+  PROGRESS_SYNC_FAILED: 'progressSyncFailed'
 });
 
 /** Bus chico e intencional para desacoplar reglas, feedback visual y audio. */

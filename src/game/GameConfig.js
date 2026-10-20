@@ -126,6 +126,46 @@ export const GameConfig = Object.freeze({
     FALL_DAMAGE_MULTIPLIER: 0.05
   }),
 
+  /**
+   * Puntuación y clasificación (Backend 2). Ver docs/PROGRESION.md para la
+   * justificación de cada regla. Ningún otro módulo declara valores de puntos.
+   */
+  progression: Object.freeze({
+    /** Modo de la partida actual. Cada modo tiene su propia clasificación. */
+    GAME_MODE: 'survival',
+    MODES: Object.freeze(['survival', 'creative']),
+    /** Lado, en columnas, de cada celda de exploración del mapa. */
+    EXPLORATION_CELL_SIZE: 8,
+    POINTS: Object.freeze({
+      /** Por cada celda de exploración visitada por primera vez en un mundo. */
+      EXPLORATION_CELL: 5,
+      /** Por cada bioma pisado por primera vez en un mundo. */
+      BIOME_DISCOVERED: 50,
+      /** Por cada bloque construido que sigue en pie (saldo neto). */
+      BLOCK_BUILT: 1,
+      /** Por mineral natural extraído, una sola vez por posición. */
+      ORES: Object.freeze({
+        [BlockIds.COAL_ORE]: 1,
+        [BlockIds.IRON_ORE]: 2,
+        [BlockIds.GOLD_ORE]: 5,
+        [BlockIds.DIAMOND_ORE]: 10
+      })
+    }),
+    /** Tope de bloques construidos que suman puntos por mundo: el servidor no puede verificarlos. */
+    MAX_BLOCKS_BUILT_COUNTED: 2000,
+    /** Cada cuántos segundos de juego se envía el progreso pendiente al servidor. */
+    SYNC_INTERVAL_SECONDS: 10,
+    REQUEST_TIMEOUT_MS: 5000,
+    API_BASE_PATH: '/api',
+    LEADERBOARD_DEFAULT_LIMIT: 10,
+    LEADERBOARD_MAX_LIMIT: 100,
+    /** Ritmo máximo de puntos que acepta el servidor, más un margen inicial. */
+    MAX_POINTS_PER_MINUTE: 600,
+    RATE_BURST_POINTS: 300,
+    PLAYER_NAME_MIN_LENGTH: 3,
+    PLAYER_NAME_MAX_LENGTH: 20
+  }),
+
   audio: Object.freeze({
     MASTER_VOLUME: 1,
     SFX_VOLUME: 1,

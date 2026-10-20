@@ -36,6 +36,9 @@ const sketch = (p) => {
     game.render();
   };
 
+  // Al cerrar o recargar la pestaña se envía el progreso pendiente sin esperar la respuesta.
+  window.addEventListener('pagehide', () => game?.progression.flush({ keepalive: true }));
+
   p.windowResized = () => {
     game?.onResize(p.windowWidth, p.windowHeight);
   };

@@ -8,6 +8,9 @@ import { PlayerController } from '../player/PlayerController.js';
 import { PlayerPhysics } from '../player/PlayerPhysics.js';
 import { BlockInteraction } from '../player/BlockInteraction.js';
 import { PlayerHealth, DamageCauses } from '../player/PlayerHealth.js';
+import { NaturalTerrain } from '../world/NaturalTerrain.js';
+import { PlayerProgression } from '../progression/PlayerProgression.js';
+import { WorldKey } from '../progression/WorldKey.js';
 import { FirstPersonCamera } from '../camera/FirstPersonCamera.js';
 import { CollisionSystem } from '../physics/CollisionSystem.js';
 import { Raycast } from '../physics/Raycast.js';
@@ -38,7 +41,9 @@ export class Game {
   /**
    * @param {object} p instancia de p5
    * @param {object} [config] GameConfig
-   * @param {{seed?: number}} [options] seed reemplaza a config.world.SEED para esta partida
+   * @param {{seed?: number, mode?: string, progression?: PlayerProgression}} [options]
+   *   seed reemplaza a config.world.SEED para esta partida; mode elige la clasificación;
+   *   progression permite inyectar otra integración (tests)
    */
   constructor(p, config = GameConfig, options = {}) {
     this.p = p;
@@ -59,6 +64,13 @@ export class Game {
     this.playerPhysics = new PlayerPhysics(this.player, this.collisionSystem, config.player);
     this.events = new GameEvents();
     this.playerHealth = new PlayerHealth(config.survival, this.events);
+    this.progression = options.progression ?? new PlayerProgression({
+      config: config.progression,
+      events: this.events,
+      mode: options.mode ?? config.progression.GAME_MODE
+    });
+    /** Mundo tal como lo generó la semilla; lo usan las reglas de progresión. */
+    this.naturalTerrain = null;
 
     this.textureManager = new TextureManager(p, config.assets);
     this.blockRenderer = new BlockRenderer(p, this.blockRegistry, this.textureManager, config);
@@ -99,6 +111,7 @@ export class Game {
   /** Prepara mundo, jugador e interfaz. La carga de texturas no bloquea el arranque. */
   async start(canvasElement) {
     this.worldGenerator.generate(this.world);
+    this.naturalTerrain = NaturalTerrain.fromGeneration(this.world, this.worldGenerator);
     this.#placePlayerOnSurface();
     this.#fillStarterHotbar();
 
@@ -107,6 +120,8 @@ export class Game {
     this.#bindPointerLock(canvasElement);
 
     this.state.set(GameStates.RUNNING);
+    // Deliberadamente sin await: la conexión con el servidor de puntuaciones no frena el arranque.
+    this.progression.start(this.naturalTerrain, WorldKey.fromGenerator(this.worldGenerator, this.world));
 
     // Deliberadamente sin await: el mundo se dibuja con colores hasta que lleguen.
     this.textureManager.loadAll(this.blockRegistry.textureNames());
@@ -136,6 +151,7 @@ export class Game {
       if (this.playerHealth.isDead) this.#respawn();
       this.#syncCameraToPlayer();
       this.#handleHotbarSelection();
+      this.#updateProgression(deltaTime);
     }
 
     this.#updateViewmodel(deltaTime);
@@ -162,10 +178,12 @@ export class Game {
 
   togglePause() {
     this.state.set(this.state.isRunning ? GameStates.PAUSED : GameStates.RUNNING);
+    if (this.state.isPaused) this.progression.flush();
   }
 
   pause() {
     this.state.set(GameStates.PAUSED);
+    this.progression.flush();
   }
 
   resume() {
@@ -177,6 +195,7 @@ export class Game {
   }
 
   saveGame(slot) {
+    this.progression.flush();
     return this.saveManager.save(slot, this.world, this.player);
   }
 
@@ -209,6 +228,12 @@ export class Game {
     }
     this.blockInteraction.updateBreaking(deltaTime, this.input.isBreakDown());
     if (this.input.wasPlaceRequested()) this.blockInteraction.tryPlace();
+  }
+
+  /** La progresión recibe la columna del jugador; las reglas deciden si eso da puntos. */
+  #updateProgression(deltaTime) {
+    const feet = this.world.worldToBlock(this.player.position.x, this.player.position.y, this.player.position.z);
+    this.progression.update(deltaTime, feet.x, feet.z);
   }
 
   /** Caer al vacío mata una sola vez; la reaparición la resuelve #respawn en el mismo frame. */
