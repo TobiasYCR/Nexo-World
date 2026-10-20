@@ -34,6 +34,20 @@ export class FirstPersonCamera {
     this.position.set(x, y, z);
   }
 
+  /** Ajusta el campo de visión (FOV) en grados en tiempo de ejecución. */
+  setFov(degrees) {
+    if (typeof degrees === 'number' && degrees > 0) {
+      this.config.FOV_DEGREES = degrees;
+    }
+  }
+
+  /** Ajusta la sensibilidad del mouse en tiempo de ejecución. */
+  setSensitivity(sensitivity) {
+    if (typeof sensitivity === 'number' && sensitivity > 0) {
+      this.config.MOUSE_SENSITIVITY = sensitivity;
+    }
+  }
+
   #updateBasis() {
     VectorUtils.forwardFromYaw(this.yaw, this.forward);
     VectorUtils.rightFromYaw(this.yaw, this.right);

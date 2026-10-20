@@ -7,12 +7,20 @@ export class KeyboardInput {
   #justPressed = new Set();
   #target = null;
 
+  #isTextInput(target) {
+    if (!target) return false;
+    const tagName = target.tagName;
+    return tagName === 'INPUT' || tagName === 'TEXTAREA' || Boolean(target.isContentEditable);
+  }
+
   #handleKeyDown = (event) => {
+    if (this.#isTextInput(event.target)) return;
     if (!this.#pressed.has(event.code)) this.#justPressed.add(event.code);
     this.#pressed.add(event.code);
   };
 
   #handleKeyUp = (event) => {
+    if (this.#isTextInput(event.target)) return;
     this.#pressed.delete(event.code);
   };
 
@@ -22,12 +30,20 @@ export class KeyboardInput {
     this.#justPressed.clear();
   };
 
+  #handleFocusIn = (event) => {
+    if (this.#isTextInput(event.target)) {
+      this.#pressed.clear();
+      this.#justPressed.clear();
+    }
+  };
+
   attach(target = window) {
     this.detach();
     this.#target = target;
     target.addEventListener('keydown', this.#handleKeyDown);
     target.addEventListener('keyup', this.#handleKeyUp);
     target.addEventListener('blur', this.#handleBlur);
+    target.addEventListener?.('focusin', this.#handleFocusIn);
   }
 
   detach() {
@@ -35,6 +51,7 @@ export class KeyboardInput {
     this.#target.removeEventListener('keydown', this.#handleKeyDown);
     this.#target.removeEventListener('keyup', this.#handleKeyUp);
     this.#target.removeEventListener('blur', this.#handleBlur);
+    this.#target.removeEventListener?.('focusin', this.#handleFocusIn);
     this.#target = null;
   }
 

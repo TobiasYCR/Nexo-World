@@ -16,7 +16,12 @@ export class IntentBus {
     SET_HOTBAR_SLOT: 'intent:setHotbarSlot',
     SET_HOTBAR_BLOCK: 'intent:setHotbarBlock',
     SETTINGS_CHANGED: 'intent:settingsChanged',
-    RESTORE_DEFAULTS: 'intent:restoreDefaults'
+    RESTORE_DEFAULTS: 'intent:restoreDefaults',
+    SAVE_GAME: 'intent:saveGame',
+    LOAD_GAME: 'intent:loadGame',
+    DELETE_WORLD: 'intent:deleteWorld',
+    CREATE_WORLD: 'intent:createWorld',
+    SHOW_TOAST: 'intent:showToast'
   });
 
   #listeners = new Map();

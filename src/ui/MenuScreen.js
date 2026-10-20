@@ -4,8 +4,8 @@ import { IntentBus } from './IntentBus.js';
 
 /**
  * Pantalla del Menú Principal.
- * Muestra el título del juego y 3 botones apilados: Jugar, Configuración y Controles.
- * El mundo 3D se renderiza de fondo mientras el menú está abierto.
+ * Presenta el título del juego y las acciones principales:
+ * Jugar / Seleccionar Mundos, Configuración y Controles.
  */
 export class MenuScreen extends Screen {
   constructor(screenManager = null, intentBus = null) {
@@ -49,7 +49,7 @@ export class MenuScreen extends Screen {
     this.playBtn.id = 'menu-btn-play';
     this.playBtn.innerHTML = `
       <span class="nx-btn-icon">▶</span>
-      <span class="nx-btn-text">JUGAR</span>
+      <span class="nx-btn-text">JUGAR / MUNDOS</span>
     `;
     this.playBtn.addEventListener('click', () => this.handlePlay());
 
@@ -80,7 +80,7 @@ export class MenuScreen extends Screen {
     // Footer de versión y atajos
     const footer = document.createElement('div');
     footer.className = 'nx-menu-footer';
-    footer.textContent = 'v0.1.0 • Usa el mouse para interactuar • Navegación por teclado disponible';
+    footer.textContent = 'v0.2.0 • Usa el mouse o teclado para navegar';
 
     card.appendChild(titleContainer);
     card.appendChild(nav);
@@ -91,16 +91,15 @@ export class MenuScreen extends Screen {
 
   show(params = {}) {
     super.show(params);
-    // Autofoco en botón jugar
     setTimeout(() => this.playBtn?.focus?.(), 50);
   }
 
   handlePlay() {
     if (this.intentBus) {
-      this.intentBus.emit(IntentBus.Events.START_GAME);
+      this.intentBus.emit(IntentBus.Events.OPEN_SCREEN, { screen: ScreenType.WORLD_SELECTION });
     }
     if (this.screenManager) {
-      this.screenManager.open(ScreenType.PLAYING);
+      this.screenManager.open(ScreenType.WORLD_SELECTION);
     }
   }
 
@@ -123,7 +122,6 @@ export class MenuScreen extends Screen {
   }
 
   onKeyDown(event) {
-    // Escape no sale del menú principal
     if (event.key === 'Escape') {
       event.preventDefault?.();
       return;

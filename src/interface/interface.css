@@ -3,7 +3,6 @@
    Estilos Scoped con prefijo .nx- y diseño temático Dark Voxel / Slate & Emerald
    ========================================================================== */
 
-/* Variables locales del subsistema de interfaz */
 :root {
   --nx-bg-dialog: #0f172a;
   --nx-bg-card: #131d35;
@@ -24,26 +23,19 @@
   --nx-radius-sm: 6px;
 }
 
-/* ==========================================================================
-   Diseño de Scrollbar Personalizada (Global y Scoped)
-   ========================================================================== */
-
-/* Estilos de scrollbar estándar para Firefox */
 * {
   scrollbar-width: thin;
   scrollbar-color: #475569 #0f172a;
 }
 
-/* Estilos de scrollbar Webkit (Chrome, Edge, Safari, Opera) */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: #0f172a;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 0 var(--nx-radius-lg) var(--nx-radius-lg) 0;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -85,8 +77,8 @@
 .nx-modal-dialog {
   position: relative;
   width: 100%;
-  max-width: 580px;
-  max-height: 85vh;
+  max-width: 680px;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   background: var(--nx-bg-dialog);
@@ -115,15 +107,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 24px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--nx-border-subtle);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .nx-modal-title {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #ffffff;
 }
@@ -146,11 +139,12 @@
 }
 
 .nx-modal-body {
-  padding: 24px;
+  padding: 20px 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  flex: 1;
 }
 
 .nx-modal-footer {
@@ -160,11 +154,11 @@
   gap: 12px;
   padding: 16px 24px;
   border-top: 1px solid var(--nx-border-subtle);
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.6);
 }
 
 /* ==========================================================================
-   Botones (.nx-btn)
+   Botones (.nx-btn, .nx-btn-*)
    ========================================================================== */
 
 .nx-btn {
@@ -172,19 +166,18 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  padding: 10px 18px;
   font-family: var(--nx-font-family);
   font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 10px 22px;
-  border-radius: var(--nx-radius-md);
+  letter-spacing: 0.05em;
+  border-radius: var(--nx-radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.18s ease;
-  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  text-transform: uppercase;
   text-decoration: none;
-  pointer-events: auto;
+  box-shadow: none;
 }
 
 .nx-btn:focus-visible {
@@ -195,326 +188,713 @@
 .nx-btn-primary {
   background: var(--nx-emerald-base);
   color: #064e3b;
-  border-color: var(--nx-emerald-light);
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  border-color: rgba(52, 211, 153, 0.4);
+  box-shadow: none;
 }
 
-.nx-btn-primary:hover {
+.nx-btn-primary:hover:not(:disabled) {
   background: var(--nx-emerald-light);
-  box-shadow: 0 6px 18px rgba(52, 211, 153, 0.4);
-  transform: translateY(-1px);
-}
-
-.nx-btn-primary:active {
-  transform: translateY(0);
+  box-shadow: none;
 }
 
 .nx-btn-secondary {
   background: #1e293b;
   color: var(--nx-text-primary);
   border-color: #334155;
+  box-shadow: none;
 }
 
-.nx-btn-secondary:hover {
+.nx-btn-secondary:hover:not(:disabled) {
   background: #334155;
   color: #ffffff;
-  border-color: #475569;
+  box-shadow: none;
+}
+
+.nx-btn-secondary.is-active {
+  background: #064e3b;
+  color: var(--nx-emerald-light);
+  border-color: var(--nx-emerald-base);
+  box-shadow: none;
 }
 
 .nx-btn-danger {
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: none;
 }
 
-.nx-btn-danger:hover {
-  background: rgba(239, 68, 68, 0.3);
+.nx-btn-danger:hover:not(:disabled) {
+  background: var(--nx-danger-base);
   color: #ffffff;
-  border-color: var(--nx-danger-base);
+  box-shadow: none;
+}
+
+.nx-btn-small {
+  padding: 6px 12px;
+  font-size: 0.75rem;
 }
 
 .nx-btn-large {
-  padding: 14px 28px;
+  padding: 14px 24px;
   font-size: 0.95rem;
-  width: 100%;
 }
 
 .nx-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  pointer-events: none;
 }
 
 /* ==========================================================================
-   Slider (.nx-slider-*)
+   Inputs y Formularios (.nx-input, .nx-form-*)
    ========================================================================== */
 
-.nx-slider-container {
+.nx-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--nx-bg-input);
+  border: 1px solid var(--nx-border-dialog);
+  border-radius: var(--nx-radius-sm);
+  color: var(--nx-text-primary);
+  font-family: var(--nx-font-family);
+  font-size: 0.85rem;
+  transition: border-color 0.15s ease;
+}
+
+.nx-input:focus {
+  outline: none;
+  border-color: var(--nx-emerald-light);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+}
+
+.nx-input.is-invalid {
+  border-color: var(--nx-danger-base);
+}
+
+.nx-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nx-form-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--nx-text-secondary);
+  text-transform: uppercase;
+}
+
+.nx-form-error {
+  font-size: 0.75rem;
+  color: var(--nx-danger-base);
+}
+
+/* ==========================================================================
+   Badges (.nx-badge, .nx-badge-*)
+   ========================================================================== */
+
+.nx-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nx-badge-accent {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--nx-text-accent);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.nx-badge-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--nx-emerald-light);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.nx-badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.nx-badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ==========================================================================
+   Controles: Slider y Toggle (.nx-slider-*, .nx-toggle-*)
+   ========================================================================== */
+
+.nx-slider-container,
+.nx-toggle-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
-  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 16px;
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid var(--nx-border-subtle);
 }
 
-.nx-slider-header {
+.nx-slider-header,
+.nx-toggle-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.9rem;
 }
 
-.nx-slider-label {
+.nx-slider-label,
+.nx-toggle-label {
+  font-size: 0.85rem;
+  font-weight: 700;
   color: var(--nx-text-primary);
-  font-weight: 500;
 }
 
 .nx-slider-value {
-  color: var(--nx-emerald-light);
+  font-size: 0.85rem;
   font-weight: 700;
-  font-family: var(--nx-font-family);
-}
-
-.nx-slider-container.is-disabled .nx-slider-value {
-  color: var(--nx-text-secondary);
+  color: var(--nx-emerald-light);
 }
 
 .nx-slider-input {
-  appearance: none;
-  -webkit-appearance: none;
   width: 100%;
-  height: 8px;
+  height: 6px;
   border-radius: 9999px;
-  background: #1e293b;
   outline: none;
+  -webkit-appearance: none;
   cursor: pointer;
-  margin: 6px 0;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  pointer-events: auto;
 }
 
 .nx-slider-input::-webkit-slider-thumb {
-  appearance: none;
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--nx-emerald-light);
+  background: #ffffff;
+  border: 2px solid var(--nx-emerald-base);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-  transition: transform 0.1s ease;
-}
-
-.nx-slider-input::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-}
-
-.nx-slider-input::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--nx-emerald-light);
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-}
-
-.nx-slider-container.is-disabled .nx-slider-input {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.nx-slider-container.is-disabled .nx-slider-input::-webkit-slider-thumb {
-  background: #64748b;
-  box-shadow: none;
-  cursor: not-allowed;
 }
 
 .nx-control-note {
-  margin: 2px 0 0 0;
-  font-size: 0.75rem;
-  color: #7dd3fc;
-  line-height: 1.4;
-  opacity: 0.85;
+  margin: 0;
+  font-size: 0.72rem;
+  color: #f59e0b;
+  font-style: italic;
 }
 
-/* ==========================================================================
-   Toggle Switch (.nx-toggle-*)
-   ========================================================================== */
-
-.nx-toggle-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-  pointer-events: auto;
-}
-
-.nx-toggle-label {
-  font-size: 0.9rem;
-  color: var(--nx-text-primary);
-  font-weight: 500;
-}
-
-.nx-toggle-switch {
-  position: relative;
-  width: 48px;
-  height: 26px;
-  background: #1e293b;
-  border: 1px solid #334155;
+.nx-toggle-btn {
+  width: 44px;
+  height: 24px;
+  background: #334155;
   border-radius: 9999px;
+  border: none;
+  position: relative;
   cursor: pointer;
-  padding: 0;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-  pointer-events: auto;
+  transition: background 0.2s ease;
 }
 
-.nx-toggle-switch.is-checked {
+.nx-toggle-btn.is-checked {
   background: var(--nx-emerald-base);
-  border-color: var(--nx-emerald-light);
 }
 
-.nx-toggle-knob {
-  position: absolute;
-  top: 2px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
+.nx-toggle-thumb {
+  width: 18px;
+  height: 18px;
   background: #ffffff;
   border-radius: 50%;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s ease;
 }
 
-.nx-toggle-switch.is-checked .nx-toggle-knob {
+.nx-toggle-btn.is-checked .nx-toggle-thumb {
   transform: translateX(20px);
 }
 
 /* ==========================================================================
-   Pantalla de Controles (.nx-controls-*)
+   Pestañas de Configuración (.nx-settings-*)
    ========================================================================== */
 
-.nx-controls-dialog {
-  max-width: 520px;
+.nx-settings-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--nx-border-dialog);
+  padding-bottom: 12px;
 }
 
-.nx-controls-group {
+.nx-settings-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--nx-text-secondary);
+  font-family: var(--nx-font-family);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-radius: var(--nx-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nx-settings-tab-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nx-settings-tab-btn.is-active {
+  color: var(--nx-emerald-light);
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.nx-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nx-preset-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 16px;
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid var(--nx-border-subtle);
+}
+
+.nx-preset-group {
+  display: flex;
+  gap: 6px;
+}
+
+/* ==========================================================================
+   Inventario Creativo (.nx-inventory-*)
+   ========================================================================== */
+
+.nx-inventory-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nx-inventory-toolbar {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.nx-controls-group-title {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: #60a5fa;
-  text-transform: uppercase;
-}
-
-.nx-controls-list {
+.nx-inventory-categories {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.nx-control-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-}
-
-.nx-control-name {
-  font-size: 0.9rem;
-  color: var(--nx-text-primary);
-}
-
-.nx-key-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  padding: 4px 10px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: var(--nx-radius-sm);
-  color: #f1f5f9;
-  font-family: var(--nx-font-family);
-  font-size: 0.8rem;
-  font-weight: 600;
-  box-shadow: 0 2px 0 #0f172a;
-}
-
-/* ==========================================================================
-   Pantalla de Inventario (.nx-inventory-*)
-   ========================================================================== */
-
-.nx-inventory-dialog {
-  max-width: 620px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .nx-inventory-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
   padding: 4px;
-}
-
-@media (max-width: 580px) {
-  .nx-inventory-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  background: #080d18;
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid var(--nx-border-dialog);
 }
 
 .nx-block-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 6px;
-  background: #182030;
+  gap: 6px;
+  padding: 8px 4px;
+  background: var(--nx-bg-card);
   border: 2px solid transparent;
-  border-radius: var(--nx-radius-md);
+  border-radius: var(--nx-radius-sm);
   cursor: pointer;
   transition: all 0.15s ease;
-  user-select: none;
-  pointer-events: auto;
+  text-align: center;
 }
 
 .nx-block-card:hover {
-  background: #1e293b;
-  border-color: #475569;
-  transform: translateY(-2px);
+  background: #1e2c4f;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .nx-block-card.is-selected {
+  background: #1e3a5f;
   border-color: var(--nx-emerald-light);
-  background: #1e2d42;
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+  box-shadow: none;
 }
 
 .nx-block-card:focus-visible {
   outline: 2px solid var(--nx-emerald-light);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .nx-block-swatch {
-  width: 54px;
-  height: 54px;
-  border-radius: var(--nx-radius-sm);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15), 0 4px 6px rgba(0, 0, 0, 0.3);
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .nx-block-name {
   font-size: 0.72rem;
   color: var(--nx-text-primary);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.nx-inventory-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--nx-bg-card);
+  padding: 12px 16px;
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid var(--nx-border-dialog);
+}
+
+.nx-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nx-details-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #ffffff;
+}
+
+.nx-details-specs {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-details-spec-item {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Popup flotante de selección de ranura (sin blur de fondo) */
+.nx-slot-popup {
+  position: absolute;
+  z-index: 100;
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #0b1329;
+  border: 1px solid var(--nx-emerald);
+  border-radius: var(--nx-radius-sm);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(16, 185, 129, 0.15);
+  animation: nx-slot-popup-in 0.14s ease-out;
+}
+
+.nx-slot-popup[hidden] {
+  display: none !important;
+}
+
+/* Flecha que apunta al bloque */
+.nx-slot-popup::after {
+  content: '';
+  position: absolute;
+  left: var(--nx-arrow-x, 50%);
+  width: 10px;
+  height: 10px;
+  background: #0b1329;
+  border: 1px solid var(--nx-emerald);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.nx-slot-popup[data-placement='above']::after {
+  bottom: -6px;
+  border-top: none;
+  border-left: none;
+}
+
+.nx-slot-popup[data-placement='below']::after {
+  top: -6px;
+  border-bottom: none;
+  border-right: none;
+}
+
+@keyframes nx-slot-popup-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.nx-slot-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nx-slot-popup-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--nx-emerald-light);
+}
+
+.nx-slot-popup-close {
+  background: transparent;
+  border: none;
+  color: var(--nx-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.nx-slot-popup-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nx-slot-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nx-slot-popup-hint {
+  font-size: 0.72rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-details-slots-row {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+}
+
+.nx-btn-slot-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+  border-radius: var(--nx-radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--nx-border-dialog);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nx-btn-slot-pick:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--nx-emerald);
+  transform: translateY(-1px);
+}
+
+.nx-slot-pick-num {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--nx-emerald-light);
+}
+
+.nx-slot-pick-label {
+  font-size: 0.65rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-btn-equip-active {
+  margin: 0;
+}
+
+.nx-inventory-empty {
+  padding: 30px;
   text-align: center;
-  font-weight: 500;
-  max-width: 70px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--nx-text-secondary);
+  font-size: 0.85rem;
+  grid-column: 1 / -1;
+}
+
+/* ==========================================================================
+   Selección y Creación de Mundos (.nx-world-*)
+   ========================================================================== */
+
+.nx-world-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.nx-world-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--nx-bg-card);
+  border: 2px solid var(--nx-border-dialog);
+  border-radius: var(--nx-radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nx-world-card:hover {
+  background: #1b2642;
+  border-color: #475569;
+}
+
+.nx-world-card.is-selected {
+  border-color: var(--nx-emerald-light);
+  background: #172a45;
+  box-shadow: none;
+}
+
+.nx-world-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nx-world-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #ffffff;
+}
+
+.nx-world-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: var(--nx-text-secondary);
+  flex-wrap: wrap;
+}
+
+.nx-world-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.nx-world-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.nx-world-empty-icon {
+  font-size: 3rem;
+}
+
+.nx-world-empty-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--nx-text-secondary);
+}
+
+/* Modo de Juego Cards */
+.nx-mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.nx-mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--nx-bg-card);
+  border: 2px solid var(--nx-border-dialog);
+  border-radius: var(--nx-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nx-mode-card:hover {
+  border-color: #64748b;
+}
+
+.nx-mode-card.is-selected {
+  border-color: var(--nx-emerald-light);
+  background: #172a45;
+}
+
+.nx-mode-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.nx-mode-desc {
+  font-size: 0.72rem;
+  color: var(--nx-text-secondary);
+  line-height: 1.3;
+}
+
+.nx-advanced-info {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 16px;
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid var(--nx-border-subtle);
+}
+
+.nx-advanced-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--nx-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.nx-advanced-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-confirm-dialog {
+  max-width: 440px;
+}
+
+.nx-confirm-message {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--nx-text-primary);
+}
+
+/* Reducción de movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
