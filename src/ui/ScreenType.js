@@ -10,5 +10,9 @@ export const ScreenType = Object.freeze({
   PLAYING: 'playing',
   PAUSE: 'pause',
   WORLD_SELECTION: 'world-selection',
-  WORLD_CREATION: 'world-creation'
+  WORLD_CREATION: 'world-creation',
+  LOGIN: 'login',
+  REGISTER: 'register',
+  PROFILE: 'profile',
+  PASSWORD_RECOVERY: 'password-recovery'
 });
