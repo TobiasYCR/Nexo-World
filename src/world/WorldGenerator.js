@@ -41,6 +41,7 @@ export class WorldGenerator {
     this.treeNoise = new NoiseGenerator(NoiseGenerator.deriveSeed(this.seed, 'trees'));
     this.clusterNoise = new NoiseGenerator(NoiseGenerator.deriveSeed(this.seed, 'trees:cluster'));
     this.bedrockNoise = new NoiseGenerator(NoiseGenerator.deriveSeed(this.seed, 'bedrock'));
+    this.currentBiomeMap = null;
     /** Métricas de la última generación (tiempos por fase, conteos). */
     this.stats = null;
   }
@@ -67,7 +68,14 @@ export class WorldGenerator {
    */
   planSurface(world) {
     const settings = this.#settingsFor(world);
-    return this.createBiomeMap(world).build(world.width, world.depth, settings.minSurface, settings.maxSurface);
+    const biomeMap = this.createBiomeMap(world);
+    this.currentBiomeMap = biomeMap;
+    return biomeMap.build(world.width, world.depth, settings.minSurface, settings.maxSurface);
+  }
+
+  /** API pública para consumidores visuales; no duplica la selección de biomas. */
+  getBiomeAt(x, z) {
+    return this.currentBiomeMap?.biomeAt(x, z) ?? null;
   }
 
   generate(world) {
@@ -76,8 +84,9 @@ export class WorldGenerator {
     const phases = {};
 
     let phaseStart = performance.now();
-    const { biomeIds, heights } = this.createBiomeMap(world)
-      .build(world.width, world.depth, settings.minSurface, settings.maxSurface);
+    const biomeMap = this.createBiomeMap(world);
+    this.currentBiomeMap = biomeMap;
+    const { biomeIds, heights } = biomeMap.build(world.width, world.depth, settings.minSurface, settings.maxSurface);
     phases.biomes = performance.now() - phaseStart;
 
     phaseStart = performance.now();

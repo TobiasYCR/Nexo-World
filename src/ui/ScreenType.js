@@ -8,5 +8,11 @@ export const ScreenType = Object.freeze({
   CONTROLS: 'controls',
   INVENTORY: 'inventory',
   PLAYING: 'playing',
-  PAUSE: 'pause'
+  PAUSE: 'pause',
+  WORLD_SELECTION: 'world-selection',
+  WORLD_CREATION: 'world-creation',
+  LOGIN: 'login',
+  REGISTER: 'register',
+  PROFILE: 'profile',
+  PASSWORD_RECOVERY: 'password-recovery'
 });

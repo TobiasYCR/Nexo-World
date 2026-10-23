@@ -151,7 +151,7 @@ test('la cabeza del pico queda ubicada en el extremo del mango', () => {
   assert.ok(
     p.calls.translations.some((coordinates) => (
       coordinates[0] === 0 &&
-      coordinates[1] === -hand.config.PICKAXE.HANDLE_LENGTH / 2 &&
+      coordinates[1] === hand.config.PICKAXE.HANDLE_LENGTH / 2 &&
       coordinates[2] === 0
     )),
     'la cabeza se dibuja en la punta del eje longitudinal del mango'

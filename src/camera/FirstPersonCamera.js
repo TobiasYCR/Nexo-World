@@ -16,7 +16,15 @@ export class FirstPersonCamera {
     this.forward = new Vec3();
     this.right = new Vec3();
     this.lookDirection = new Vec3();
+    this.visualEffects = null;
+    this.#visualLookDirection = new Vec3();
     this.#updateBasis();
+  }
+
+  #visualLookDirection;
+
+  setVisualEffects(effects) {
+    this.visualEffects = effects;
   }
 
   /** Rotación a partir del desplazamiento del mouse en píxeles. */
@@ -32,6 +40,20 @@ export class FirstPersonCamera {
 
   setPosition(x, y, z) {
     this.position.set(x, y, z);
+  }
+
+  /** Ajusta el campo de visión (FOV) en grados en tiempo de ejecución. */
+  setFov(degrees) {
+    if (typeof degrees === 'number' && degrees > 0) {
+      this.config.FOV_DEGREES = degrees;
+    }
+  }
+
+  /** Ajusta la sensibilidad del mouse en tiempo de ejecución. */
+  setSensitivity(sensitivity) {
+    if (typeof sensitivity === 'number' && sensitivity > 0) {
+      this.config.MOUSE_SENSITIVITY = sensitivity;
+    }
   }
 
   #updateBasis() {
@@ -55,8 +77,16 @@ export class FirstPersonCamera {
     const right = top * (p.width / p.height);
     p.frustum(-right, right, top, -top, near, this.config.FAR_PLANE);
 
-    const { x, y, z } = this.position;
-    const target = this.lookDirection;
+    const effect = this.visualEffects?.transform;
+    const offsetX = effect?.offsetX ?? 0;
+    const offsetY = effect?.offsetY ?? 0;
+    const offsetZ = effect?.offsetZ ?? 0;
+    const x = this.position.x + this.right.x * offsetX + this.forward.x * offsetZ;
+    const y = this.position.y + offsetY;
+    const z = this.position.z + this.right.z * offsetX + this.forward.z * offsetZ;
+    const yaw = this.yaw + (effect?.yaw ?? 0);
+    const pitch = this.pitch + (effect?.pitch ?? 0);
+    const target = effect ? VectorUtils.directionFromAngles(yaw, pitch, this.#visualLookDirection) : this.lookDirection;
     p.camera(x, y, z, x + target.x, y + target.y, z + target.z, 0, 1, 0);
   }
 }

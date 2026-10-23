@@ -1,157 +1,105 @@
 import { GameConfig } from '../game/GameConfig.js';
 import { MathUtils } from '../utils/MathUtils.js';
-import { ViewBob } from './ViewBob.js';
+import { HandAnimator } from './HandAnimator.js';
 
-/**
- * Mano en primera persona: un cubo con la textura del bloque activo, o un
- * brazo si la ranura está vacía. Se dibuja con cámara fija (no la del
- * jugador) y después de limpiar el depth buffer, para que nunca quede
- * tapada por el mundo ni lo atraviese.
- *
- * Solo lee estado (ranura activa, si se está rompiendo, velocidad horizontal
- * y si está en el suelo) y escucha dos eventos (bloque roto/colocado); nunca
- * toca World, Player ni Hotbar directamente.
- */
+/** Dibuja la mano en primera persona; HandAnimator calcula sus transformaciones. */
 export class HandRenderer {
   #blockType = null;
+  #pendingBlockType = null;
+  #hasPendingSwitch = false;
   #selectedIndex = null;
-
-  #swingActive = false;
-  #swingTime = 0;
-  #swingLoop = false;
-  #isBreaking = false;
-  #pickaxeSwing = false;
-  #swingJustStarted = false;
-
-  #slotChangeTime = null;
+  #switchApplied = false;
 
   constructor(
     textureManager,
     camera = null,
     config = GameConfig.viewmodel.hand,
     cameraConfig = GameConfig.camera,
-    viewBobConfig = GameConfig.viewmodel.viewBob
+    viewBobConfig = GameConfig.viewmodel.viewBob,
+    animatorConfig = GameConfig.viewmodel.handAnimator
   ) {
     this.textures = textureManager;
-    // Cámara real del jugador, solo para leer su FOV vigente (puede cambiar en
-    // caliente desde Configuración). Nunca se usa su posición/orientación acá:
-    // la mano tiene su propia cámara fija (ver #applyFixedCamera).
     this.playerCamera = camera;
     this.config = config;
     this.cameraConfig = cameraConfig;
-    this.viewBob = new ViewBob(viewBobConfig);
+    this.animator = new HandAnimator(config, viewBobConfig, animatorConfig);
+    this.viewBob = this.animator.viewBob;
   }
 
-  /**
-   * Ranura activa del hotbar. Si cambió de índice, dispara la animación de
-   * bajar/subir la mano; el contenido (blockType, o null para el brazo) se
-   * actualiza de una, la animación es puramente visual.
-   * @param {number} selectedIndex
-   * @param {import('../blocks/BlockType.js').BlockType|null} blockType
-   */
   setSelectedSlot(selectedIndex, blockType) {
-    if (this.#selectedIndex !== null && selectedIndex !== this.#selectedIndex) {
-      this.#slotChangeTime = 0;
-    }
+    const changed = this.#selectedIndex !== null && selectedIndex !== this.#selectedIndex;
+    this.animator.setSelectedSlot(selectedIndex);
     this.#selectedIndex = selectedIndex;
-    this.#blockType = blockType;
+    if (changed) {
+      this.#pendingBlockType = blockType;
+      this.#hasPendingSwitch = true;
+      this.#switchApplied = false;
+    } else {
+      this.#blockType = blockType;
+      this.#pendingBlockType = null;
+      this.#hasPendingSwitch = false;
+    }
   }
 
-  /** Dispara un swing único (ease-out): llamar al recibir blockBroken. */
   notifyBlockBroken() {
-    this.#pickaxeSwing = true;
-    this.#startSwing();
+    this.animator.notifyBlockBroken();
   }
 
-  /** Dispara un swing único (ease-out): llamar al recibir blockPlaced. */
   notifyBlockPlaced() {
-    this.#pickaxeSwing = false;
-    this.#startSwing();
+    this.animator.notifyBlockPlaced();
   }
 
-  #startSwing() {
-    this.#swingActive = true;
-    this.#swingTime = 0;
-    this.#swingJustStarted = true;
+  setLandingTransform(offset, compression) {
+    this.animator.setLandingTransform(offset, compression);
   }
 
-  /**
-   * @param {number} deltaTime segundos desde el frame anterior
-   * @param {object} state
-   * @param {boolean} [state.isBreaking] true mientras se mantiene apretado romper
-   * @param {number} [state.horizontalSpeed] velocidad horizontal del jugador
-   * @param {boolean} [state.isOnGround]
-   */
-  update(deltaTime, { isBreaking = false, horizontalSpeed = 0, isOnGround = false } = {}) {
-    this.viewBob.update(deltaTime, horizontalSpeed, isOnGround);
-    this.#swingLoop = isBreaking;
-    this.#isBreaking = isBreaking;
-    this.#advanceSwing(deltaTime);
-    if (!this.#swingActive) this.#pickaxeSwing = false;
-    this.#advanceSlotChange(deltaTime);
+  resetTemporary() {
+    this.animator.resetTemporary();
+    this.#pendingBlockType = null;
+    this.#hasPendingSwitch = false;
+    this.#switchApplied = false;
   }
 
-  #advanceSwing(deltaTime) {
-    if (this.#swingJustStarted) {
-      this.#swingJustStarted = false;
-      return;
-    }
-    if (!this.#swingActive && !this.#swingLoop) return;
-    if (!this.#swingActive && this.#swingLoop) this.#swingActive = true;
-
-    this.#swingTime += deltaTime;
-    if (this.#swingTime >= this.config.SWING_DURATION) {
-      if (this.#swingLoop) {
-        this.#swingTime -= this.config.SWING_DURATION;
-      } else {
-        this.#swingActive = false;
-        this.#swingTime = 0;
-      }
+  update(deltaTime, state = {}) {
+    this.animator.update(deltaTime, state);
+    if (this.#hasPendingSwitch && !this.#switchApplied && this.animator.switchProgress >= 0.5) {
+      this.#blockType = this.#pendingBlockType;
+      this.#pendingBlockType = null;
+      this.#hasPendingSwitch = false;
+      this.#switchApplied = true;
     }
   }
 
-  #advanceSlotChange(deltaTime) {
-    if (this.#slotChangeTime === null) return;
-    this.#slotChangeTime += deltaTime;
-    if (this.#slotChangeTime >= this.config.SLOT_CHANGE_DURATION) this.#slotChangeTime = null;
-  }
-
-  /** Curva de swing en [0, 1]: 0 al inicio y al final, pico a mitad de camino, con ease-out. */
   get swingAmount() {
-    if (!this.#swingActive) return 0;
-    const linear = MathUtils.clamp01(this.#swingTime / this.config.SWING_DURATION);
-    const easedOut = 1 - (1 - linear) ** 3;
-    return Math.sin(easedOut * Math.PI);
+    return this.animator.swingAmount;
   }
 
-  /** Curva de bajar/subir al cambiar de slot, misma forma que el swing. */
   get slotChangeAmount() {
-    if (this.#slotChangeTime === null) return 0;
-    const linear = MathUtils.clamp01(this.#slotChangeTime / this.config.SLOT_CHANGE_DURATION);
-    return Math.sin(linear * Math.PI);
+    return this.animator.slotChangeAmount;
+  }
+
+  get animationState() {
+    return this.animator.state;
   }
 
   draw(p, _camera) {
-    const swing = this.swingAmount;
-    const dip = this.slotChangeAmount;
-
-    const x = this.config.IDLE_OFFSET.x + this.viewBob.offsetX;
-    const y =
-      this.config.IDLE_OFFSET.y +
-      this.viewBob.offsetY -
-      swing * this.config.SWING_DISTANCE * 0.4 -
-      dip * this.config.SLOT_CHANGE_DROP;
-    const z = this.config.IDLE_OFFSET.z + swing * this.config.SWING_DISTANCE;
+    const x = this.config.IDLE_OFFSET.x + this.animator.offsetX;
+    const y = this.config.IDLE_OFFSET.y + this.animator.offsetY;
+    const z = this.config.IDLE_OFFSET.z + this.animator.offsetZ;
 
     p.push();
     p.clearDepth?.();
     this.#applyFixedCamera(p);
     p.translate(x, y, z);
+    p.rotateX?.(this.animator.rotationX);
+    p.rotateY?.(this.animator.rotationY);
+    p.rotateZ?.(this.animator.rotationZ);
+    if (this.animator.scaleY !== 1) p.scale?.(1, this.animator.scaleY, 1);
     p.noStroke();
 
-    if (this.#isBreaking || (this.#pickaxeSwing && this.#swingActive)) {
+    if (this.animator.isBreaking || this.animator.showPickaxe) {
       this.#drawArm(p);
-      this.#drawPickaxe(p, swing);
+      this.#drawPickaxe(p, this.swingAmount);
     } else if (this.#blockType) {
       this.#drawBlock(p);
     } else {
@@ -161,12 +109,6 @@ export class HandRenderer {
     p.pop();
   }
 
-  /**
-   * Cámara fija mirando hacia -Z, con el mismo frustum que usa el juego.
-   * El FOV se lee de la cámara real del jugador si está disponible (puede
-   * haber sido cambiado en caliente desde Configuración); si no, se cae al
-   * default de GameConfig.camera.
-   */
   #applyFixedCamera(p) {
     const fovDegrees = this.playerCamera?.fov ?? this.cameraConfig.FOV_DEGREES;
     const near = this.cameraConfig.NEAR_PLANE;
@@ -197,7 +139,8 @@ export class HandRenderer {
     const { PICKAXE } = this.config;
     p.push();
     p.translate(PICKAXE.OFFSET.x, PICKAXE.OFFSET.y, PICKAXE.OFFSET.z);
-    p.rotateZ(-PICKAXE.SWING_ROTATION * swing);
+    // Mantiene la cabeza del pico arriba en reposo y suma el movimiento del golpe.
+    p.rotateZ((PICKAXE.HOLD_ROTATION ?? 0) - PICKAXE.SWING_ROTATION * swing);
 
     p.fill(...PICKAXE.HANDLE_COLOR);
     p.ambientMaterial(...PICKAXE.HANDLE_COLOR);
@@ -205,7 +148,9 @@ export class HandRenderer {
 
     p.fill(...PICKAXE.HEAD_COLOR);
     p.ambientMaterial(...PICKAXE.HEAD_COLOR);
-    p.translate(0, -PICKAXE.HANDLE_LENGTH / 2, 0);
+    // En esta proyección, el extremo positivo de Y es la parte superior de la
+    // vista de primera persona. La cabeza queda allí, lejos de la mano.
+    p.translate(0, PICKAXE.HANDLE_LENGTH / 2, 0);
     p.box(PICKAXE.HEAD_WIDTH, PICKAXE.HEAD_HEIGHT, PICKAXE.HEAD_DEPTH);
     p.pop();
   }

@@ -226,6 +226,29 @@ export const GameConfig = Object.freeze({
     LIGHT_DIRECTION: Object.freeze({ x: -0.4, y: 1, z: -0.6 })
   }),
 
+  users: Object.freeze({
+    USERNAME_MIN_LENGTH: 3,
+    USERNAME_MAX_LENGTH: 20,
+    /** Letras, números, guion y guion bajo. Sin espacios ni símbolos: el nombre se usa como clave. */
+    USERNAME_PATTERN: /^[A-Za-z0-9_-]+$/,
+    PASSWORD_MIN_LENGTH: 8,
+    /** Laxo a propósito: ver el comentario de UserValidator.checkEmail. */
+    EMAIL_PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    EMAIL_MAX_LENGTH: 254,
+    /** Duración de una sesión local, en milisegundos: 7 días. */
+    SESSION_TTL_MS: 7 * 24 * 60 * 60 * 1000,
+    /** Tope alto para no derivar PBKDF2 sobre una entrada enorme y colgar la pestaña. */
+    PASSWORD_MAX_LENGTH: 128,
+    /**
+     * Costo de PBKDF2. Más iteraciones encarecen la fuerza bruta y también el
+     * login legítimo; 210.000 es la recomendación de OWASP para PBKDF2-SHA-256
+     * y tarda decenas de milisegundos en un equipo de escritorio.
+     */
+    PBKDF2_ITERATIONS: 210000,
+    SALT_BYTES: 16,
+    DERIVED_KEY_BYTES: 32
+  }),
+
   inventory: Object.freeze({
     HOTBAR_SIZE: 9,
     SLOT_MAX_STACK: 64,
@@ -292,6 +315,8 @@ export const GameConfig = Object.freeze({
         HEAD_WIDTH: 9,
         HEAD_HEIGHT: 1.8,
         HEAD_DEPTH: 1.6,
+        /** Inclinación natural del pico: la cabeza queda por encima de la mano. */
+        HOLD_ROTATION: -0.35,
         SWING_ROTATION: 0.85,
         OFFSET: Object.freeze({ x: -2, y: 3, z: -1 })
       })
@@ -301,7 +326,8 @@ export const GameConfig = Object.freeze({
       /** Cuánto más grande es la caja de resalte que el bloque, para no parpadear contra sus caras. */
       EXPANSION: 0.005,
       STROKE_COLOR: Object.freeze([12, 12, 14, 170]),
-      STROKE_WEIGHT: 1.5
+      STROKE_WEIGHT: 1.5,
+      TRANSITION_DURATION: 0.1
     }),
 
     breakOverlay: Object.freeze({
@@ -322,6 +348,13 @@ export const GameConfig = Object.freeze({
       GRAVITY: -260,
       SIZE: 2.5,
       INITIAL_SPEED: 55,
+      PLACED_MIN_COUNT: 5,
+      PLACED_MAX_COUNT: 8,
+      PLACED_LIFETIME: 0.42,
+      PLACED_INITIAL_SPEED: 28,
+      PLACEMENT_BOUNCE: 0.25,
+      ROTATION_SPEED: 4,
+      TRANSPARENT_ALPHA: 0.7,
       /** Tope del pool: ninguna partícula nueva se crea por encima de este número. */
       MAX_PARTICLES: 64
     }),
@@ -330,7 +363,72 @@ export const GameConfig = Object.freeze({
       AMPLITUDE: 2.2,
       FREQUENCY: 9,
       /** Velocidad horizontal a la que el balanceo llega a su amplitud máxima. */
-      REFERENCE_SPEED: 120
+      REFERENCE_SPEED: 120,
+      WALK_BOB_AMPLITUDE: 2.2,
+      WALK_BOB_FREQUENCY: 9,
+      RUN_BOB_MULTIPLIER: 1.2,
+      STOP_SMOOTHING: 14
+    }),
+
+    handAnimator: Object.freeze({
+      IDLE_BREATH_AMPLITUDE: 0.35,
+      IDLE_BREATH_FREQUENCY: 1.6,
+      BREAK_ROTATION: 0.85,
+      PLACE_ROTATION: 0.38,
+      LANDING_ROTATION: 0.08,
+      LANDING_OFFSET: 2.2,
+      LANDING_COMPRESSION: 0.08,
+      EASING_POWER: 3
+    }),
+
+    landing: Object.freeze({
+      ENABLED: true,
+      MIN_IMPACT_SPEED: 135,
+      MAX_IMPACT_SPEED: 360,
+      DURATION: 0.24,
+      HAND_OFFSET: 2.4,
+      HAND_COMPRESSION: 0.08,
+      CAMERA_OFFSET: 1.2
+    }),
+
+    damage: Object.freeze({
+      ENABLED: true,
+      FLASH_DURATION: 0.28,
+      MAX_OPACITY: 0.42,
+      COLOR: Object.freeze([210, 32, 32]),
+      DEATH_DURATION: 0.45,
+      DEATH_MAX_OPACITY: 0.58
+    }),
+
+    cameraEffects: Object.freeze({
+      ENABLED: true,
+      MAX_AMPLITUDE: 2.5,
+      MAX_ROTATION: 0.035,
+      DEFAULT_DURATION: 0.22,
+      DECAY: 14
+    }),
+
+    ambientParticles: Object.freeze({
+      ENABLED: true,
+      MAX_PARTICLES: 64,
+      DISTANCE: 120,
+      PARTICLE_LIFETIME: 2.4,
+      SIZE: 1.4,
+      SPAWN_RATE: 26,
+      DENSITY_PLAINS: 0.22,
+      DENSITY_FOREST: 0.7,
+      DENSITY_DESERT: 0.58,
+      DENSITY_MOUNTAINS: 0.18,
+      COLORS: Object.freeze({
+        plains: Object.freeze([205, 225, 190]),
+        forest: Object.freeze([154, 205, 132]),
+        desert: Object.freeze([214, 178, 112]),
+        mountains: Object.freeze([205, 215, 225])
+      })
+    }),
+
+    effects: Object.freeze({
+      PAUSE_FREEZES: true
     })
   })
 });

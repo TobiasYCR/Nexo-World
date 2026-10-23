@@ -30,6 +30,11 @@ import { BreakOverlay } from '../viewmodel/BreakOverlay.js';
 import { BlockParticles } from '../viewmodel/BlockParticles.js';
 import { HandRenderer } from '../viewmodel/HandRenderer.js';
 import { LevelUpEffect } from '../viewmodel/LevelUpEffect.js';
+import { AmbientParticles } from '../viewmodel/AmbientParticles.js';
+import { LandingEffect } from '../viewmodel/LandingEffect.js';
+import { DamageEffect } from '../viewmodel/DamageEffect.js';
+import { CameraEffects } from '../viewmodel/CameraEffects.js';
+import { VisualEffectsManager } from '../viewmodel/VisualEffectsManager.js';
 
 /**
  * Coordinador de sistemas. Game construye las dependencias, define el orden de
@@ -59,6 +64,8 @@ export class Game {
     this.raycast = new Raycast(this.world);
 
     this.camera = new FirstPersonCamera(config.camera);
+    this.cameraEffects = new CameraEffects(config.viewmodel.cameraEffects);
+    this.camera.setVisualEffects(this.cameraEffects);
     this.player = new Player(config.player);
     this.input = new InputManager(config.input);
     this.playerController = new PlayerController(this.player, this.camera, this.input);
@@ -84,28 +91,43 @@ export class Game {
     this.breakOverlay = new BreakOverlay(p, config.viewmodel.breakOverlay, config.world.BLOCK_SIZE);
     this.blockParticles = new BlockParticles(config.viewmodel.particles);
     this.levelUpEffect = new LevelUpEffect(config.levels ?? GameConfig.levels, config.camera, this.camera);
+    this.ambientParticles = new AmbientParticles(config.viewmodel.ambientParticles, {
+      world: this.world,
+      blockSize: config.world.BLOCK_SIZE
+    });
+    this.landingEffect = new LandingEffect(config.viewmodel.landing);
+    this.damageEffect = new DamageEffect(config.viewmodel.damage);
     this.handRenderer = new HandRenderer(
       this.textureManager,
       this.camera,
       config.viewmodel.hand,
       config.camera,
-      config.viewmodel.viewBob
+      config.viewmodel.viewBob,
+      config.viewmodel.handAnimator
     );
+    this.visualEffectsManager = new VisualEffectsManager({
+      events: this.events,
+      renderer: this.renderer,
+      world: this.world,
+      blockSize: config.world.BLOCK_SIZE,
+      handRenderer: this.handRenderer,
+      blockHighlight: this.blockHighlight,
+      breakOverlay: this.breakOverlay,
+      blockParticles: this.blockParticles,
+      ambientParticles: this.ambientParticles,
+      landingEffect: this.landingEffect,
+      damageEffect: this.damageEffect,
+      cameraEffects: this.cameraEffects
+    });
+    // Se mantienen los tres overlays existentes como entradas independientes
+    // para preservar su contrato público; el manager coordina sus estados y
+    // dibuja los efectos nuevos y la mano en el orden final.
     this.renderer.addOverlay(this.blockHighlight);
     this.renderer.addOverlay(this.breakOverlay);
     this.renderer.addOverlay(this.blockParticles);
     this.renderer.addOverlay(this.levelUpEffect);
-    this.renderer.addOverlay(this.handRenderer);
-    this.events.on(GameEventTypes.BLOCK_BROKEN, ({ position, blockType }) => {
-      this.handRenderer.notifyBlockBroken();
-      const size = config.world.BLOCK_SIZE;
-      this.blockParticles.spawn(
-        { x: (position.x + 0.5) * size, y: (position.y + 0.5) * size, z: (position.z + 0.5) * size },
-        blockType.color
-      );
-    });
-    this.events.on(GameEventTypes.BLOCK_PLACED, () => this.handRenderer.notifyBlockPlaced());
     this.events.on(GameEventTypes.LEVEL_UP, ({ level }) => this.levelUpEffect.trigger(level));
+    this.renderer.addOverlay(this.visualEffectsManager);
     this.audio = new AudioManager(config.assets);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
@@ -209,6 +231,7 @@ export class Game {
     if (result.ok) {
       this.#syncCameraToPlayer();
       this.levelUpEffect.reset();
+      this.visualEffectsManager.reset();
     }
     return result;
   }
@@ -274,21 +297,32 @@ export class Game {
   /** Sincroniza los datos de interacción del juego con los efectos visuales. */
   #updateViewmodel(deltaTime) {
     if (!this.state.isRunning) this.blockInteraction.updateBreaking(deltaTime, false);
-    this.blockHighlight.update(this.state.isRunning ? this.blockInteraction.targetedBlock : null);
-    this.breakOverlay.update(
-      this.state.isRunning ? this.blockInteraction.breakingBlock : null,
-      this.blockInteraction.breakProgress
-    );
-    this.blockParticles.update(deltaTime);
-    this.levelUpEffect.update(deltaTime);
+    this.levelUpEffect.update(this.state.isRunning ? deltaTime : 0);
     const horizontalSpeed = this.state.isRunning
       ? Math.hypot(this.player.velocity.x, this.player.velocity.z)
       : 0;
-    this.handRenderer.setSelectedSlot(this.hotbar.selectedIndex, this.hotbar.selectedBlockType);
+    const blockPosition = this.world.worldToBlock(this.player.position.x, this.player.position.y, this.player.position.z);
+    const biome = this.state.isRunning
+      ? this.worldGenerator.getBiomeAt(blockPosition.x, blockPosition.z)
+      : null;
     this.#viewmodelState.isBreaking = this.state.isRunning && this.blockInteraction.breakingBlock !== null;
     this.#viewmodelState.horizontalSpeed = horizontalSpeed;
     this.#viewmodelState.isOnGround = this.state.isRunning && this.player.isOnGround;
-    this.handRenderer.update(deltaTime, this.#viewmodelState);
+    this.visualEffectsManager.update(deltaTime, {
+      running: this.state.isRunning,
+      paused: this.state.isPaused,
+      targetedBlock: this.blockInteraction.targetedBlock,
+      breakingBlock: this.blockInteraction.breakingBlock,
+      breakProgress: this.blockInteraction.breakProgress,
+      playerPosition: this.player.position,
+      biome,
+      selectedIndex: this.hotbar.selectedIndex,
+      selectedBlockType: this.hotbar.selectedBlockType,
+      isBreaking: this.#viewmodelState.isBreaking,
+      horizontalSpeed,
+      isOnGround: this.#viewmodelState.isOnGround,
+      isSprinting: this.state.isRunning && this.player.isSprinting
+    });
   }
 
   #syncCameraToPlayer() {

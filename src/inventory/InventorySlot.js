@@ -20,13 +20,16 @@ export class InventorySlot {
   }
 
   accepts(blockType) {
-    return this.isEmpty || this.blockType === blockType;
+    if (this.isEmpty) return true;
+    if (this.isFull) return false;
+    if (!this.blockType || !blockType) return false;
+    return this.blockType === blockType || this.blockType.id === blockType.id;
   }
 
   /** Agrega unidades y devuelve el sobrante que no entró. */
   add(blockType, amount = 1) {
     if (!this.accepts(blockType)) return amount;
-    this.blockType = blockType;
+    if (this.isEmpty) this.blockType = blockType;
     const free = this.maxStack - this.count;
     const added = Math.min(free, amount);
     this.count += added;
@@ -44,5 +47,13 @@ export class InventorySlot {
   clear() {
     this.blockType = null;
     this.count = 0;
+  }
+
+  set(blockType, amount = 1) {
+    this.clear();
+    if (blockType && amount > 0) {
+      return this.add(blockType, amount);
+    }
+    return 0;
   }
 }

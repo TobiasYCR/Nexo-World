@@ -1,5 +1,6 @@
 import p5 from 'p5';
 import { Game } from './game/Game.js';
+import { GameUiBridge } from './ui/GameUiBridge.js';
 
 /** ?seed=123 en la URL genera un mundo reproducible con esa semilla. */
 function seedFromUrl() {
@@ -17,6 +18,7 @@ function seedFromUrl() {
  */
 const sketch = (p) => {
   let game = null;
+  let uiBridge = null;
 
   p.setup = () => {
     const canvas = p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
@@ -24,6 +26,10 @@ const sketch = (p) => {
 
     game = new Game(p, undefined, { seed: seedFromUrl() });
     game.start(canvas.elt);
+
+    if (game.hud) {
+      uiBridge = new GameUiBridge(game, game.hud, game.hud.intentBus);
+    }
 
     const { seed, version, totalMs } = game.worldGenerator.stats;
     console.info(`[Nexo World] mundo generado: semilla ${seed}, generador v${version}, ${totalMs.toFixed(1)} ms`);

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Nexo World - Estilos Globales, HUD y Capa Base de Interfaz (Frontend 1)
+   Nexo World - Estilos Globales, HUD y Capa Base de Interfaz (Frontend 1 & 2)
    ========================================================================== */
 
 :root {
@@ -33,6 +33,18 @@ html, body {
   height: 100vh;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 /* ==========================================================================
    Reglas globales de ocultación estricta
    ========================================================================== */
@@ -45,7 +57,8 @@ html, body {
 .hud-debug[hidden],
 .hud-crosshair[hidden],
 .hud-hotbar-container[hidden],
-.hud-hotbar-label[hidden] {
+.hud-hotbar-label[hidden],
+.hud-health-container[hidden] {
   display: none !important;
 }
 
@@ -89,7 +102,9 @@ html, body {
   height: 20px;
   margin: -10px 0 0 -10px;
   pointer-events: none;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.95));
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 1px #000000);
+  mix-blend-mode: difference;
+  z-index: 140;
 }
 
 .hud-crosshair::before,
@@ -114,6 +129,109 @@ html, body {
 }
 
 /* ==========================================================================
+   HUD In-Game: Barra de Vida (Corazones Pixel Art)
+   ========================================================================== */
+
+.hud-health-container {
+  position: absolute;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 130;
+  transition: transform 0.1s ease;
+}
+
+.hud-health-container.is-hurt {
+  animation: nx-heart-shake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes nx-heart-shake {
+  10%, 90% { transform: translate(calc(-50% - 2px), -2px); }
+  20%, 80% { transform: translate(calc(-50% + 3px), 1px); }
+  30%, 50%, 70% { transform: translate(calc(-50% - 3px), -1px); }
+  40%, 60% { transform: translate(calc(-50% + 2px), 2px); }
+}
+
+.hud-health-row {
+  display: flex;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.hud-heart {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  position: relative;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  transition: transform 0.15s ease;
+}
+
+/* Corazón Lleno */
+.hud-heart-full::before {
+  content: "❤";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #ef4444;
+  text-shadow: 0 0 2px #000, 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* Corazón Medio */
+.hud-heart-half::before {
+  content: "❤";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #f97316;
+  clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  text-shadow: 0 0 2px #000;
+  z-index: 2;
+}
+
+.hud-heart-half::after {
+  content: "❤";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #334155;
+  text-shadow: 0 0 1px #000;
+}
+
+/* Corazón Vacío */
+.hud-heart-empty::before {
+  content: "❤";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #334155;
+  text-shadow: 0 0 1px #000;
+  opacity: 0.6;
+}
+
+/* ==========================================================================
    HUD In-Game: Panel de Debug (F3)
    ========================================================================== */
 
@@ -122,18 +240,19 @@ html, body {
   top: 14px;
   left: 14px;
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: pre;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   padding: 10px 14px;
   color: #f1f5f9;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   pointer-events: none;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   z-index: 150;
+  max-width: 90vw;
 }
 
 /* ==========================================================================
@@ -166,7 +285,12 @@ html, body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(4px);
-  transition: opacity 0.2s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.hud-hotbar-label.is-fading {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
 .hud-hotbar-bar {
@@ -201,6 +325,15 @@ html, body {
   z-index: 2;
 }
 
+.hud-hotbar-slot.has-changed {
+  animation: nx-slot-pulse 0.2s ease-out;
+}
+
+@keyframes nx-slot-pulse {
+  0% { transform: scale(1.15); }
+  100% { transform: scale(1.08); }
+}
+
 .hud-slot-number {
   position: absolute;
   top: 2px;
@@ -212,10 +345,14 @@ html, body {
 }
 
 .hud-slot-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 4px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.4);
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .hud-slot-count {
@@ -229,7 +366,114 @@ html, body {
 }
 
 /* ==========================================================================
-   Pantalla de Menú Principal (.nx-menu-*)
+   Sistema de Notificaciones Toast (.nx-toast-*)
+   ========================================================================== */
+
+.nx-toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 2000;
+  pointer-events: auto;
+  max-width: 360px;
+}
+
+.nx-toast-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: #f8fafc;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: nx-toast-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 0.85rem;
+}
+
+.nx-toast-item.is-leaving {
+  animation: nx-toast-exit 0.25s ease forwards;
+}
+
+@keyframes nx-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateX(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes nx-toast-exit {
+  to {
+    opacity: 0;
+    transform: translateX(30px) scale(0.9);
+  }
+}
+
+.nx-toast-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.nx-toast-info {
+  border-left: 4px solid #38bdf8;
+}
+.nx-toast-info .nx-toast-icon {
+  color: #38bdf8;
+}
+
+.nx-toast-success {
+  border-left: 4px solid #10b981;
+}
+.nx-toast-success .nx-toast-icon {
+  color: #10b981;
+}
+
+.nx-toast-warning {
+  border-left: 4px solid #f59e0b;
+}
+.nx-toast-warning .nx-toast-icon {
+  color: #f59e0b;
+}
+
+.nx-toast-error {
+  border-left: 4px solid #ef4444;
+}
+.nx-toast-error .nx-toast-icon {
+  color: #ef4444;
+}
+
+.nx-toast-message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.nx-toast-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.nx-toast-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   Pantallas: Menú y Pausa (.nx-menu-*, .nx-pause-*)
    ========================================================================== */
 
 .nx-menu-backdrop {
@@ -320,10 +564,6 @@ html, body {
   line-height: 1.4;
 }
 
-/* ==========================================================================
-   Overlay de Pausa (.nx-pause-*)
-   ========================================================================== */
-
 .nx-pause-backdrop {
   position: fixed;
   inset: 0;
@@ -338,7 +578,7 @@ html, body {
 
 .nx-pause-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 18px;
@@ -347,7 +587,7 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 20px;
   text-align: center;
   animation: nx-menu-entrance 0.2s ease-out;
   pointer-events: auto;
@@ -364,7 +604,7 @@ html, body {
 .nx-pause-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
