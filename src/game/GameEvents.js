@@ -11,9 +11,7 @@ export const GameEventTypes = Object.freeze({
   /** El servidor aceptó el progreso: { score, rank }. */
   PROGRESS_SYNCED: 'progressSynced',
   /** No se pudo sincronizar: { reason, message }. El progreso sigue guardado localmente. */
-  PROGRESS_SYNC_FAILED: 'progressSyncFailed',
-  /** Subida de nivel durante la partida: { level, previousLevel }. */
-  LEVEL_UP: 'levelUp'
+  PROGRESS_SYNC_FAILED: 'progressSyncFailed'
 });
 
 /** Bus chico e intencional para desacoplar reglas, feedback visual y audio. */

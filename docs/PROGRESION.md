@@ -18,35 +18,6 @@ Investigación, decisiones y contratos del sistema de puntuaciones de Nexo World
 
 **Decisión: no implementar niveles en esta etapa.** No hay mecánicas que desbloquear y la experiencia sería una copia de la puntuación. La alternativa es la **puntuación desglosada por categoría** (exploración, biomas, minería y construcción), que da el mismo reconocimiento sin bloquear nada. Las puntuaciones funcionan solas; los niveles pueden sumarse después sin cambiar este modelo.
 
-### Addendum — issue #27: niveles representativos
-
-La etapa de Frontend 1 agrega niveles sin contradecir la decisión anterior: son
-representativos, no una llave de contenido. Puntos y experiencia permanecen
-separados para que cada sistema pueda cambiar sin alterar el otro.
-
-La experiencia usa estos pesos, definidos en `GameConfig.levels`:
-
-| Actividad | XP | Justificación |
-|---|---:|---|
-| Celda de exploración nueva | 5 | Premia recorrer el mundo sin hacer que caminar domine la curva. |
-| Bioma nuevo | 40 | Es un hito poco frecuente y representa descubrimiento. |
-| Mineral natural extraído | 12 | Reconoce el riesgo y la búsqueda sin copiar el valor de cada mineral en puntos. |
-| Bloque construido | 1 | Reconoce construcción sostenida con un peso bajo; retirar un bloque puede restar puntos, pero nunca XP ni niveles. |
-
-La curva es acumulativa: el nivel 1 empieza en 0 XP, el nivel 2 requiere
-`BASE_XP` (100) y cada umbral siguiente multiplica el tramo anterior por
-`GROWTH` (1,35). Se eligió un máximo representativo de 50 niveles; alcanzar el
-tope no bloquea funciones y `isMaxLevel` lo comunica a la interfaz. El nivel se
-calcula al recuperar el `ProgressState`, por lo que no se guarda una copia
-separada de la experiencia. Durante la sesión se conserva el máximo alcanzado:
-una resta de construcción no puede hacer bajar el nivel.
-
-El evento `levelUp` solo se emite cuando una acción de juego cruza un umbral,
-una vez por nivel cruzado. Cargar un guardado y adoptar progreso remoto
-actualizan el contrato en silencio. `SHOW_LEVEL_UP_EFFECT` controla el efecto
-breve alrededor de la mano; sus partículas usan un pool fijo y quedan fuera del
-centro de la pantalla para no tapar la mira.
-
 ### 1.2 Actividades que otorgan puntos
 
 Solo se usan mecánicas que ya existen en el juego.

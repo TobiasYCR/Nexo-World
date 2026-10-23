@@ -229,7 +229,7 @@ test('el progreso de rotura se refleja y se reinicia al soltar', async () => {
   dom.canvas.dispatch('mousedown', { button: 0 });
   game.update(0.1);
 
-  assert.equal(game.renderer.overlays.size, 5, 'el efecto de subida de nivel se registra como overlay adicional');
+  assert.equal(game.renderer.overlays.size, 4);
   assert.deepEqual(
     { x: game.blockHighlight.targetedBlock.x, y: game.blockHighlight.targetedBlock.y, z: game.blockHighlight.targetedBlock.z },
     target

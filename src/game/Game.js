@@ -29,7 +29,6 @@ import { BlockHighlight } from '../viewmodel/BlockHighlight.js';
 import { BreakOverlay } from '../viewmodel/BreakOverlay.js';
 import { BlockParticles } from '../viewmodel/BlockParticles.js';
 import { HandRenderer } from '../viewmodel/HandRenderer.js';
-import { LevelUpEffect } from '../viewmodel/LevelUpEffect.js';
 
 /**
  * Coordinador de sistemas. Game construye las dependencias, define el orden de
@@ -68,8 +67,7 @@ export class Game {
     this.progression = options.progression ?? new PlayerProgression({
       config: config.progression,
       events: this.events,
-      mode: options.mode ?? config.progression.GAME_MODE,
-      levelConfig: config.levels
+      mode: options.mode ?? config.progression.GAME_MODE
     });
     /** Mundo tal como lo generó la semilla; lo usan las reglas de progresión. */
     this.naturalTerrain = null;
@@ -90,12 +88,10 @@ export class Game {
       config.camera,
       config.viewmodel.viewBob
     );
-    this.levelUpEffect = new LevelUpEffect(config.levels, config.camera, this.camera);
     this.renderer.addOverlay(this.blockHighlight);
     this.renderer.addOverlay(this.breakOverlay);
     this.renderer.addOverlay(this.blockParticles);
     this.renderer.addOverlay(this.handRenderer);
-    this.renderer.addOverlay(this.levelUpEffect);
     this.events.on(GameEventTypes.BLOCK_BROKEN, ({ position, blockType }) => {
       this.handRenderer.notifyBlockBroken();
       const size = config.world.BLOCK_SIZE;
@@ -105,7 +101,6 @@ export class Game {
       );
     });
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.handRenderer.notifyBlockPlaced());
-    this.events.on(GameEventTypes.LEVEL_UP, ({ level }) => this.levelUpEffect.trigger(level));
     this.audio = new AudioManager(config.assets);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
@@ -206,10 +201,7 @@ export class Game {
 
   loadGame(slot) {
     const result = this.saveManager.load(slot, this.world, this.player);
-    if (result.ok) {
-      this.#syncCameraToPlayer();
-      this.levelUpEffect.reset();
-    }
+    if (result.ok) this.#syncCameraToPlayer();
     return result;
   }
 
@@ -280,7 +272,6 @@ export class Game {
       this.blockInteraction.breakProgress
     );
     this.blockParticles.update(deltaTime);
-    this.levelUpEffect.update(deltaTime);
     const horizontalSpeed = this.state.isRunning
       ? Math.hypot(this.player.velocity.x, this.player.velocity.z)
       : 0;
