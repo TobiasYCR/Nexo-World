@@ -18,6 +18,35 @@ Investigación, decisiones y contratos del sistema de puntuaciones de Nexo World
 
 **Decisión: no implementar niveles en esta etapa.** No hay mecánicas que desbloquear y la experiencia sería una copia de la puntuación. La alternativa es la **puntuación desglosada por categoría** (exploración, biomas, minería y construcción), que da el mismo reconocimiento sin bloquear nada. Las puntuaciones funcionan solas; los niveles pueden sumarse después sin cambiar este modelo.
 
+### Addendum: niveles representativos (issue #27)
+
+La etapa siguiente incorpora niveles sin contradecir la decisión anterior: son
+representativos, no desbloquean ni bloquean contenido y funcionan igual en
+supervivencia y creativo (cada modo conserva sus propias estadísticas).
+
+La experiencia está separada de los puntos para que cada actividad tenga un
+valor propio:
+
+| Actividad | XP | Justificación |
+|---|---:|---|
+| Celda de exploración nueva | 5 | Reconoce recorrer territorio, pero a una escala moderada. |
+| Bioma nuevo | 40 | Es un descubrimiento menos frecuente y más significativo. |
+| Mineral natural extraído | 12 | Valora la exploración subterránea sin depender del tipo de mineral. |
+| Bloque construido en pie | 1 | Acompaña la construcción sin convertirla en la fuente principal de XP. |
+
+El umbral del nivel 2 es `BASE_XP` (100 XP). Cada nivel siguiente suma un
+umbral `ceil(BASE_XP × GROWTH^(nivel-2))`, con `GROWTH = 1.35`; así la curva
+crece de forma progresiva. Se decidió un máximo representativo de nivel 50:
+al alcanzarlo la barra queda completa, pero ninguna acción queda bloqueada.
+
+La experiencia se recalcula desde `ProgressState` al entrar a un mundo; no se
+guarda una copia de XP. Durante la sesión se conserva el mayor valor observado
+para que quitar una construcción no baje el nivel. La carga y la reconciliación
+con el servidor son silenciosas: `levelUp` solo se emite cuando una acción de
+la partida cruza uno o más umbrales. El feedback es un conjunto pequeño de
+partículas alrededor de la mano en primera persona y se puede apagar con
+`GameConfig.levels.SHOW_LEVEL_UP_EFFECT`.
+
 ### 1.2 Actividades que otorgan puntos
 
 Solo se usan mecánicas que ya existen en el juego.

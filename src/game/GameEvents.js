@@ -8,6 +8,8 @@ export const GameEventTypes = Object.freeze({
   PLAYER_RESPAWNED: 'playerRespawned',
   /** Cambió la puntuación local: { score, delta, reason, breakdown }. */
   SCORE_CHANGED: 'scoreChanged',
+  /** Subió uno o más niveles: { level, previousLevel }. */
+  LEVEL_UP: 'levelUp',
   /** El servidor aceptó el progreso: { score, rank }. */
   PROGRESS_SYNCED: 'progressSynced',
   /** No se pudo sincronizar: { reason, message }. El progreso sigue guardado localmente. */

@@ -7,6 +7,8 @@ import { ProgressValidator } from './ProgressValidator.js';
 import { ProgressionApiClient } from './ProgressionApiClient.js';
 import { ProgressionLocalStore } from './ProgressionLocalStore.js';
 import { ProgressionResult } from './ProgressionResult.js';
+import { LevelRules } from './LevelRules.js';
+import { LevelProgress } from './LevelProgress.js';
 
 /** Estado de la sincronización con el servidor, para mostrarlo en la interfaz. */
 export const SyncStatus = Object.freeze({
@@ -48,6 +50,7 @@ export class PlayerProgression {
   #verifiedScore = null;
   #rank = null;
   #lastError = null;
+  #levelProgress;
 
   /**
    * @param {object} [options]
@@ -57,6 +60,7 @@ export class PlayerProgression {
    * @param {import('../game/GameEvents.js').GameEvents|null} [options.events]
    * @param {string} [options.mode] modo de la partida
    * @param {string} [options.playerName] nombre para registrar un jugador invitado nuevo
+   * @param {object} [options.levelConfig] GameConfig.levels
    */
   constructor({
     config = GameConfig.progression,
@@ -64,10 +68,13 @@ export class PlayerProgression {
     store = new ProgressionLocalStore(),
     events = null,
     mode = config.GAME_MODE,
-    playerName = null
+    playerName = null,
+    levelConfig = GameConfig.levels
   } = {}) {
     this.config = config;
     this.rules = new ScoreRules(config);
+    this.levelRules = new LevelRules(levelConfig);
+    this.#levelProgress = new LevelProgress(this.levelRules);
     this.validator = new ProgressValidator(this.rules);
     this.api = apiClient;
     this.store = store;
@@ -96,6 +103,7 @@ export class PlayerProgression {
     const cachedState = cached ? this.#acceptState(cached.state) : null;
     if (cachedState) {
       this.#tracker.load(cachedState);
+      this.#levelProgress.load(cachedState.stats());
       this.#revision = cached.revision;
       // Lo guardado localmente puede no haber llegado al servidor.
       this.#dirty = true;
@@ -170,6 +178,26 @@ export class PlayerProgression {
     return this.#identity?.playerId ?? null;
   }
 
+  get level() {
+    return this.#levelProgress.level;
+  }
+
+  get experience() {
+    return this.#levelProgress.experience;
+  }
+
+  get experienceForNextLevel() {
+    return this.#levelProgress.experienceForNextLevel;
+  }
+
+  get levelProgress() {
+    return this.#levelProgress.levelProgress;
+  }
+
+  get isMaxLevel() {
+    return this.#levelProgress.isMaxLevel;
+  }
+
   /** Copia de solo lectura con todo lo que necesita la interfaz. */
   snapshot() {
     return Object.freeze({
@@ -182,6 +210,11 @@ export class PlayerProgression {
       rank: this.#rank,
       stats: this.stats,
       breakdown: this.breakdown,
+      level: this.level,
+      experience: this.experience,
+      experienceForNextLevel: this.experienceForNextLevel,
+      levelProgress: this.levelProgress,
+      isMaxLevel: this.isMaxLevel,
       status: this.#status
     });
   }
@@ -221,6 +254,9 @@ export class PlayerProgression {
     this.#changeCounter += 1;
     this.store.saveProgress(this.mode, this.#worldKey, this.#revision, this.#tracker.state.toJSON());
     this.events?.emit(GameEventTypes.SCORE_CHANGED, { score: this.score, delta, reason, breakdown: this.breakdown });
+    for (const levelUp of this.#levelProgress.update(this.stats)) {
+      this.events?.emit(GameEventTypes.LEVEL_UP, levelUp);
+    }
   }
 
   /** Estado serializado aceptable para este mundo, o null. */
@@ -274,6 +310,9 @@ export class PlayerProgression {
     const merged = ProgressState.merge(localState, remoteState);
     const serverHasEverything = remoteState.includes(merged) && remoteState.blocksBuilt === merged.blocksBuilt;
     this.#tracker.load(merged);
+    // La sincronización remota puede completar progreso, pero nunca genera
+    // feedback: cargar o reconciliar una partida no es subir jugando.
+    this.#levelProgress.update(merged.stats());
     this.#revision = Math.max(this.#revision, revision);
     this.#dirty = !serverHasEverything;
     this.#verifiedScore = score;

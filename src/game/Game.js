@@ -29,6 +29,7 @@ import { BlockHighlight } from '../viewmodel/BlockHighlight.js';
 import { BreakOverlay } from '../viewmodel/BreakOverlay.js';
 import { BlockParticles } from '../viewmodel/BlockParticles.js';
 import { HandRenderer } from '../viewmodel/HandRenderer.js';
+import { LevelUpEffect } from '../viewmodel/LevelUpEffect.js';
 
 /**
  * Coordinador de sistemas. Game construye las dependencias, define el orden de
@@ -67,7 +68,8 @@ export class Game {
     this.progression = options.progression ?? new PlayerProgression({
       config: config.progression,
       events: this.events,
-      mode: options.mode ?? config.progression.GAME_MODE
+      mode: options.mode ?? config.progression.GAME_MODE,
+      levelConfig: config.levels ?? GameConfig.levels
     });
     /** Mundo tal como lo generó la semilla; lo usan las reglas de progresión. */
     this.naturalTerrain = null;
@@ -81,6 +83,7 @@ export class Game {
     this.blockHighlight = new BlockHighlight(config.viewmodel.highlight, config.world.BLOCK_SIZE);
     this.breakOverlay = new BreakOverlay(p, config.viewmodel.breakOverlay, config.world.BLOCK_SIZE);
     this.blockParticles = new BlockParticles(config.viewmodel.particles);
+    this.levelUpEffect = new LevelUpEffect(config.levels ?? GameConfig.levels, config.camera, this.camera);
     this.handRenderer = new HandRenderer(
       this.textureManager,
       this.camera,
@@ -91,6 +94,7 @@ export class Game {
     this.renderer.addOverlay(this.blockHighlight);
     this.renderer.addOverlay(this.breakOverlay);
     this.renderer.addOverlay(this.blockParticles);
+    this.renderer.addOverlay(this.levelUpEffect);
     this.renderer.addOverlay(this.handRenderer);
     this.events.on(GameEventTypes.BLOCK_BROKEN, ({ position, blockType }) => {
       this.handRenderer.notifyBlockBroken();
@@ -101,6 +105,7 @@ export class Game {
       );
     });
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.handRenderer.notifyBlockPlaced());
+    this.events.on(GameEventTypes.LEVEL_UP, ({ level }) => this.levelUpEffect.trigger(level));
     this.audio = new AudioManager(config.assets);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
@@ -201,7 +206,10 @@ export class Game {
 
   loadGame(slot) {
     const result = this.saveManager.load(slot, this.world, this.player);
-    if (result.ok) this.#syncCameraToPlayer();
+    if (result.ok) {
+      this.#syncCameraToPlayer();
+      this.levelUpEffect.reset();
+    }
     return result;
   }
 
@@ -272,6 +280,7 @@ export class Game {
       this.blockInteraction.breakProgress
     );
     this.blockParticles.update(deltaTime);
+    this.levelUpEffect.update(deltaTime);
     const horizontalSpeed = this.state.isRunning
       ? Math.hypot(this.player.velocity.x, this.player.velocity.z)
       : 0;

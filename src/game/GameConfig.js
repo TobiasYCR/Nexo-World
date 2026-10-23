@@ -166,6 +166,41 @@ export const GameConfig = Object.freeze({
     PLAYER_NAME_MAX_LENGTH: 20
   }),
 
+  /**
+   * Niveles representativos (issue #27). La experiencia se deriva de los
+   * hechos guardados en progression; no se persiste un contador separado.
+   * El nivel máximo es deliberado: evita que el HUD muestre una barra sin fin
+   * y mantiene acotado el efecto visual, sin bloquear ninguna acción.
+   */
+  levels: Object.freeze({
+    /** Experiencia por celda de exploración descubierta por primera vez. */
+    XP_EXPLORATION_CELL: 5,
+    /** Experiencia por bioma descubierto por primera vez. */
+    XP_BIOME: 40,
+    /** Experiencia por mineral natural extraído por primera vez. */
+    XP_ORES: 12,
+    /** Experiencia por bloque construido que queda en pie. */
+    XP_BLOCK_BUILT: 1,
+    /** Experiencia para pasar del nivel 1 al 2. */
+    BASE_XP: 100,
+    /** Multiplicador de la experiencia de cada nivel siguiente. */
+    GROWTH: 1.35,
+    /** Nivel máximo representativo; no bloquea contenido. */
+    MAX_LEVEL: 50,
+    /** Permite apagar el feedback visual sin cambiar las reglas. */
+    SHOW_LEVEL_UP_EFFECT: true,
+    /** Parámetros del efecto breve de primera persona. */
+    EFFECT_DURATION: 0.8,
+    EFFECT_PARTICLE_COUNT: 8,
+    EFFECT_RADIUS: 5,
+    EFFECT_PARTICLE_HEIGHT: 0.8,
+    EFFECT_SIZE: 1.5,
+    EFFECT_SPIN_SPEED: 4,
+    EFFECT_COLOR: Object.freeze([255, 220, 96]),
+    EFFECT_ALPHA: 220,
+    EFFECT_HAND_OFFSET: Object.freeze({ x: 9, y: -3, z: -15 })
+  }),
+
   audio: Object.freeze({
     MASTER_VOLUME: 1,
     SFX_VOLUME: 1,
