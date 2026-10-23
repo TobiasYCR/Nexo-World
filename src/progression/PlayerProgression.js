@@ -7,6 +7,8 @@ import { ProgressValidator } from './ProgressValidator.js';
 import { ProgressionApiClient } from './ProgressionApiClient.js';
 import { ProgressionLocalStore } from './ProgressionLocalStore.js';
 import { ProgressionResult } from './ProgressionResult.js';
+import { LevelRules } from './LevelRules.js';
+import { LevelProgress } from './LevelProgress.js';
 
 /** Estado de la sincronización con el servidor, para mostrarlo en la interfaz. */
 export const SyncStatus = Object.freeze({
@@ -48,6 +50,7 @@ export class PlayerProgression {
   #verifiedScore = null;
   #rank = null;
   #lastError = null;
+  #levelProgress;
 
   /**
    * @param {object} [options]
@@ -57,6 +60,7 @@ export class PlayerProgression {
    * @param {import('../game/GameEvents.js').GameEvents|null} [options.events]
    * @param {string} [options.mode] modo de la partida
    * @param {string} [options.playerName] nombre para registrar un jugador invitado nuevo
+   * @param {object} [options.levelConfig] GameConfig.levels
    */
   constructor({
     config = GameConfig.progression,
@@ -64,7 +68,8 @@ export class PlayerProgression {
     store = new ProgressionLocalStore(),
     events = null,
     mode = config.GAME_MODE,
-    playerName = null
+    playerName = null,
+    levelConfig = GameConfig.levels
   } = {}) {
     this.config = config;
     this.rules = new ScoreRules(config);
@@ -75,6 +80,8 @@ export class PlayerProgression {
     if (!this.rules.isValidMode(mode)) throw new RangeError(`Modo de juego desconocido: "${mode}".`);
     this.mode = mode;
     this.playerName = playerName;
+    this.levelRules = new LevelRules(levelConfig);
+    this.#levelProgress = new LevelProgress(this.levelRules);
     /** Promesa de la conexión inicial con el servidor; útil para tests y para la interfaz. */
     this.ready = Promise.resolve();
   }
@@ -97,6 +104,7 @@ export class PlayerProgression {
     if (cachedState) {
       this.#tracker.load(cachedState);
       this.#revision = cached.revision;
+      this.#levelProgress.load(this.#tracker.state.stats());
       // Lo guardado localmente puede no haber llegado al servidor.
       this.#dirty = true;
     }
@@ -158,6 +166,26 @@ export class PlayerProgression {
     return this.#status;
   }
 
+  get level() {
+    return this.#levelProgress.level;
+  }
+
+  get experience() {
+    return this.#levelProgress.experience;
+  }
+
+  get experienceForNextLevel() {
+    return this.#levelProgress.experienceForNextLevel;
+  }
+
+  get levelProgress() {
+    return this.#levelProgress.levelProgress;
+  }
+
+  get isMaxLevel() {
+    return this.#levelProgress.isMaxLevel;
+  }
+
   get lastError() {
     return this.#lastError;
   }
@@ -178,6 +206,11 @@ export class PlayerProgression {
       playerId: this.playerId,
       playerName: this.#identity?.name ?? null,
       score: this.score,
+      level: this.level,
+      experience: this.experience,
+      experienceForNextLevel: this.experienceForNextLevel,
+      levelProgress: this.levelProgress,
+      isMaxLevel: this.isMaxLevel,
       verifiedScore: this.#verifiedScore,
       rank: this.#rank,
       stats: this.stats,
@@ -221,6 +254,9 @@ export class PlayerProgression {
     this.#changeCounter += 1;
     this.store.saveProgress(this.mode, this.#worldKey, this.#revision, this.#tracker.state.toJSON());
     this.events?.emit(GameEventTypes.SCORE_CHANGED, { score: this.score, delta, reason, breakdown: this.breakdown });
+    for (const { level, previousLevel } of this.#levelProgress.update(this.stats)) {
+      this.events?.emit(GameEventTypes.LEVEL_UP, { level, previousLevel });
+    }
   }
 
   /** Estado serializado aceptable para este mundo, o null. */
@@ -274,6 +310,7 @@ export class PlayerProgression {
     const merged = ProgressState.merge(localState, remoteState);
     const serverHasEverything = remoteState.includes(merged) && remoteState.blocksBuilt === merged.blocksBuilt;
     this.#tracker.load(merged);
+    this.#levelProgress.update(this.#tracker.state.stats());
     this.#revision = Math.max(this.#revision, revision);
     this.#dirty = !serverHasEverything;
     this.#verifiedScore = score;

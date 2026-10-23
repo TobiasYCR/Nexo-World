@@ -166,6 +166,39 @@ export const GameConfig = Object.freeze({
     PLAYER_NAME_MAX_LENGTH: 20
   }),
 
+  /**
+   * Niveles representativos (Frontend 1). La experiencia tiene pesos propios
+   * y se deriva de las estadísticas de progreso; no desbloquea contenido.
+   * BASE_XP es el umbral del nivel 2 y GROWTH multiplica cada umbral siguiente.
+   */
+  levels: Object.freeze({
+    /** Explorar una celda nueva premia el recorrido, sin dominar la curva. */
+    XP_EXPLORATION_CELL: 5,
+    /** Descubrir un bioma es menos frecuente y por eso tiene mayor peso. */
+    XP_BIOME: 40,
+    /** Cada mineral natural extraído aporta una cantidad intermedia. */
+    XP_ORES: 12,
+    /** Construir aporta poco por bloque y nunca resta experiencia. */
+    XP_BLOCK_BUILT: 1,
+    /** Experiencia acumulada para pasar del nivel 1 al 2. */
+    BASE_XP: 100,
+    /** Curva progresiva: cada umbral es 1,35 veces el anterior. */
+    GROWTH: 1.35,
+    /** Tope representativo; el contenido nunca depende de este valor. */
+    MAX_LEVEL: 50,
+    SHOW_LEVEL_UP_EFFECT: true,
+    /** Parámetros del destello de primera persona, separado del contrato numérico. */
+    EFFECT_DURATION: 0.8,
+    EFFECT_PARTICLE_COUNT: 8,
+    EFFECT_RADIUS: 5,
+    EFFECT_PARTICLE_HEIGHT: 0.8,
+    EFFECT_SIZE: 1.5,
+    EFFECT_SPIN_SPEED: 4,
+    EFFECT_COLOR: Object.freeze([255, 220, 96]),
+    EFFECT_ALPHA: 220,
+    EFFECT_HAND_OFFSET: Object.freeze({ x: 9, y: -3, z: -15 })
+  }),
+
   audio: Object.freeze({
     MASTER_VOLUME: 1,
     SFX_VOLUME: 1,
