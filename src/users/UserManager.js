@@ -49,20 +49,24 @@ export class UserManager {
    * Registra una cuenta nueva.
    * @param {string} username
    * @param {string} password
+   * @param {{email?:string|null}} [extra] el correo es opcional
    * @returns {Promise<{ok:boolean, reason:string|null, message:string|null, account?:object}>}
    */
-  async register(username, password) {
+  async register(username, password, { email = null } = {}) {
     const { Reasons } = UserResult;
 
     const badUsername = this.#validator.checkUsername(username);
     if (badUsername) return UserResult.fail(badUsername);
     const badPassword = this.#validator.checkPassword(password);
     if (badPassword) return UserResult.fail(badPassword);
+    const badEmail = this.#validator.checkEmail(email);
+    if (badEmail) return UserResult.fail(badEmail);
 
     if (!this.#hasher.isAvailable) return UserResult.fail(Reasons.CRYPTO_UNAVAILABLE);
 
     const trimmed = username.trim();
     const usernameKey = UserAccount.normalizeUsername(trimmed);
+    const correo = typeof email === 'string' && email.trim().length > 0 ? email.trim() : null;
 
     // Se chequea antes de derivar para no gastar 200.000 iteraciones en un
     // nombre que ya está tomado. El insert vuelve a chequear, porque entre
@@ -71,6 +75,12 @@ export class UserManager {
     if (existing.ok) return UserResult.fail(Reasons.USERNAME_TAKEN);
     if (existing.reason !== Reasons.NOT_FOUND) return existing;
 
+    if (correo !== null) {
+      const porCorreo = this.#repository.findByEmailKey(UserAccount.normalizeUsername(correo));
+      if (porCorreo.ok) return UserResult.fail(Reasons.EMAIL_TAKEN);
+      if (porCorreo.reason !== Reasons.NOT_FOUND) return porCorreo;
+    }
+
     const credential = await this.#hasher.derive(password);
     if (credential === null) return UserResult.fail(Reasons.CRYPTO_UNAVAILABLE);
 
@@ -78,6 +88,7 @@ export class UserManager {
     const account = new UserAccount({
       id: UserManager.#newId(),
       username: trimmed,
+      email: correo,
       credential,
       createdAt: now,
       updatedAt: now
@@ -88,20 +99,23 @@ export class UserManager {
   /**
    * Comprueba que el par usuario/contraseña es correcto.
    *
+   * El primer parámetro es un identificador: acepta el nombre de usuario o el
+   * correo, porque la pantalla de login deja escribir cualquiera de los dos.
+   *
    * Devuelve el mismo motivo (`invalid-credentials`) tanto si el usuario no
    * existe como si la contraseña está mal: distinguirlos le confirmaría a un
    * atacante qué nombres están registrados.
    *
    * @returns {Promise<{ok:boolean, reason:string|null, account?:object}>}
    */
-  async verifyCredentials(username, password) {
+  async verifyCredentials(identifier, password) {
     const { Reasons } = UserResult;
-    if (typeof username !== 'string' || typeof password !== 'string') {
+    if (typeof identifier !== 'string' || typeof password !== 'string') {
       return UserResult.fail(Reasons.INVALID_CREDENTIALS);
     }
     if (!this.#hasher.isAvailable) return UserResult.fail(Reasons.CRYPTO_UNAVAILABLE);
 
-    const found = this.#repository.findByUsernameKey(UserAccount.normalizeUsername(username));
+    const found = this.#buscarPorIdentificador(identifier);
     if (!found.ok) {
       // Un almacenamiento caído o datos dañados sí se informan tal cual: no son
       // una pista sobre qué cuentas existen, y el jugador necesita saberlo.
@@ -111,6 +125,25 @@ export class UserManager {
 
     const matches = await this.#hasher.verify(password, found.account.credential);
     if (!matches) return UserResult.fail(Reasons.INVALID_CREDENTIALS);
+    return UserResult.ok({ account: found.account.toPublicJSON() });
+  }
+
+  /**
+   * Busca por nombre y, si no aparece, por correo. Devuelve el resultado del
+   * repositorio tal cual, con la cuenta completa (no la vista pública).
+   */
+  #buscarPorIdentificador(identifier) {
+    const clave = UserAccount.normalizeUsername(identifier);
+    const porNombre = this.#repository.findByUsernameKey(clave);
+    if (porNombre.ok || porNombre.reason !== UserResult.Reasons.NOT_FOUND) return porNombre;
+    return this.#repository.findByEmailKey(clave);
+  }
+
+  /** @returns {Promise<{ok:boolean, reason:string|null, account?:object}>} */
+  async findByEmail(email) {
+    if (typeof email !== 'string') return UserResult.fail(UserResult.Reasons.NOT_FOUND);
+    const found = this.#repository.findByEmailKey(UserAccount.normalizeUsername(email));
+    if (!found.ok) return found;
     return UserResult.ok({ account: found.account.toPublicJSON() });
   }
 

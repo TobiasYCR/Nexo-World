@@ -12,16 +12,19 @@
 export class UserAccount {
   #id;
   #username;
+  #email;
   #credential;
   #createdAt;
   #updatedAt;
 
   /**
-   * @param {{id:string, username:string, credential:object, createdAt:number, updatedAt:number}} datos
+   * @param {{id:string, username:string, email?:string|null, credential:object,
+   *          createdAt:number, updatedAt:number}} datos
    */
-  constructor({ id, username, credential, createdAt, updatedAt }) {
+  constructor({ id, username, email = null, credential, createdAt, updatedAt }) {
     this.#id = id;
     this.#username = username;
+    this.#email = email ?? null;
     this.#credential = credential;
     this.#createdAt = createdAt;
     this.#updatedAt = updatedAt;
@@ -33,6 +36,21 @@ export class UserAccount {
 
   get username() {
     return this.#username;
+  }
+
+  /**
+   * Correo, si la cuenta se registró con uno. Es opcional a propósito: la capa
+   * de datos no lo necesita para nada (sin servidor de mail no habilita
+   * recuperar ni verificar la cuenta), pero la pantalla de registro lo pide y
+   * permite iniciar sesión con él, así que se guarda cuando llega.
+   */
+  get email() {
+    return this.#email;
+  }
+
+  /** Clave de unicidad del correo, con el mismo criterio que el nombre. */
+  get emailKey() {
+    return this.#email === null ? null : UserAccount.normalizeUsername(this.#email);
   }
 
   get createdAt() {
@@ -73,11 +91,18 @@ export class UserAccount {
     this.#updatedAt = now;
   }
 
+  /** @param {string|null} email */
+  changeEmail(email, now = Date.now()) {
+    this.#email = email ?? null;
+    this.#updatedAt = now;
+  }
+
   /** Vista segura: es la única forma en la que una cuenta sale de este módulo. */
   toPublicJSON() {
     return {
       id: this.#id,
       username: this.#username,
+      email: this.#email,
       createdAt: this.#createdAt,
       updatedAt: this.#updatedAt
     };
@@ -88,6 +113,7 @@ export class UserAccount {
     return {
       id: this.#id,
       username: this.#username,
+      email: this.#email,
       credential: { ...this.#credential },
       createdAt: this.#createdAt,
       updatedAt: this.#updatedAt
@@ -102,12 +128,15 @@ export class UserAccount {
    */
   static fromStoredJSON(raw) {
     if (raw === null || typeof raw !== 'object') return null;
-    const { id, username, credential, createdAt, updatedAt } = raw;
+    const { id, username, email, credential, createdAt, updatedAt } = raw;
     if (typeof id !== 'string' || id.length === 0) return null;
     if (typeof username !== 'string' || username.trim().length === 0) return null;
     if (credential === null || typeof credential !== 'object') return null;
     if (typeof credential.hash !== 'string' || typeof credential.salt !== 'string') return null;
     if (!Number.isFinite(createdAt) || !Number.isFinite(updatedAt)) return null;
-    return new UserAccount({ id, username, credential, createdAt, updatedAt });
+    // El correo es opcional: una cuenta guardada antes de que existiera el
+    // campo sigue siendo válida y se lee con email null.
+    const correo = typeof email === 'string' && email.length > 0 ? email : null;
+    return new UserAccount({ id, username, email: correo, credential, createdAt, updatedAt });
   }
 }

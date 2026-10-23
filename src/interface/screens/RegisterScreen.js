@@ -4,6 +4,7 @@ import { IntentBus } from '../../ui/IntentBus.js';
 import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { AuthService } from '../../auth/AuthService.js';
+import { GameConfig } from '../../game/GameConfig.js';
 
 /**
  * Pantalla de Registro de Cuentas en Nexo World.
@@ -94,14 +95,14 @@ export class RegisterScreen extends Screen {
     pGroup.className = 'nx-form-group';
     const pLabel = document.createElement('label');
     pLabel.className = 'nx-form-label';
-    pLabel.textContent = 'Contraseña * (mínimo 6 caracteres)';
+    pLabel.textContent = `Contraseña * (mínimo ${GameConfig.users.PASSWORD_MIN_LENGTH} caracteres)`;
     pLabel.htmlFor = 'register-input-password';
 
     this.passwordInput = document.createElement('input');
     this.passwordInput.id = 'register-input-password';
     this.passwordInput.type = 'password';
     this.passwordInput.className = 'nx-input nx-form-input';
-    this.passwordInput.placeholder = 'Mínimo 6 caracteres';
+    this.passwordInput.placeholder = `Mínimo ${GameConfig.users.PASSWORD_MIN_LENGTH} caracteres`;
     this.passwordInput.autocomplete = 'new-password';
     this.passwordInput.required = true;
     this.passwordInput.setAttribute('aria-label', 'Contraseña');

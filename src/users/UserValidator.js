@@ -31,6 +31,27 @@ export class UserValidator {
   }
 
   /**
+   * Valida un correo, si viene. Ausente o vacío es válido: el correo es
+   * opcional en la capa de datos, aunque la pantalla de registro lo exija.
+   *
+   * La comprobación es deliberadamente laxa (algo@algo.algo): validar correos
+   * con precisión es imposible con una expresión regular, y el único modo real
+   * de saber si uno existe es mandarle un mensaje, cosa que sin servidor no se
+   * puede hacer.
+   *
+   * @param {unknown} email
+   * @returns {'invalid-email'|null}
+   */
+  checkEmail(email) {
+    if (email === null || email === undefined || email === '') return null;
+    if (typeof email !== 'string') return 'invalid-email';
+    const limpio = email.trim();
+    if (limpio.length === 0) return null;
+    if (limpio.length > this.#rules.EMAIL_MAX_LENGTH) return 'invalid-email';
+    return this.#rules.EMAIL_PATTERN.test(limpio) ? null : 'invalid-email';
+  }
+
+  /**
    * @param {unknown} password
    * @returns {'invalid-password'|null}
    */

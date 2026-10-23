@@ -157,6 +157,11 @@ export const GameConfig = Object.freeze({
     /** Letras, números, guion y guion bajo. Sin espacios ni símbolos: el nombre se usa como clave. */
     USERNAME_PATTERN: /^[A-Za-z0-9_-]+$/,
     PASSWORD_MIN_LENGTH: 8,
+    /** Laxo a propósito: ver el comentario de UserValidator.checkEmail. */
+    EMAIL_PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    EMAIL_MAX_LENGTH: 254,
+    /** Duración de una sesión local, en milisegundos: 7 días. */
+    SESSION_TTL_MS: 7 * 24 * 60 * 60 * 1000,
     /** Tope alto para no derivar PBKDF2 sobre una entrada enorme y colgar la pestaña. */
     PASSWORD_MAX_LENGTH: 128,
     /**
