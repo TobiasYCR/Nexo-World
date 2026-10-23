@@ -5,6 +5,7 @@ import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { AuthService } from '../../auth/AuthService.js';
 import { Icons } from '../../ui/Icons.js';
+import { GameConfig } from '../../game/GameConfig.js';
 
 /**
  * Pantalla de Perfil de Usuario en Nexo World.
@@ -195,7 +196,7 @@ export class ProfileScreen extends Screen {
     this.newPassInput = document.createElement('input');
     this.newPassInput.type = 'password';
     this.newPassInput.className = 'nx-input nx-form-input';
-    this.newPassInput.placeholder = 'Mínimo 6 caracteres';
+    this.newPassInput.placeholder = `Mínimo ${GameConfig.users.PASSWORD_MIN_LENGTH} caracteres`;
 
     newPassGroup.appendChild(newPassLabel);
     newPassGroup.appendChild(this.newPassInput);

@@ -18,6 +18,12 @@ import { UserResult } from './UserResult.js';
 export class UserRepository {
   static USER_PREFIX = 'nexo-world:user:';
   static INDEX_KEY = 'nexo-world:users:index';
+  /**
+   * El índice de correos va en su propia clave y no dentro del de nombres a
+   * propósito: así el formato ya guardado no cambia y las cuentas creadas
+   * antes de que existiera el correo se siguen leyendo sin migrar nada.
+   */
+  static EMAIL_INDEX_KEY = 'nexo-world:users:emails';
   static FORMAT_ID = 'nexo-world-users';
   static DATA_VERSION = 1;
   static #PROBE_KEY = 'nexo-world:probe';
@@ -84,6 +90,18 @@ export class UserRepository {
   }
 
   /**
+   * @param {string} emailKey correo ya normalizado
+   * @returns {{ok:boolean, reason:string|null, account?:UserAccount}}
+   */
+  findByEmailKey(emailKey) {
+    const index = this.readEmailIndex();
+    if (!index.ok) return index;
+    const id = index.entries[emailKey];
+    if (id === undefined) return UserResult.fail(UserResult.Reasons.NOT_FOUND);
+    return this.findById(id);
+  }
+
+  /**
    * Guarda una cuenta nueva y la agrega al índice.
    *
    * Escribe primero la cuenta y después el índice. Si el índice falla, borra la
@@ -102,6 +120,12 @@ export class UserRepository {
       return UserResult.fail(Reasons.USERNAME_TAKEN);
     }
 
+    const emails = this.readEmailIndex();
+    if (!emails.ok) return emails;
+    if (account.emailKey !== null && emails.entries[account.emailKey] !== undefined) {
+      return UserResult.fail(Reasons.EMAIL_TAKEN);
+    }
+
     const written = this.#write(UserRepository.#keyFor(account.id), account.toStoredJSON());
     if (!written.ok) return written;
 
@@ -110,6 +134,18 @@ export class UserRepository {
     if (!indexed.ok) {
       this.#remove(UserRepository.#keyFor(account.id));
       return indexed;
+    }
+
+    if (account.emailKey !== null) {
+      const porCorreo = { ...emails.entries, [account.emailKey]: account.id };
+      const indexadoCorreo = this.#writeEmailIndex(porCorreo);
+      if (!indexadoCorreo.ok) {
+        // Mismo criterio que arriba: se deshace todo antes que dejar una
+        // cuenta a medio indexar.
+        this.#remove(UserRepository.#keyFor(account.id));
+        this.#writeIndex(index.entries);
+        return indexadoCorreo;
+      }
     }
     return UserResult.ok({ account: account.toPublicJSON() });
   }
@@ -121,7 +157,7 @@ export class UserRepository {
    * @param {UserAccount} account
    * @param {string} [previousUsernameKey] clave anterior, si el nombre cambió
    */
-  update(account, previousUsernameKey = account.usernameKey) {
+  update(account, previousUsernameKey = account.usernameKey, previousEmailKey = account.emailKey) {
     const { Reasons } = UserResult;
     if (!this.#storage) return UserResult.fail(Reasons.STORAGE_UNAVAILABLE);
 
@@ -146,6 +182,20 @@ export class UserRepository {
       const indexed = this.#writeIndex(entries);
       if (!indexed.ok) return indexed;
     }
+
+    if (previousEmailKey !== account.emailKey) {
+      const emails = this.readEmailIndex();
+      if (!emails.ok) return emails;
+      const ocupado = account.emailKey === null ? undefined : emails.entries[account.emailKey];
+      if (ocupado !== undefined && ocupado !== account.id) {
+        return UserResult.fail(Reasons.EMAIL_TAKEN);
+      }
+      const porCorreo = { ...emails.entries };
+      if (previousEmailKey !== null) delete porCorreo[previousEmailKey];
+      if (account.emailKey !== null) porCorreo[account.emailKey] = account.id;
+      const indexado = this.#writeEmailIndex(porCorreo);
+      if (!indexado.ok) return indexado;
+    }
     return UserResult.ok({ account: account.toPublicJSON() });
   }
 
@@ -165,6 +215,15 @@ export class UserRepository {
     const indexed = this.#writeIndex(entries);
     if (!indexed.ok) return indexed;
 
+    if (found.account.emailKey !== null) {
+      const emails = this.readEmailIndex();
+      if (emails.ok) {
+        const porCorreo = { ...emails.entries };
+        delete porCorreo[found.account.emailKey];
+        this.#writeEmailIndex(porCorreo);
+      }
+    }
+
     this.#remove(UserRepository.#keyFor(id));
     return UserResult.ok();
   }
@@ -175,10 +234,15 @@ export class UserRepository {
    * @returns {{ok:boolean, reason:string|null, entries?:Object<string,string>}}
    */
   readIndex() {
+    return this.#readMapa(UserRepository.INDEX_KEY);
+  }
+
+  /** Lee un índice clave -> id. Ausente no es error: todavía no hay nadie. */
+  #readMapa(clave) {
     const { Reasons } = UserResult;
     if (!this.#storage) return UserResult.fail(Reasons.STORAGE_UNAVAILABLE);
 
-    const raw = this.#read(UserRepository.INDEX_KEY);
+    const raw = this.#read(clave);
     if (!raw.ok) return raw;
     if (raw.value === null) return UserResult.ok({ entries: {} });
 
@@ -243,8 +307,17 @@ export class UserRepository {
     }
   }
 
+  /** Mismo formato y mismas garantías que readIndex, en su propia clave. */
+  readEmailIndex() {
+    return this.#readMapa(UserRepository.EMAIL_INDEX_KEY);
+  }
+
   #writeIndex(entries) {
     return this.#write(UserRepository.INDEX_KEY, entries);
+  }
+
+  #writeEmailIndex(entries) {
+    return this.#write(UserRepository.EMAIL_INDEX_KEY, entries);
   }
 
   #remove(key) {

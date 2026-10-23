@@ -2,6 +2,7 @@ import { AuthSession } from './AuthSession.js';
 import { SessionManager } from './SessionManager.js';
 import { BackendAuthClient } from './BackendAuthClient.js';
 import { IntentBus } from '../ui/IntentBus.js';
+import { GameConfig } from '../game/GameConfig.js';
 
 /**
  * Servicio principal de autenticación y gestión de usuarios (Frontend 2).
@@ -219,8 +220,12 @@ export class AuthService {
       if (!updates.currentPassword) {
         return { ok: false, code: 'INVALID_INPUT', message: 'Ingresa tu contraseña actual para cambiarla.' };
       }
-      if (updates.newPassword.length < 6) {
-        return { ok: false, code: 'INVALID_INPUT', message: 'La nueva contraseña debe tener al menos 6 caracteres.' };
+      if (updates.newPassword.length < GameConfig.users.PASSWORD_MIN_LENGTH) {
+        return {
+          ok: false,
+          code: 'INVALID_INPUT',
+          message: `La nueva contraseña debe tener al menos ${GameConfig.users.PASSWORD_MIN_LENGTH} caracteres.`
+        };
       }
     }
 
@@ -315,8 +320,15 @@ export class AuthService {
     if (!password) {
       return { ok: false, code: 'INVALID_PASSWORD', message: 'La contraseña es obligatoria.' };
     }
-    if (password.length < 6) {
-      return { ok: false, code: 'INVALID_PASSWORD', message: 'La contraseña debe tener al menos 6 caracteres.' };
+    // El largo sale de GameConfig y no de un número escrito acá: antes la
+    // interfaz pedía 6 y la capa de datos exigía 8, así que una contraseña de
+    // 7 pasaba la validación de pantalla y después fallaba sin explicación.
+    if (password.length < GameConfig.users.PASSWORD_MIN_LENGTH) {
+      return {
+        ok: false,
+        code: 'INVALID_PASSWORD',
+        message: `La contraseña debe tener al menos ${GameConfig.users.PASSWORD_MIN_LENGTH} caracteres.`
+      };
     }
     return { ok: true };
   }

@@ -16,6 +16,7 @@ import { WorldSelectionScreen } from '../interface/screens/WorldSelectionScreen.
 import { WorldCreationScreen } from '../interface/screens/WorldCreationScreen.js';
 import { SettingsModel } from '../interface/models/SettingsModel.js';
 import { AuthService } from '../auth/AuthService.js';
+import { LocalAuthClient } from '../users/LocalAuthClient.js';
 import { LoginScreen } from '../interface/screens/LoginScreen.js';
 import { RegisterScreen } from '../interface/screens/RegisterScreen.js';
 import { ProfileScreen } from '../interface/screens/ProfileScreen.js';
@@ -40,7 +41,12 @@ export class HUD {
     this.uiStateManager = new UiStateManager(ScreenType.MENU);
     this.screenManager = new ScreenManager(this.container, this.intentBus, this.uiStateManager);
     this.settingsModel = new SettingsModel();
-    this.authService = options.authService ?? new AuthService({ intentBus: this.intentBus });
+    // Las cuentas se resuelven en el navegador con LocalAuthClient. El cliente
+    // HTTP por defecto de AuthService apunta a /api/auth/*, que no existe: con
+    // él, registrarse fallaba con "No se pudo conectar con el servidor".
+    // Cuando haya servidor, se cambia esta línea por BackendAuthClient.
+    this.authService = options.authService
+      ?? new AuthService({ intentBus: this.intentBus, client: new LocalAuthClient() });
     this.backend2Service = options.backend2Service ?? null;
 
     // Elementos del HUD in-game
