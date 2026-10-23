@@ -41,7 +41,12 @@ npm run build    # build de producción en dist/
 npm run preview  # sirve el build de producción
 npm test         # tests unitarios y de integración
 npm run benchmark:viewmodel # coste de CPU del viewmodel con 64 partículas
+npm run server   # API de puntuaciones en http://127.0.0.1:3001 (requiere MySQL y .env)
 ```
+
+### Servidor de puntuaciones
+
+Requiere MySQL 8. Copiar `.env.example` como `.env`, completar usuario y contraseña de MySQL y, en otra terminal, ejecutar `npm run server`: crea la base `nexo_world` y sus tablas si no existen. Con `npm run dev` corriendo, Vite reenvía `/api` al servidor. Sin servidor, el juego funciona igual y guarda el progreso localmente. Detalle en [`docs/PROGRESION.md`](docs/PROGRESION.md).
 
 El benchmark instrumenta las llamadas de dibujo para medir el coste JavaScript; no mide el trabajo de la GPU.
 
