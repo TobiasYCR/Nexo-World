@@ -13,6 +13,9 @@
     "benchmark:worldgen": "node scripts/benchmark-worldgen.js"
   },
   "dependencies": {
+    "dayjs": "^1.11.23",
+    "fuse.js": "^7.5.0",
+    "mathjs": "^15.2.0",
     "p5": "^1.11.13"
   },
   "devDependencies": {

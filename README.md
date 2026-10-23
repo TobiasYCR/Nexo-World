@@ -16,12 +16,18 @@ El objetivo de esta etapa no es tener un juego jugable, sino dejar un esqueleto 
 | **HTML5 / CSS3** | Documento base y capa de interfaz superpuesta al canvas. |
 | **Web APIs del navegador** | Pointer Lock (vista en primera persona), Web Audio (sonido), `localStorage` (guardado). |
 | **`node:test`** | Tests unitarios y de integración, sin dependencias adicionales. |
+| **Fuse.js 7** | Búsqueda difusa de la pregunta del jugador contra el catálogo de intenciones del asistente. |
+| **mathjs 15** | Cuentas y conversión de unidades del asistente, con el evaluador acotado. |
+| **dayjs 1.11** | Fechas del asistente, en español y con aritmética de días. |
+
+Las tres últimas son del asistente de consultas y **no entran en el bundle inicial**: se cargan la primera vez que alguien abre el chat (ver [Asistente de consultas](#asistente-de-consultas)).
 
 ### Qué no se usó, y por qué
 
 - **React**: la interfaz actual son dos elementos (mira y panel de depuración). Un framework de UI agregaría build, estado y ciclo de vida sin resolver ningún problema real todavía. La interfaz ya vive en el DOM, separada del canvas, así que migrar a React más adelante es sumar componentes sobre `#ui-root` sin tocar el motor.
 - **TypeScript**: para un equipo de cuatro personas arrancando, el costo de configuración y la fricción de tipos en código que todavía va a cambiar mucho supera el beneficio. Las clases están documentadas y los contratos son chicos y explícitos.
 - **p5.sound**: `AudioManager` usa la Web Audio API directamente. Es menos código, menos peso y cubre de sobra lo que el juego necesita.
+- **Un LLM para el asistente**: una clave de API no puede vivir en el cliente de un sitio estático, así que exigiría un servidor proxy que todavía no existe. Además cuesta por pregunta, rompe el funcionamiento sin internet y puede inventar. La comparación completa, con precios, está en [`docs/CHATBOT.md`](docs/CHATBOT.md) (rama `research/chatbot`).
 
 ---
 
@@ -81,6 +87,7 @@ nexo-world/
 │   ├── inventory/           Inventario y hotbar
 │   ├── audio/               Reproducción de sonido
 │   ├── ui/                  Interfaz durante la partida
+│   ├── chatbot/             Asistente de consultas sobre el juego
 │   ├── persistence/         Guardado y serialización
 │   └── utils/               Constantes y utilidades sin dependencias
 ├── assets/                  Texturas, audio, modelos y fuentes
@@ -187,6 +194,42 @@ Sumar la acción en `Constants.InputActions` y su tecla en `GameConfig.input.KEY
 - Dos sistemas de coordenadas: **bloque** (enteros de la grilla) y **mundo** (unidades continuas). La conversión pasa por `World.worldToBlock()` y `World.blockToWorld()`.
 
 Más detalle en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y [`docs/CONVENCIONES.md`](docs/CONVENCIONES.md).
+
+---
+
+## Asistente de consultas
+
+Durante la partida, **`T`** abre un chat que contesta preguntas sobre el juego. Se cierra con `Escape`. Mientras se escribe, el teclado no mueve al personaje.
+
+```
+¿cuál es la tecla para saltar?
+→ Para saltar, Space.                       fuente: GameConfig.input.KEY_BINDINGS
+
+¿a qué profundidad hay diamantes?
+→ Mineral de diamante aparece entre las alturas Y=1 y Y=9…   fuente: GameConfig.ores
+
+¿dónde estoy?
+→ Estás en el bloque X=16, Y=11, Z=16, pisando suelo.   fuente: Player.position
+```
+
+**Ninguna respuesta sobre el juego está escrita a mano.** Todas se derivan de `GameConfig`, del `BlockRegistry` o del estado vivo de la partida, así que si alguien remapea una tecla o cambia la dureza de un bloque, la respuesta cambia sola. Por eso cada respuesta muestra su fuente: es lo que permite verificarla contra el código.
+
+Qué contesta:
+
+| Familia | De dónde sale |
+|---|---|
+| Controles, hotbar, interacción | `GameConfig.input` y `GameConfig.blocks` |
+| Bloques: dureza, drops, transparencia | `BlockRegistry` |
+| Minerales y profundidades | `GameConfig.ores` |
+| Vida y daño por caída | `GameConfig.survival` y `.player` |
+| Mundo, chunks, biomas, cuevas, guardado | `GameConfig` y `SaveManager` |
+| Dónde estoy, cuánta vida me queda, qué tengo en la mano | la partida en curso |
+| Cuentas, conversiones de unidades, fechas | mathjs y dayjs |
+| Unos pocos temas generales (qué es un voxel, qué es WebGL) | texto escrito a mano, y lo declara |
+
+Qué **no** contesta, a propósito: mecánicas que el juego no tiene (encantamientos, Nether, crafteo, mobs), contraseñas o claves, y cómo hacer trampa. Que el bot diga "no sé" en lugar de improvisar es el comportamiento buscado, no una falla: `tests/chatbot.test.js` lo mide como acierto.
+
+La investigación que llevó a esta implementación —seis alternativas comparadas, riesgos y costos— está en [`docs/CHATBOT.md`](docs/CHATBOT.md), en la rama `research/chatbot`.
 
 ---
 

@@ -3,6 +3,7 @@ import { DebugOverlay } from './DebugOverlay.js';
 import { HotbarView } from './HotbarView.js';
 import { HealthBar } from './HealthBar.js';
 import { Toast } from './Toast.js';
+import { ChatPanel } from './ChatPanel.js';
 import { IntentBus } from './IntentBus.js';
 import { ScreenManager } from './ScreenManager.js';
 import { ScreenType } from './ScreenType.js';
@@ -20,10 +21,11 @@ import { LoginScreen } from '../interface/screens/LoginScreen.js';
 import { RegisterScreen } from '../interface/screens/RegisterScreen.js';
 import { ProfileScreen } from '../interface/screens/ProfileScreen.js';
 import { PasswordRecoveryScreen } from '../interface/screens/PasswordRecoveryScreen.js';
+import { GameConfig } from '../game/GameConfig.js';
 
 /**
  * Capa de interfaz de usuario de Nexo World.
- * Coordina el HUD durante el juego (Crosshair, Hotbar, HealthBar, DebugOverlay, Toast),
+ * Coordina el HUD durante el juego (Crosshair, Hotbar, HealthBar, DebugOverlay, Toast, ChatPanel),
  * el gestor de pantallas (ScreenManager), el bus de intenciones (IntentBus),
  * la autenticación y la navegación entre menús, inventario y creación/selección de mundos.
  */
@@ -52,6 +54,17 @@ export class HUD {
     this.healthBar = new HealthBar(20);
     this.debugOverlay = new DebugOverlay();
     this.toast = Toast.getInstance(this.container);
+
+    // El asistente responde con los datos del juego, así que necesita leer el
+    // estado vivo de la partida. Game pasa el proveedor; sin él el bot sigue
+    // contestando todo lo que sale de GameConfig y del BlockRegistry, y avisa
+    // que lo de la partida en curso no lo puede saber.
+    //
+    // Se carga al abrir el chat por primera vez, no al arrancar: así el peso de
+    // sus librerías no lo paga quien nunca lo usa.
+    this.chatPanel = new ChatPanel({
+      loadBot: options.loadBot ?? ChatPanel.defaultLoader(options.gameContextProvider ?? null)
+    });
 
     this.#registerScreens();
     this.#setupIntentListeners();
@@ -142,6 +155,7 @@ export class HUD {
       const isPlaying = current === ScreenType.PLAYING;
       this.crosshair.setVisible(isPlaying);
       this.hotbarView.setVisible(isPlaying);
+      if (!isPlaying) this.chatPanel.close();
       this.healthBar.setVisible(isPlaying && this.settingsModel.get('showHealthBar'));
     });
   }
@@ -150,9 +164,29 @@ export class HUD {
     if (typeof window === 'undefined' || !window.addEventListener) return;
 
     window.addEventListener('keydown', (e) => {
+      // Mientras se escribe en un campo de texto no hay atajos: antes de que
+      // existiera el chat no había dónde escribir durante la partida, así que
+      // esta guarda solo estaba en el inventario. Sin ella, teclear "o" en el
+      // chat abre los ajustes.
+      const isEditingText = e.target && (
+        e.target.tagName === 'INPUT' ||
+        e.target.tagName === 'TEXTAREA' ||
+        Boolean(e.target.isContentEditable)
+      );
+
+      if (isEditingText && e.code !== 'Escape') return;
+
       // Atajos activos únicamente durante el juego
       if (this.screenManager.currentScreenType === ScreenType.PLAYING) {
-        if (e.code === 'KeyE') {
+        if (e.code === GameConfig.chatbot.TOGGLE_KEY) {
+          e.preventDefault?.();
+          this.toggleChat();
+        } else if (e.code === 'Escape' && this.chatPanel.isOpen) {
+          // El chat se cierra primero: Escape con el chat abierto no debe
+          // pausar la partida.
+          e.preventDefault?.();
+          this.chatPanel.close();
+        } else if (e.code === 'KeyE') {
           e.preventDefault?.();
           this.screenManager.open(ScreenType.INVENTORY);
         } else if (e.code === 'KeyO') {
@@ -166,12 +200,6 @@ export class HUD {
           this.toggleDebug();
         }
       } else if (this.screenManager.currentScreenType === ScreenType.INVENTORY) {
-        const isEditingText = e.target && (
-          e.target.tagName === 'INPUT' ||
-          e.target.tagName === 'TEXTAREA' ||
-          Boolean(e.target.isContentEditable)
-        );
-
         if (e.code === 'KeyE') {
           if (!isEditingText) {
             e.preventDefault?.();
@@ -193,6 +221,7 @@ export class HUD {
     this.hotbarView.mount(this.container);
     this.healthBar.mount(this.container);
     this.debugOverlay.mount(this.container);
+    this.chatPanel.mount(this.container);
     this.toast.mount(this.container);
 
     // Inicializar con el Menú Principal
@@ -202,6 +231,11 @@ export class HUD {
     this.crosshair.setVisible(false);
     this.hotbarView.setVisible(false);
     this.healthBar.setVisible(false);
+  }
+
+  /** Abre o cierra el chat del asistente. */
+  toggleChat() {
+    this.chatPanel.toggle();
   }
 
   toggleDebug() {

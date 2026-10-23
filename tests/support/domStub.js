@@ -62,6 +62,7 @@ class FakeElement {
     this.style = {};
     this.classList = new FakeClassList(this);
     this.parentNode = null;
+    this.scrollTop = 0;
   }
 
   get innerHTML() {
@@ -102,6 +103,25 @@ class FakeElement {
       child.parentNode = null;
     }
     return child;
+  }
+
+  /** Varios hijos de una vez, como el append() del DOM real. */
+  append(...nodes) {
+    for (const node of nodes) this.appendChild(node);
+  }
+
+  /** Se quita a sí mismo de su padre, como el remove() del DOM real. */
+  remove() {
+    this.parentNode?.removeChild(this);
+  }
+
+  get firstChild() {
+    return this.children[0] ?? null;
+  }
+
+  /** El scroll no se simula: alcanza con que escribirlo no falle. */
+  get scrollHeight() {
+    return this.children.length;
   }
 
   setAttribute(name, value) {

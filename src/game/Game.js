@@ -114,7 +114,19 @@ export class Game {
     this.audio = new AudioManager(config.assets);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
-    this.hud = new HUD();
+    // El asistente lee el estado vivo de la partida. Se pasa un proveedor y no
+    // los objetos porque el estado cambia en cada frame y el HUD se arma una
+    // sola vez; además así el chat no guarda referencias que impidan liberar
+    // una partida descartada.
+    this.hud = new HUD('ui-root', {
+      gameContextProvider: () => ({
+        player: this.player,
+        world: this.world,
+        hotbar: this.hotbar,
+        health: this.playerHealth,
+        worldGenerator: this.worldGenerator
+      })
+    });
     this.saveManager = new SaveManager();
   }
 

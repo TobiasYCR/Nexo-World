@@ -612,3 +612,144 @@ html, body {
   font-size: 0.75rem;
   color: var(--ui-text-muted);
 }
+
+/* ==========================================================================
+   Chat del asistente (Backend 1 — IA)
+   Panel en DOM sobre el canvas, abajo a la izquierda para no tapar la mira
+   ni la hotbar. Captura el puntero solo mientras está abierto.
+   ========================================================================== */
+
+.nx-chat {
+  position: absolute;
+  bottom: 110px;
+  left: 20px;
+  width: min(420px, calc(100vw - 40px));
+  max-height: min(46vh, 420px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(11, 15, 25, 0.92);
+  border: 2px solid rgba(16, 185, 129, 0.45);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.nx-chat[hidden] {
+  display: none !important;
+}
+
+.nx-chat-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(16, 185, 129, 0.14);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.nx-chat-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-emerald-light);
+}
+
+.nx-chat-hint {
+  font-size: 10px;
+  color: var(--ui-text-muted);
+}
+
+.nx-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* El texto del chat se lee y se copia: es la excepción al user-select global. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.nx-chat-message {
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+
+.nx-chat-player {
+  background: rgba(148, 163, 184, 0.12);
+  border-left-color: rgba(148, 163, 184, 0.7);
+}
+
+.nx-chat-bot {
+  background: rgba(16, 185, 129, 0.1);
+  border-left-color: var(--ui-emerald);
+}
+
+/* El bot no sabía y lo dijo: se marca distinto a propósito, para que una
+   respuesta derivada no se confunda con un dato del juego. */
+.nx-chat-unsure {
+  background: rgba(249, 238, 218, 0.08);
+  border-left-color: #f59e0b;
+}
+
+.nx-chat-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nx-chat-source {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: var(--ui-text-muted);
+}
+
+.nx-chat-form {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.nx-chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font-family: var(--ui-font);
+  font-size: 12px;
+  color: var(--ui-text);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 4px;
+}
+
+.nx-chat-input:focus {
+  outline: none;
+  border-color: var(--ui-emerald);
+}
+
+.nx-chat-send {
+  padding: 6px 12px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #06281d;
+  background: var(--ui-emerald);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.nx-chat-send:hover {
+  background: var(--ui-emerald-light);
+}

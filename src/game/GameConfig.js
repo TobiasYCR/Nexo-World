@@ -200,6 +200,43 @@ export const GameConfig = Object.freeze({
     HOTBAR_KEY_PREFIX: 'Digit'
   }),
 
+  /**
+   * Chat bot de consultas (Backend 1 — IA). Es la etapa 1 de docs/CHATBOT.md:
+   * reglas sobre los datos del juego, sin servidor, sin claves y offline.
+   */
+  chatbot: Object.freeze({
+    /** Nombre con el que se presenta el asistente. */
+    BOT_NAME: 'Nexo',
+    /** Tecla que abre y cierra el chat durante la partida. */
+    TOGGLE_KEY: 'KeyT',
+    /** Mensajes que conserva el panel antes de descartar los más viejos. */
+    MAX_HISTORY: 40,
+    /** Largo máximo de una pregunta; más que esto se recorta. */
+    MAX_QUESTION_LENGTH: 300,
+    /**
+     * Umbral de Fuse.js al buscar intenciones: 0 exige coincidencia exacta, 1
+     * acepta cualquier cosa. Es deliberadamente permisivo porque Fuse acá solo
+     * propone candidatos; el que decide es MIN_CONFIDENCE.
+     */
+    MATCH_THRESHOLD: 0.7,
+    /** Umbral de Fuse.js al buscar un tema general, donde no hay segunda vuelta. */
+    TOPIC_THRESHOLD: 0.45,
+    /** Candidatos que devuelve Fuse antes de reordenarlos por cobertura. */
+    MATCH_CANDIDATES: 12,
+    /**
+     * Cuánto pesa la cobertura de palabras frente al puntaje difuso de Fuse al
+     * combinar los dos. La cobertura es la señal más confiable de las dos, así
+     * que pesa más.
+     */
+    OVERLAP_WEIGHT: 0.6,
+    /** Confianza mínima para contestar una intención en vez de derivar. */
+    MIN_CONFIDENCE: 0.4,
+    /** Dígitos significativos de los resultados numéricos. */
+    NUMBER_PRECISION: 6,
+    /** Tope de caracteres de una expresión matemática, por costo de evaluación. */
+    MAX_EXPRESSION_LENGTH: 120
+  }),
+
   debug: Object.freeze({
     SHOW_OVERLAY_ON_START: true,
     /** Intervalo de refresco del overlay en segundos, para no escribir en el DOM cada frame. */
