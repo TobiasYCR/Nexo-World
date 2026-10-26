@@ -1,8 +1,8 @@
 import { create, all } from 'mathjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es.js';
-import Fuse from 'fuse.js';
 import { ChatResponse } from './ChatResponse.js';
+import { IntentMatcher } from './IntentMatcher.js';
 import { GeneralTopics } from './GeneralTopics.js';
 import { NumberFormatter } from './NumberFormatter.js';
 import { TextNormalizer } from './TextNormalizer.js';
@@ -83,6 +83,13 @@ export class GeneralKnowledge {
     celsius: 'degC', grados: 'degC', centigrados: 'degC',
     fahrenheit: 'degF',
     kelvin: 'K',
+    hectarea: 'hectare', hectareas: 'hectare',
+    acre: 'acre', acres: 'acre',
+    'metros cuadrados': 'm^2', 'kilometros cuadrados': 'km^2',
+    julio: 'J', julios: 'J', joule: 'J', joules: 'J',
+    vatio: 'W', vatios: 'W', watt: 'W', watts: 'W',
+    pascal: 'Pa', pascales: 'Pa', bar: 'bar', psi: 'psi',
+    'caballo de fuerza': 'hp', hp: 'hp',
     byte: 'B', bytes: 'B',
     kilobyte: 'kB', kilobytes: 'kB',
     megabyte: 'MB', megabytes: 'MB',
@@ -116,8 +123,9 @@ export class GeneralKnowledge {
   #config;
   #numbers;
   #clock;
+  #random;
   #topics;
-  #topicFuse;
+  #topicMatcher;
 
   /**
    * @param {Object} [options]
@@ -125,22 +133,25 @@ export class GeneralKnowledge {
    * @param {NumberFormatter} [options.numbers]
    * @param {() => Date} [options.clock] reloj inyectable: las pruebas no pueden
    *        depender de la fecha real del día en que se corren
+   * @param {() => number} [options.random] azar inyectable, por la misma razón
    * @param {Array} [options.topics]
    */
   constructor({
     config = GameConfig.chatbot,
     numbers = new NumberFormatter({ config }),
     clock = () => new Date(),
+    random = Math.random,
     topics = GeneralTopics
   } = {}) {
     this.#config = config;
     this.#numbers = numbers;
     this.#clock = clock;
+    this.#random = random;
     this.#topics = topics;
-    this.#topicFuse = new Fuse(
-      topics.map((topic) => ({ ...topic, haystack: topic.phrases.map((p) => TextNormalizer.stemmed(p)).join(' | ') })),
-      { keys: ['haystack'], includeScore: true, ignoreLocation: true, threshold: config.TOPIC_THRESHOLD }
-    );
+    // Los temas tienen la misma forma que las intenciones ({ id, phrases }),
+    // así que usan el mismo matcher: una sola implementación de la búsqueda
+    // difusa, con el mismo peso por rareza y el mismo umbral de confianza.
+    this.#topicMatcher = new IntentMatcher(topics, config);
   }
 
   /**
@@ -169,7 +180,9 @@ export class GeneralKnowledge {
       'general.smallTalk.thanks': () => this.#thanks(),
       'general.smallTalk.bye': () => this.#bye(),
       'general.smallTalk.joke': () => this.#joke(),
-      'general.time.today': () => this.#today()
+      'general.time.today': () => this.#today(),
+      'general.random.coin': () => this.#coin(),
+      'general.random.dice': () => this.#dice()
     };
     return handlers[intentId]?.() ?? null;
   }
@@ -179,14 +192,14 @@ export class GeneralKnowledge {
    * @returns {Object|null}
    */
   answerTopic(question) {
-    const stemmed = TextNormalizer.stemmed(question);
-    if (stemmed === '') return null;
+    const match = this.#topicMatcher.match(question);
+    if (!match) return null;
 
-    const [best] = this.#topicFuse.search(stemmed, { limit: 1 });
-    if (!best || (best.score ?? 1) > this.#config.TOPIC_THRESHOLD) return null;
+    const topic = this.#topics.find(({ id }) => id === match.id);
+    if (!topic) return null;
 
     return ChatResponse.known(
-      best.item.answer,
+      topic.answer,
       ChatResponse.Topics.GENERAL,
       // Se declara que está escrita a mano: es lo que la distingue de un dato
       // del juego, que sí se puede verificar contra el código.
@@ -261,11 +274,15 @@ export class GeneralKnowledge {
         ChatResponse.Topics.UNITS,
         'mathjs (conversión de unidades)'
       );
-    } catch {
-      // Unidades incompatibles ("3 metros en kilos") caen acá: no es un error
-      // del jugador que valga un mensaje técnico, se deriva como no sabido.
+    } catch (error) {
+      // Dos fallas distintas que merecen mensajes distintos: una unidad que la
+      // tabla de alias nombra pero mathjs no conoce es un error NUESTRO, y
+      // decir "no miden lo mismo" ahí sería mentirle al jugador.
+      const faltaLaUnidad = /undefined symbol/i.test(String(error?.message ?? ''));
       return ChatResponse.unknown(
-        `No puedo convertir ${from.label} a ${to.label}: no miden lo mismo.`,
+        faltaLaUnidad
+          ? `No sé manejar esas unidades (${from.label} o ${to.label}). Probá con otras.`
+          : `No puedo convertir ${from.label} a ${to.label}: no miden lo mismo.`,
         ChatResponse.Topics.UNITS,
         'mathjs (conversión de unidades)'
       );
@@ -362,6 +379,24 @@ export class GeneralKnowledge {
     return ChatResponse.known(
       'Bien, corriendo en tu navegador sin gastarte un peso. ¿Qué querés saber del juego?',
       ChatResponse.Topics.SMALL_TALK
+    );
+  }
+
+  #coin() {
+    const cara = this.#random() < 0.5;
+    return ChatResponse.known(
+      `Salió ${cara ? 'cara' : 'cruz'}.`,
+      ChatResponse.Topics.GENERAL,
+      'moneda al azar'
+    );
+  }
+
+  #dice() {
+    const valor = 1 + Math.floor(this.#random() * 6);
+    return ChatResponse.known(
+      `Salió ${valor}.`,
+      ChatResponse.Topics.GENERAL,
+      'dado de 6 caras'
     );
   }
 

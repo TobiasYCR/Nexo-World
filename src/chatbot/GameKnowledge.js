@@ -153,6 +153,14 @@ export class GameKnowledge {
       'game.world.caves': () => this.#worldCaves(),
       'game.world.trees': () => this.#worldTrees(),
       'game.world.save': () => this.#worldSave(),
+      'game.world.bottom': () => this.#worldBottom(),
+      'game.world.ceiling': () => this.#worldCeiling(),
+      'game.world.findCaves': () => this.#worldFindCaves(),
+      'game.world.mining': () => this.#worldMining(),
+      'game.meta.settings': () => this.#metaSettings(),
+      'game.meta.performance': () => this.#metaPerformance(),
+      'game.meta.account': () => this.#metaAccount(),
+      'game.meta.sound': () => this.#metaSound(),
       'game.status.position': () => this.#statusPosition(),
       'game.status.health': () => this.#statusHealth(),
       'game.status.hotbar': () => this.#statusHotbar(),
@@ -162,28 +170,46 @@ export class GameKnowledge {
 
     const handler = handlers[intentId];
     if (!handler) return null;
-    // Una pregunta por un bloque o mineral concreto gana sobre la respuesta
-    // genérica del tema: "¿qué dureza tiene el vidrio?" no se contesta con la
-    // lista de bloques.
-    return this.answerAboutEntity(normalizedQuestion) ?? handler();
+
+    // Dentro de los temas de bloques y minerales, un bloque nombrado gana sobre
+    // la respuesta genérica: "¿qué dureza tiene el vidrio?" no se contesta con
+    // la lista de bloques. Fuera de esos dos temas, no: "¿cómo consigo
+    // diamantes?" pregunta por una estrategia, y contestarla con la ficha del
+    // bloque sería otra vez un dato correcto sobre otra pregunta.
+    const esTemaDeBloques = intentId.startsWith('game.blocks.') || intentId.startsWith('game.ores.');
+    return this.answerAboutEntity(normalizedQuestion, { allowGeneric: esTemaDeBloques }) ?? handler();
   }
 
   /**
    * Preguntas sobre un bloque o mineral nombrado, sin importar la intención.
    * @returns {Object|null}
    */
-  answerAboutEntity(normalizedQuestion) {
+  answerAboutEntity(normalizedQuestion, { allowGeneric = true } = {}) {
     const question = String(normalizedQuestion ?? '');
     if (question === '') return null;
 
     const ore = this.#findOre(question);
-    if (ore && TextNormalizer.mentions(question, 'profundidad', 'altura', 'donde', 'encuentro', 'veta', 'minar', 'mina', 'buscar', 'y=')) {
-      return this.#oreDepth(ore.name, ore.vein);
-    }
-
     const block = this.#findBlock(question);
-    if (!block) return ore ? this.#oreDepth(ore.name, ore.vein) : null;
-    return this.#blockDetail(block, question);
+    const preguntaPorProfundidad = TextNormalizer.mentions(
+      question, 'profundidad', 'altura', 'donde', 'encuentro', 'veta', 'minar', 'mina', 'buscar', 'y='
+    );
+    const preguntaPorPropiedad = TextNormalizer.mentions(
+      question, 'dureza', 'duro', 'romp', 'destru', 'suelta', 'drop', 'tira', 'transparen', 'solido'
+    );
+
+    // Una pregunta explícita por una propiedad o por la profundidad gana
+    // siempre, aunque el matcher haya elegido otro tema: "¿se puede romper el
+    // bedrock?" se parece a "¿cómo rompo un bloque?", y sin esto se contestaba
+    // con los botones del mouse.
+    if (ore && preguntaPorProfundidad) return this.#oreDepth(ore.name, ore.vein);
+    if (block && preguntaPorPropiedad) return this.#blockDetail(block, question);
+
+    // Sin pregunta explícita, nombrar un bloque solo alcanza dentro de su
+    // propio tema. Si no, "¿cómo consigo diamantes?" se contesta con la ficha
+    // del bloque en vez de con dónde buscarlo.
+    if (!allowGeneric) return null;
+    if (ore) return this.#oreDepth(ore.name, ore.vein);
+    return block ? this.#blockDetail(block, question) : null;
   }
 
   // ------------------------------------------------------------------ controles
@@ -591,6 +617,102 @@ export class GameKnowledge {
         'construir y guardar la partida.',
       ChatResponse.Topics.WORLD,
       'GameConfig.world + README.md'
+    );
+  }
+
+
+  #worldBottom() {
+    const bedrock = this.#registry.values().find((type) => !type.breakable && type.solid);
+    const capas = this.#config.worldGeneration.BEDROCK_LAYERS;
+    return ChatResponse.known(
+      `Abajo de todo hay ${bedrock?.label ?? 'roca madre'}: ${capas} capas desde Y=0, y no se puede ` +
+        `romper. Más abajo que Y=0 no hay nada, y si te caés fuera del mundo por debajo de ` +
+        `Y=${this.#config.player.VOID_Y} reaparecés en la superficie.`,
+      ChatResponse.Topics.WORLD,
+      'GameConfig.worldGeneration.BEDROCK_LAYERS + GameConfig.player.VOID_Y'
+    );
+  }
+
+  #worldCeiling() {
+    const world = this.#config.world;
+    const margen = this.#config.worldGeneration.SKY_MARGIN;
+    return ChatResponse.known(
+      `El techo está en Y=${world.WORLD_HEIGHT - 1}: arriba de eso no entra ningún bloque. La ` +
+        `generación deja al menos ${margen} bloques libres sobre el punto más alto del terreno, ` +
+        'así que te queda bastante aire para construir.',
+      ChatResponse.Topics.WORLD,
+      'GameConfig.world.WORLD_HEIGHT + GameConfig.worldGeneration.SKY_MARGIN'
+    );
+  }
+
+  #worldFindCaves() {
+    const caves = this.#config.caves;
+    if (!caves.ENABLED) return this.#worldCaves();
+    return ChatResponse.known(
+      `Hay dos formas: cavar derecho hacia abajo hasta Y=${caves.MAX_DEPTH} o menos, o buscar una ` +
+        'entrada natural. Algunas cuevas se abren a la superficie, así que a veces se ve el agujero ' +
+        `desde arriba. El grueso está entre Y=${caves.MIN_DEPTH} y Y=${caves.MAX_DEPTH}.`,
+      ChatResponse.Topics.WORLD,
+      'GameConfig.caves'
+    );
+  }
+
+  #worldMining() {
+    const ores = Object.entries(this.#config.ores);
+    // El más profundo es el más raro: se ordena por MAX_Y en vez de escribir
+    // "los diamantes están abajo", que deja de ser cierto si alguien cambia los
+    // rangos de GameConfig.ores.
+    const masProfundo = ores.slice().sort((a, b) => a[1].MAX_Y - b[1].MAX_Y)[0];
+    const label = this.#registry.get(masProfundo[1].BLOCK)?.label ?? masProfundo[0];
+    return ChatResponse.known(
+      `Cuanto más abajo, más raro lo que sale. Lo más difícil de conseguir es ${label}, entre ` +
+        `Y=${masProfundo[1].MIN_Y} y Y=${masProfundo[1].MAX_Y}. Conviene cavar en escalera hasta ` +
+        'esa altura y seguir las cuevas, que te ahorran romper bloques.',
+      ChatResponse.Topics.ORES,
+      'GameConfig.ores'
+    );
+  }
+
+  #metaSettings() {
+    return ChatResponse.known(
+      'Con O abrís la configuración durante la partida, y desde el menú principal también. Ahí ' +
+        'están el campo de visión, la sensibilidad del mouse, el tamaño de la mira, los volúmenes ' +
+        'y qué partes del HUD se ven. Los ajustes quedan guardados en el navegador.',
+      ChatResponse.Topics.CONTROLS,
+      'src/interface/screens/SettingsScreen.js + SettingsStorage'
+    );
+  }
+
+  #metaPerformance() {
+    const world = this.#config.world;
+    const total = world.WORLD_WIDTH * world.WORLD_HEIGHT * world.WORLD_DEPTH;
+    return ChatResponse.known(
+      `El juego dibuja bloque por bloque, así que el mundo entero son ${total.toLocaleString('es-AR')} ` +
+        'celdas posibles y lo que se ve pesa. Si va lento: bajá la distancia de render en la ' +
+        'configuración y cerrá otras pestañas. Si el navegador no tiene aceleración por GPU, WebGL ' +
+        'corre por software y los FPS se caen aunque la máquina sea buena.',
+      ChatResponse.Topics.WORLD,
+      'GameConfig.world + GameConfig.rendering'
+    );
+  }
+
+  #metaAccount() {
+    return ChatResponse.known(
+      'Podés jugar como invitado o crear una cuenta desde el menú principal. La cuenta sirve para ' +
+        'separar perfiles en la misma máquina: los datos quedan en tu navegador, no se suben a ' +
+        'ningún servidor. La contraseña se guarda derivada con PBKDF2, nunca en texto plano.',
+      ChatResponse.Topics.WORLD,
+      'src/users/ (UserManager, PasswordHasher)'
+    );
+  }
+
+  #metaSound() {
+    return ChatResponse.known(
+      'Sí: hay sonido al romper y al colocar bloques. Los navegadores no dejan sonar nada hasta que ' +
+        'hacés un clic en la página, así que si no escuchás nada, hacé clic una vez. Los volúmenes ' +
+        'se ajustan en la configuración.',
+      ChatResponse.Topics.WORLD,
+      'src/audio/AudioManager.js + GameConfig.audio'
     );
   }
 

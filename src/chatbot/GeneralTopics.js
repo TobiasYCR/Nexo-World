@@ -95,5 +95,68 @@ export const GeneralTopics = Object.freeze([
     phrases: Object.freeze(['que es un raycast', 'como sabe que bloque estoy mirando']),
     answer: 'Un raycast es una línea que sale de la cámara y avanza celda por celda hasta tocar ' +
       'un bloque sólido. Es así como el juego decide a qué bloque le apuntás y cuál se rompe.'
+  }),
+  Object.freeze({
+    id: 'fisica-gravedad',
+    phrases: Object.freeze(['que es la gravedad', 'por que caen las cosas', 'por que caigo tan rapido en el juego']),
+    answer: 'La gravedad es la atracción entre cuerpos con masa; en la Tierra acelera la caída unos ' +
+      '9,8 m/s². En Nexo World es un número de configuración, no una medición: se eligió el valor ' +
+      'que hace que saltar y caer se sientan bien, no el real.'
+  }),
+  Object.freeze({
+    id: 'binario',
+    phrases: Object.freeze(['que es el sistema binario', 'por que las computadoras usan ceros y unos', 'que es un bit']),
+    answer: 'Un bit es un sí o un no. Las computadoras trabajan con dos estados porque es lo que un ' +
+      'circuito distingue sin equivocarse: hay corriente o no hay. Ocho bits son un byte, y con un ' +
+      'byte se cuentan 256 valores distintos.'
+  }),
+  Object.freeze({
+    id: 'algoritmo',
+    phrases: Object.freeze(['que es un algoritmo', 'que significa programar', 'que es el codigo']),
+    answer: 'Un algoritmo son los pasos para resolver algo, escritos de forma que no quede nada a ' +
+      'interpretación. Programar es escribirlos en un lenguaje que la máquina ejecuta igual todas ' +
+      'las veces, incluso cuando lo que escribiste no era lo que querías decir.'
+  }),
+  Object.freeze({
+    id: 'internet',
+    phrases: Object.freeze(['que es internet', 'como funciona una pagina web', 'que es un servidor']),
+    answer: 'Un servidor es una computadora que espera pedidos y contesta. Una página web es un pedido ' +
+      'a uno de ellos que devuelve texto, que el navegador dibuja. Nexo World no tiene servidor: ' +
+      'todo lo que ves corre en tu máquina.'
+  }),
+  Object.freeze({
+    id: 'memoria',
+    phrases: Object.freeze(['que es la memoria ram', 'cuanta memoria usa el juego', 'que es un gigabyte']),
+    answer: 'La RAM es la memoria de trabajo: rápida y se borra al apagar. Un gigabyte son mil millones ' +
+      'de bytes, más o menos. Un mundo de voxels se guarda como un número por celda, así que su ' +
+      'tamaño en memoria es ancho × alto × profundidad, nada más.'
+  }),
+  Object.freeze({
+    id: 'coordenadas',
+    phrases: Object.freeze(['que significa x y z', 'que son las coordenadas', 'que significan las coordenadas', 'para que sirve el eje y', 'que es el eje vertical']),
+    answer: 'X y Z son el plano horizontal y la Y es la altura. En Nexo World la Y crece hacia arriba: ' +
+      'Y=0 es el fondo del mundo y los números grandes son el cielo. Las ves en el panel de ' +
+      'depuración, o preguntándome dónde estás.'
+  }),
+  Object.freeze({
+    id: 'semilla',
+    phrases: Object.freeze(['que es una semilla', 'que es un generador pseudoaleatorio', 'por que el azar se repite']),
+    answer: 'Una semilla es el número con el que arranca un generador de azar. El azar de una ' +
+      'computadora no es azar: es una cuenta que parece desordenada pero da siempre lo mismo para ' +
+      'la misma semilla. Por eso dos personas con la misma semilla reciben el mundo idéntico.'
+  }),
+  Object.freeze({
+    id: 'open-source',
+    phrases: Object.freeze(['que es codigo abierto', 'que es github', 'que es una licencia de software']),
+    answer: 'Código abierto es software cuyo código se puede leer, copiar y modificar según su ' +
+      'licencia. GitHub es donde vive el repositorio: aloja el código, el historial y las ' +
+      'discusiones sobre los cambios.'
+  }),
+  Object.freeze({
+    id: 'minecraft',
+    phrases: Object.freeze(['esto es minecraft', 'en que se parece a minecraft', 'es una copia de minecraft']),
+    answer: 'No. Nexo World es un trabajo de facultad que toma la idea de un mundo de cubos, que ' +
+      'Minecraft popularizó. Tiene mucho menos: no hay crafteo, ni mobs, ni ciclo de día y noche, ' +
+      'ni multijugador. Si me preguntás por algo de Minecraft que acá no existe, te lo voy a decir.'
   })
 ]);

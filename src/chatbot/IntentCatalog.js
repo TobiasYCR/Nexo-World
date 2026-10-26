@@ -117,6 +117,41 @@ export const IntentCatalog = Object.freeze([
     phrases: Object.freeze(['como se guarda la partida', 'donde se guarda mi mundo', 'se pierde mi partida', 'puedo cargar una partida'])
   }),
 
+  Object.freeze({
+    id: 'game.world.bottom',
+    phrases: Object.freeze(['que pasa si cavo hasta abajo', 'que hay en el fondo del mundo', 'hasta donde puedo cavar', 'que es la roca madre'])
+  }),
+  Object.freeze({
+    id: 'game.world.ceiling',
+    phrases: Object.freeze(['hasta que altura puedo construir', 'cual es el limite de altura', 'cuan alto puedo llegar'])
+  }),
+  Object.freeze({
+    id: 'game.world.findCaves',
+    phrases: Object.freeze(['como encuentro una cueva', 'donde entro a una cueva', 'como llego a las cuevas'])
+  }),
+  Object.freeze({
+    id: 'game.world.mining',
+    phrases: Object.freeze(['como consigo diamantes', 'cual es la mejor forma de minar', 'donde conviene cavar', 'como encuentro minerales'])
+  }),
+
+  // ------------------------------------------------------------- el programa
+  Object.freeze({
+    id: 'game.meta.settings',
+    phrases: Object.freeze(['como cambio la configuracion', 'donde estan las opciones', 'como cambio la sensibilidad del mouse', 'como cambio el campo de vision'])
+  }),
+  Object.freeze({
+    id: 'game.meta.performance',
+    phrases: Object.freeze(['por que va lento', 'como mejoro los fps', 'el juego va a tirones', 'por que tengo pocos fps'])
+  }),
+  Object.freeze({
+    id: 'game.meta.account',
+    phrases: Object.freeze(['como me registro', 'como creo una cuenta', 'para que sirve iniciar sesion', 'se guardan mis datos'])
+  }),
+  Object.freeze({
+    id: 'game.meta.sound',
+    phrases: Object.freeze(['hay sonido', 'por que no escucho nada', 'como activo el audio'])
+  }),
+
   // ------------------------------------------------------- estado de partida
   Object.freeze({
     id: 'game.status.position',
@@ -169,6 +204,14 @@ export const IntentCatalog = Object.freeze([
   Object.freeze({
     id: 'general.smallTalk.joke',
     phrases: Object.freeze(['contame un chiste', 'decime algo graciosos', 'hacete el gracioso', 'sabes chistes'])
+  }),
+  Object.freeze({
+    id: 'general.random.coin',
+    phrases: Object.freeze(['cara o cruz', 'tira una moneda', 'decidi por mi', 'si o no'])
+  }),
+  Object.freeze({
+    id: 'general.random.dice',
+    phrases: Object.freeze(['tira un dado', 'tirame un dado', 'numero al azar', 'dame un numero random'])
   }),
   Object.freeze({
     id: 'general.time.today',

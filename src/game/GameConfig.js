@@ -219,8 +219,6 @@ export const GameConfig = Object.freeze({
      * propone candidatos; el que decide es MIN_CONFIDENCE.
      */
     MATCH_THRESHOLD: 0.7,
-    /** Umbral de Fuse.js al buscar un tema general, donde no hay segunda vuelta. */
-    TOPIC_THRESHOLD: 0.45,
     /** Candidatos que devuelve Fuse antes de reordenarlos por cobertura. */
     MATCH_CANDIDATES: 12,
     /**

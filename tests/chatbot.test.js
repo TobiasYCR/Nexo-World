@@ -22,9 +22,12 @@ import { createDefaultBlockRegistry } from '../src/blocks/BlockRegistry.js';
 /** Reloj fijo: una prueba no puede depender del día en que se corre. */
 const RELOJ = () => new Date('2026-10-23T15:04:00');
 
+/** Azar fijo, por la misma razón que el reloj. */
+const AZAR = () => 0.5;
+
 function crearBot() {
   return new ChatBot({
-    generalKnowledge: new GeneralKnowledge({ config: GameConfig.chatbot, clock: RELOJ })
+    generalKnowledge: new GeneralKnowledge({ config: GameConfig.chatbot, clock: RELOJ, random: AZAR })
   });
 }
 
@@ -255,6 +258,60 @@ test('los números se escriben con coma decimal', () => {
   assert.equal(formato.format(20), '20');
   // Una pulgada en metros da 0.025399999187200026 en punto flotante.
   assert.equal(formato.format(0.025399999187200026), '0,0254');
+});
+
+test('una pregunta por una propiedad gana sobre el tema que eligió el matcher', () => {
+  const bot = crearBot();
+
+  // "¿se puede romper el bedrock?" se parece a "¿cómo rompo un bloque?", que es
+  // una pregunta de controles. El bloque nombrado más la propiedad preguntada
+  // pesan más que el parecido de las palabras.
+  assert.ok(contiene(bot.ask('¿se puede romper el bedrock?').text, 'no se puede romper'));
+  assert.ok(contiene(bot.ask('¿a qué profundidad encuentro diamantes?').text, 'Y=1'));
+
+  // Y al revés: nombrar un bloque sin preguntar por una propiedad no tiene que
+  // secuestrar una pregunta de estrategia.
+  const minar = bot.ask('¿cómo consigo diamantes?');
+  assert.ok(contiene(minar.text, 'cuanto mas abajo'), `salió: ${minar.text}`);
+});
+
+test('las respuestas nuevas del mundo también salen de la configuración', () => {
+  const masAlto = {
+    ...GameConfig,
+    world: { ...GameConfig.world, WORLD_HEIGHT: GameConfig.world.WORLD_HEIGHT + 100 }
+  };
+  const normal = new GameKnowledge().answer('game.world.ceiling', 'hasta que altura');
+  const alto = new GameKnowledge({ config: masAlto }).answer('game.world.ceiling', 'hasta que altura');
+
+  assert.ok(contiene(normal.text, `Y=${GameConfig.world.WORLD_HEIGHT - 1}`));
+  assert.ok(contiene(alto.text, `Y=${GameConfig.world.WORLD_HEIGHT + 99}`), `salió: ${alto.text}`);
+});
+
+test('el azar es inyectable, así que las respuestas son reproducibles', () => {
+  const general = new GeneralKnowledge({ config: GameConfig.chatbot, clock: RELOJ, random: () => 0 });
+  assert.ok(contiene(general.answer('general.random.coin').text, 'cara'));
+  assert.ok(contiene(general.answer('general.random.dice').text, '1'));
+
+  const otro = new GeneralKnowledge({ config: GameConfig.chatbot, clock: RELOJ, random: () => 0.99 });
+  assert.ok(contiene(otro.answer('general.random.coin').text, 'cruz'));
+  assert.ok(contiene(otro.answer('general.random.dice').text, '6'));
+});
+
+test('una unidad que el bot nombra pero mathjs no conoce no se confunde con una incompatible', () => {
+  const general = new GeneralKnowledge({ config: GameConfig.chatbot, clock: RELOJ, random: AZAR });
+
+  const incompatible = general.answerDirect('3 metros en kilos');
+  assert.ok(contiene(incompatible.text, 'no miden lo mismo'));
+
+  // Toda la tabla de alias tiene que existir en mathjs: si alguien agrega una
+  // unidad que la librería no conoce, el bot diría "no miden lo mismo", que es
+  // falso. Esta prueba recorre la tabla entera.
+  const alias = Object.keys(GeneralKnowledge.UNIT_ALIASES);
+  const rotas = alias.filter((nombre) => {
+    const respuesta = general.answerDirect(`1 ${nombre} en ${nombre}`);
+    return respuesta === null || contiene(respuesta.text, 'no se manejar');
+  });
+  assert.deepEqual(rotas, [], `alias que mathjs no reconoce: ${rotas.join(', ')}`);
 });
 
 // ============================================================================

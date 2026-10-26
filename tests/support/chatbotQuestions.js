@@ -109,7 +109,26 @@ export const preguntas = [
 
   // --- Fuera de alcance, otra vez: el bot no es un buscador -------------
   { id: 51, texto: '¿quién ganó el mundial de 1986?', categoria: 'fuera-de-alcance', esperado: 'deriva' },
-  { id: 52, texto: '¿cuál es la capital de Australia?', categoria: 'fuera-de-alcance', esperado: 'deriva' }
+  { id: 52, texto: '¿cuál es la capital de Australia?', categoria: 'fuera-de-alcance', esperado: 'deriva' },
+
+  // --- Segunda tanda: más cobertura del juego --------------------------
+  { id: 53, texto: '¿qué pasa si cavo hasta abajo?', categoria: 'mundo', esperado: 'responde', contiene: 'roca madre' },
+  { id: 54, texto: '¿hasta qué altura puedo construir?', categoria: 'mundo', esperado: 'responde' },
+  { id: 55, texto: '¿cómo encuentro una cueva?', categoria: 'mundo', esperado: 'responde' },
+  { id: 56, texto: '¿cómo consigo diamantes?', categoria: 'minerales', esperado: 'responde', contiene: 'cuanto mas abajo' },
+  { id: 57, texto: '¿por qué va lento el juego?', categoria: 'programa', esperado: 'responde' },
+  { id: 58, texto: '¿cómo cambio la sensibilidad del mouse?', categoria: 'programa', esperado: 'responde' },
+  { id: 59, texto: '¿hay sonido?', categoria: 'programa', esperado: 'responde' },
+  { id: 60, texto: '¿cómo me registro?', categoria: 'programa', esperado: 'responde' },
+  { id: 61, texto: '¿se puede romper el bedrock?', categoria: 'bloques', esperado: 'responde', contiene: 'no se puede romper' },
+
+  // --- Segunda tanda: más cobertura general ----------------------------
+  { id: 62, texto: '¿qué significa X Y Z?', categoria: 'general', esperado: 'responde', contiene: 'altura' },
+  { id: 63, texto: '¿esto es Minecraft?', categoria: 'general', esperado: 'responde' },
+  { id: 64, texto: '¿qué es un algoritmo?', categoria: 'general', esperado: 'responde' },
+  { id: 65, texto: 'tirá un dado', categoria: 'azar', esperado: 'responde' },
+  { id: 66, texto: '¿cara o cruz?', categoria: 'azar', esperado: 'responde' },
+  { id: 67, texto: '100 watts en hp', categoria: 'unidades', esperado: 'responde' }
 ];
 
 /** Resumen por categoría, para reportar cobertura. */
