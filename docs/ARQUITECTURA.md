@@ -58,7 +58,7 @@ La resolución de penetración por eje es el trabajo pendiente principal de este
 
 `Renderer` orquesta el frame: fondo, cámara, luces, geometría. `BlockRenderer` es la única clase que sabe cómo se ve un bloque. `LightingManager` aísla la iluminación. `TextureManager` centraliza rutas y carga de texturas.
 
-`BlockRenderer` consume `World.forEachSolidBlock()`. Ese es el contrato completo: cualquier implementación futura (mallas fusionadas, instancing) puede reemplazarlo sin que `World` cambie.
+`BlockRenderer` arma una malla por chunk y tipo de bloque con `ChunkMeshBuilder`, que solo genera las caras que dan a un bloque no opaco. La malla se rehace únicamente cuando el chunk está `dirty` (`World.setBlockId` también ensucia el vecino si el cambio es en un borde) y se recorta por chunk según la distancia de render. Consume `world.chunks` y `World.getBlockId()`; `World` no sabe nada de dibujado.
 
 ### `input/`
 
@@ -87,12 +87,12 @@ En p5 WEBGL el eje Y crece hacia arriba y el eje Z hacia el observador; por eso 
 
 ## Rendimiento
 
-Esta versión dibuja un `box()` por bloque visible. Se aplican dos recortes baratos:
+Cada chunk se dibuja con una malla por tipo de bloque que queda en la placa de video y solo se rehace cuando el chunk cambia. Se aplican dos recortes:
 
-- distancia horizontal contra `RENDER_DISTANCE`;
-- descarte de bloques rodeados por seis bloques opacos.
+- distancia horizontal contra `RENDER_DISTANCE`, de a chunk;
+- solo se generan las caras que dan a aire o a un bloque no opaco (las paredes internas de las cuevas y el interior del terreno no generan nada).
 
-Deliberadamente **no** hay mallas fusionadas, instancing, shaders propios, oclusión avanzada, Web Workers ni LOD. El objetivo es que el código sea legible mientras el equipo se familiariza; la optimización entra después, contenida en `BlockRenderer`.
+Deliberadamente **no** hay instancing, shaders propios, oclusión avanzada, Web Workers ni LOD. El objetivo es que el código sea legible mientras el equipo se familiariza; la optimización entra después, contenida en `BlockRenderer`.
 
 ## Testing
 

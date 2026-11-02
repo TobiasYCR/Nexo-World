@@ -46,8 +46,9 @@ test('un frame completo dibuja bloques sin lanzar excepciones', async () => {
 
   assert.equal(p.calls.background, 1);
   assert.equal(p.calls.camera, 2, 'el overlay de la mano aplica su cámara fija');
-  assert.ok(p.calls.box > 0, 'el renderer debería emitir geometría');
-  assert.ok(p.calls.box >= game.renderer.stats.renderedBlocks + 1, 'la mano añade geometría al mundo');
+  assert.ok(p.calls.model > 0, 'el renderer dibuja las mallas de los chunks');
+  assert.ok(game.renderer.stats.renderedBlocks > 0);
+  assert.ok(p.calls.box >= 1, 'la mano se sigue dibujando aparte');
   assert.equal(p.calls.clearDepth, 1);
 });
 

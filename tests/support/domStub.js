@@ -211,7 +211,7 @@ export function uninstallDomStub() {
 
 /** Doble de p5 que cuenta las primitivas de dibujo emitidas por frame. */
 export function createP5Stub() {
-  const calls = { box: 0, camera: 0, background: 0, material: 0, clearDepth: 0 };
+  const calls = { box: 0, model: 0, freeGeometry: 0, camera: 0, background: 0, material: 0, clearDepth: 0 };
   const noop = () => {};
 
   return {
@@ -239,6 +239,8 @@ export function createP5Stub() {
     fill: noop,
     ambientMaterial: () => { calls.material += 1; },
     box: () => { calls.box += 1; },
+    model: () => { calls.model += 1; },
+    freeGeometry: () => { calls.freeGeometry += 1; },
     loadImage: (_path, _onLoad, onError) => onError(new Error('sin texturas en el test'))
   };
 }

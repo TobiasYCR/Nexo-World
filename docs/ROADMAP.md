@@ -42,9 +42,9 @@ Orden sugerido de trabajo y reparto para un equipo de cuatro. Cada bloque toca m
 
 **Módulos:** `rendering/`
 
-- Reemplazar el `box()` por bloque por mallas por chunk, reconstruidas solo cuando el chunk está `dirty`.
-- Descartar caras internas al construir la malla.
-- Recorte por volumen de visión.
+- ~~Reemplazar el `box()` por bloque por mallas por chunk, reconstruidas solo cuando el chunk está `dirty`.~~ Hecho.
+- ~~Descartar caras internas al construir la malla.~~ Hecho.
+- Recorte por volumen de visión (hoy se recorta por distancia, de a chunk).
 
 Esta etapa se hace **al final** y queda contenida en `BlockRenderer`: si el resto del código respetó los contratos, `World`, `Player` y `UI` no cambian.
 
