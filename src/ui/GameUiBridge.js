@@ -1,6 +1,7 @@
 import { IntentBus } from './IntentBus.js';
 import { ScreenType } from './ScreenType.js';
 import { Toast } from './Toast.js';
+import { ProgressionUiService } from '../progression/ProgressionUiService.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -21,6 +22,9 @@ export class GameUiBridge {
 
     this.#bindIntents();
     this.#bindAccount();
+    if (game?.progression && hud?.setProgressionService) {
+      hud.setProgressionService(new ProgressionUiService(game.progression, { config: game.config?.progression }));
+    }
   }
 
   /**
