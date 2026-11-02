@@ -1404,6 +1404,73 @@
   flex: 1;
 }
 
+/* ==========================================================================
+   Clasificación
+   ========================================================================== */
+.nx-leaderboard-dialog {
+  max-width: 520px;
+  width: 100%;
+}
+
+.nx-leaderboard-status,
+.nx-leaderboard-own {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-leaderboard-status[hidden] {
+  display: none;
+}
+
+.nx-leaderboard-own {
+  color: var(--nx-text-accent);
+}
+
+.nx-leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.nx-leaderboard-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nx-text-secondary);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--nx-border-dialog);
+}
+
+.nx-leaderboard-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--nx-border-subtle);
+}
+
+.nx-leaderboard-table th:first-child,
+.nx-leaderboard-table td:first-child {
+  width: 3.5rem;
+  color: var(--nx-text-secondary);
+}
+
+.nx-leaderboard-table th:last-child,
+.nx-leaderboard-table td:last-child {
+  text-align: right;
+}
+
+.nx-leaderboard-table[hidden] {
+  display: none;
+}
+
+.nx-leaderboard-table tr.is-own td {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--nx-emerald-light);
+  font-weight: 700;
+}
+
 /* Reducción de movimiento */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {

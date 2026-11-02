@@ -4,6 +4,7 @@ import { Toast } from './Toast.js';
 import { SpeechService } from '../audio/SpeechService.js';
 import { BuildChallengeView } from './BuildChallengeView.js';
 import { GameEventTypes } from '../game/GameEvents.js';
+import { ProgressionUiService } from '../progression/ProgressionUiService.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -24,6 +25,9 @@ export class GameUiBridge {
 
     this.#bindIntents();
     this.#bindAccount();
+    if (game?.progression && hud?.setProgressionService) {
+      hud.setProgressionService(new ProgressionUiService(game.progression, { config: game.config?.progression }));
+    }
   }
 
   /**
