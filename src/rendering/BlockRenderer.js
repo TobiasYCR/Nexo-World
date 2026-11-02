@@ -1,33 +1,53 @@
 import { GameConfig } from '../game/GameConfig.js';
-import { RenderQueue } from './RenderQueue.js';
+import { ChunkMeshBuilder } from './ChunkMeshBuilder.js';
 
 /**
  * Dibuja los bloques del mundo. Es la ÚNICA clase que sabe cómo se ve un bloque.
  *
- * Contrato con World: solo consume forEachSolidBlock() e isBlockHidden(), así
- * que World no sabe nada de dibujado. El frame tiene dos fases:
- *   1. #collect: culling y agrupado por tipo en una RenderQueue.
- *   2. #drawQueue: un cambio de material por grupo y un box() por bloque.
- * Reemplazar box() por mallas por chunk implica cambiar solo la fase 2 (o esta
- * clase entera, manteniendo render()/renderedBlocks/setRenderDistance()).
+ * Cada chunk se convierte en una malla por tipo de bloque, con solo las caras
+ * que dan a un bloque no opaco (ChunkMeshBuilder). La malla queda en la placa
+ * de video y se reconstruye únicamente cuando el chunk cambia (Chunk.dirty),
+ * en lugar de recorrer el mundo y emitir un box() por bloque en cada frame.
+ *
+ * Contrato con World: recorre world.chunks y consulta vecinos con getBlockId;
+ * World no sabe nada de dibujado. La interfaz pública no cambió:
+ * render(), renderedBlocks, renderDistance y setRenderDistance().
  */
 export class BlockRenderer {
   static MIN_RENDER_DISTANCE = 1;
+  static #nextGeometryId = 0;
 
   #renderedBlocks = 0;
+  #drawnChunks = 0;
   #renderDistance;
-  #queue = new RenderQueue();
+  #builder;
+  /** clave de chunk -> { chunk, meshes: [{blockId, geometry}], visibleBlocks, minX, minZ, maxX, maxZ } */
+  #meshes = new Map();
+  /** Reutilizado entre frames: blockId -> geometrías visibles de ese tipo. */
+  #byType = new Map();
 
   constructor(p, blockRegistry, textureManager, config = GameConfig) {
     this.p = p;
     this.blockRegistry = blockRegistry;
     this.textures = textureManager;
     this.blockSize = config.world.BLOCK_SIZE;
+    this.#builder = new ChunkMeshBuilder(blockRegistry, this.blockSize);
     this.setRenderDistance(config.rendering.RENDER_DISTANCE);
   }
 
+  /** Bloques con al menos una cara visible en los chunks dibujados el último frame. */
   get renderedBlocks() {
     return this.#renderedBlocks;
+  }
+
+  /** Chunks dibujados el último frame. */
+  get drawnChunks() {
+    return this.#drawnChunks;
+  }
+
+  /** Chunks con malla armada. */
+  get meshedChunks() {
+    return this.#meshes.size;
   }
 
   /** Radio de dibujado en bloques. */
@@ -52,67 +72,125 @@ export class BlockRenderer {
    * @param {{x:number,y:number,z:number}} viewerPosition posición en coordenadas de mundo
    */
   render(world, viewerPosition) {
-    this.#collect(world, viewerPosition);
-    this.#drawQueue();
-    this.#renderedBlocks = this.#queue.size;
+    this.#syncMeshes(world);
+    this.#draw(viewerPosition);
+  }
+
+  /** Libera las mallas de la placa de video (al descartar el renderer). */
+  dispose() {
+    for (const entry of this.#meshes.values()) this.#release(entry);
+    this.#meshes.clear();
   }
 
   /**
-   * Culling por distancia horizontal contra el centro de cada bloque, medida
-   * desde la posición continua del jugador: el conteo varía de a poco al
-   * caminar en vez de saltar al cruzar el borde de un bloque.
+   * Arma las mallas de los chunks nuevos o modificados y libera las de chunks
+   * que ya no existen (por ejemplo, al cargar otra partida).
    */
-  #collect(world, viewerPosition) {
-    const queue = this.#queue;
-    queue.clear();
+  #syncMeshes(world) {
+    const alive = new Set();
+    for (const chunk of world.chunks) {
+      alive.add(chunk.key);
+      const cached = this.#meshes.get(chunk.key);
+      if (cached && cached.chunk === chunk && !chunk.isDirty) continue;
+      if (cached) this.#release(cached);
+      this.#meshes.set(chunk.key, this.#buildEntry(world, chunk));
+      chunk.markClean();
+    }
+    for (const [key, entry] of this.#meshes) {
+      if (alive.has(key)) continue;
+      this.#release(entry);
+      this.#meshes.delete(key);
+    }
+  }
 
-    const viewerX = viewerPosition.x / this.blockSize - 0.5;
-    const viewerZ = viewerPosition.z / this.blockSize - 0.5;
+  #buildEntry(world, chunk) {
+    const { groups, visibleBlocks } = this.#builder.build(world, chunk);
+    const meshes = [];
+    for (const [blockId, group] of groups) {
+      BlockRenderer.#nextGeometryId += 1;
+      const gid = `nexo-chunk-${chunk.key}-${blockId}-${BlockRenderer.#nextGeometryId}`;
+      meshes.push({ blockId, geometry: this.#toGeometry(group, gid) });
+    }
+    return {
+      chunk,
+      meshes,
+      visibleBlocks,
+      minX: chunk.chunkX * chunk.sizeX,
+      minZ: chunk.chunkZ * chunk.sizeZ,
+      maxX: (chunk.chunkX + 1) * chunk.sizeX,
+      maxZ: (chunk.chunkZ + 1) * chunk.sizeZ
+    };
+  }
+
+  /**
+   * Recorte por chunk: se dibuja si el punto más cercano del chunk está dentro
+   * del radio. Después se agrupa por tipo para cambiar de material una sola vez
+   * por tipo en todo el frame.
+   */
+  #draw(viewerPosition) {
+    const viewerX = viewerPosition.x / this.blockSize;
+    const viewerZ = viewerPosition.z / this.blockSize;
     const maxDistanceSq = this.#renderDistance * this.#renderDistance;
 
-    world.forEachSolidBlock((x, y, z, blockId) => {
-      const dx = x - viewerX;
-      const dz = z - viewerZ;
-      if (dx * dx + dz * dz > maxDistanceSq) return;
-      if (world.isBlockHidden(x, y, z)) return;
-      queue.push(blockId, x, y, z);
-    });
+    for (const list of this.#byType.values()) list.length = 0;
+    let rendered = 0;
+    let drawn = 0;
+    for (const entry of this.#meshes.values()) {
+      const dx = Math.max(entry.minX - viewerX, 0, viewerX - entry.maxX);
+      const dz = Math.max(entry.minZ - viewerZ, 0, viewerZ - entry.maxZ);
+      if (dx * dx + dz * dz > maxDistanceSq) continue;
+      for (const { blockId, geometry } of entry.meshes) {
+        let list = this.#byType.get(blockId);
+        if (!list) {
+          list = [];
+          this.#byType.set(blockId, list);
+        }
+        list.push(geometry);
+      }
+      rendered += entry.visibleBlocks;
+      drawn += 1;
+    }
+    this.#renderedBlocks = rendered;
+    this.#drawnChunks = drawn;
+
+    const p = this.p;
+    p.push();
+    p.noStroke();
+    for (const [blockId, geometries] of this.#byType) {
+      if (geometries.length === 0) continue;
+      p.push();
+      this.#applyMaterial(this.blockRegistry.get(blockId));
+      for (const geometry of geometries) p.model(geometry);
+      p.pop();
+    }
+    p.pop();
   }
 
   /**
-   * Dentro de un grupo se encadenan translate() relativos en vez de un
-   * push()/pop() por bloque: el material queda fijo para todo el grupo.
+   * Convierte el grupo en p5.Geometry. En los tests (sin p5 real) usa un objeto
+   * con la misma forma.
    */
-  #drawQueue() {
-    const p = this.p;
-    const size = this.blockSize;
-    const half = size / 2;
+  #toGeometry(group, gid) {
+    const GeometryClass = this.p.constructor?.Geometry;
+    const geometry = typeof GeometryClass === 'function'
+      ? new GeometryClass(1, 1)
+      : { vertices: [], vertexNormals: [], uvs: [], faces: [], edges: [], vertexColors: [], _edgesToVertices() {} };
+    geometry.gid = gid;
 
-    p.push();
-    p.noStroke();
+    const { positions, normals, uvs, indices } = group;
+    for (let index = 0; index < positions.length; index += 3) {
+      geometry.vertices.push({ x: positions[index], y: positions[index + 1], z: positions[index + 2] });
+      geometry.vertexNormals.push({ x: normals[index], y: normals[index + 1], z: normals[index + 2] });
+    }
+    for (const value of uvs) geometry.uvs.push(value);
+    for (let index = 0; index < indices.length; index += 3) {
+      geometry.faces.push([indices[index], indices[index + 1], indices[index + 2]]);
+    }
+    return geometry;
+  }
 
-    this.#queue.forEachGroup((blockId, positions) => {
-      p.push();
-      this.#applyMaterial(this.blockRegistry.get(blockId));
-
-      let currentX = 0;
-      let currentY = 0;
-      let currentZ = 0;
-      for (let index = 0; index < positions.length; index += 3) {
-        const targetX = positions[index] * size + half;
-        const targetY = positions[index + 1] * size + half;
-        const targetZ = positions[index + 2] * size + half;
-        p.translate(targetX - currentX, targetY - currentY, targetZ - currentZ);
-        currentX = targetX;
-        currentY = targetY;
-        currentZ = targetZ;
-        p.box(size);
-      }
-
-      p.pop();
-    });
-
-    p.pop();
+  #release(entry) {
+    for (const { geometry } of entry.meshes) this.p.freeGeometry?.(geometry);
   }
 
   #applyMaterial(blockType) {

@@ -4,7 +4,7 @@ import { createP5Stub } from './support/domStub.js';
 import { TextureManager } from '../src/rendering/TextureManager.js';
 import { BlockRenderer } from '../src/rendering/BlockRenderer.js';
 import { LightingManager } from '../src/rendering/LightingManager.js';
-import { RenderQueue } from '../src/rendering/RenderQueue.js';
+import { ChunkMeshBuilder } from '../src/rendering/ChunkMeshBuilder.js';
 import { World } from '../src/world/World.js';
 import { WorldGenerator } from '../src/world/WorldGenerator.js';
 import { createDefaultBlockRegistry } from '../src/blocks/BlockRegistry.js';
@@ -106,19 +106,6 @@ test('las texturas cargadas usan filtro NEAREST en ambos sentidos', async () => 
   assert.deepEqual(interpolations, [['/textures/blocks/dirt.png', 'nearest', 'nearest']]);
 });
 
-test('RenderQueue agrupa por tipo y reutiliza la capacidad entre frames', () => {
-  const queue = new RenderQueue();
-  queue.push(1, 0, 0, 0);
-  queue.push(2, 1, 0, 0);
-  queue.push(1, 2, 0, 0);
-  assert.equal(queue.size, 3);
-  assert.equal(queue.groupCount, 2);
-
-  queue.clear();
-  assert.equal(queue.size, 0);
-  assert.equal(queue.groupCount, 0);
-});
-
 function buildTerrain() {
   const world = new World(createDefaultBlockRegistry(), GameConfig);
   new WorldGenerator(GameConfig.world).generate(world);
@@ -136,24 +123,83 @@ function countingStub() {
   return p;
 }
 
-test('BlockRenderer cambia de material una vez por tipo, no por bloque', () => {
+/** Bloques con al menos una cara visible, contados sin pasar por el renderer. */
+function visibleBlocks(world) {
+  let count = 0;
+  const types = new Set();
+  world.forEachSolidBlock((x, y, z, id) => {
+    if (world.isBlockHidden(x, y, z)) return;
+    count += 1;
+    types.add(id);
+  });
+  return { count, types };
+}
+
+test('BlockRenderer dibuja una malla por chunk y tipo, y cambia de material una vez por tipo', () => {
   const world = buildTerrain();
   const p = countingStub();
   const textures = { get: (name) => (name === 'grass_top.png' ? { name } : null) };
   const renderer = new BlockRenderer(p, world.blockRegistry, textures, GameConfig);
-  // Radio que cubre todo el mundo: así los tipos dibujados son los de los bloques visibles.
+  // Radio que cubre todo el mundo: así se dibujan todos los chunks.
   renderer.setRenderDistance(world.width + world.depth);
 
   renderer.render(world, worldCenter(world));
 
-  const typesDrawn = new Set();
-  world.forEachSolidBlock((x, y, z, id) => {
-    if (!world.isBlockHidden(x, y, z)) typesDrawn.add(id);
-  });
-  assert.ok(renderer.renderedBlocks > typesDrawn.size);
-  assert.equal(p.calls.box, renderer.renderedBlocks);
-  assert.equal(p.calls.texture + p.calls.material, typesDrawn.size);
+  const { count, types } = visibleBlocks(world);
+  assert.equal(renderer.renderedBlocks, count, 'cuenta los mismos bloques visibles que antes');
+  assert.equal(renderer.drawnChunks, world.chunkCount);
+  assert.equal(p.calls.box, 0, 'ya no hay un box() por bloque');
+  assert.ok(p.calls.model >= types.size && p.calls.model <= types.size * world.chunkCount);
+  assert.equal(p.calls.texture + p.calls.material, types.size);
   assert.equal(p.calls.texture, 1, 'solo el cesped tiene textura en este doble');
+});
+
+test('las mallas se arman una vez y se rehacen solo en el chunk que cambia', () => {
+  const world = buildTerrain();
+  const p = countingStub();
+  const geometries = [];
+  p.model = (geometry) => geometries.push(geometry);
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  renderer.setRenderDistance(64);
+  const center = worldCenter(world);
+
+  renderer.render(world, center);
+  const first = new Set(geometries);
+  geometries.length = 0;
+  renderer.render(world, center);
+  assert.deepEqual(new Set(geometries), first, 'sin cambios se reutilizan las mismas mallas');
+  assert.ok([...world.chunks].every((chunk) => !chunk.isDirty));
+
+  // Un bloque en el medio del chunk (0,0): solo ese chunk se rehace.
+  const x = 5;
+  const z = 5;
+  const y = world.getSurfaceHeight(x, z);
+  world.setBlockId(x, y, z, BlockIds.STONE);
+  geometries.length = 0;
+  renderer.render(world, center);
+  const changed = geometries.filter((geometry) => !first.has(geometry));
+  assert.ok(changed.length > 0);
+  assert.ok(changed.every((geometry) => geometry.gid.startsWith('nexo-chunk-0,0-')));
+  assert.ok(p.calls.freeGeometry > 0, 'las mallas viejas se liberan');
+});
+
+test('un bloque en el borde rehace también la malla del chunk vecino', () => {
+  const world = buildTerrain();
+  const p = countingStub();
+  const geometries = [];
+  p.model = (geometry) => geometries.push(geometry);
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  renderer.setRenderDistance(64);
+  renderer.render(world, worldCenter(world));
+  const first = new Set(geometries);
+
+  const x = GameConfig.chunk.SIZE_X - 1;
+  const y = world.getSurfaceHeight(x, 4) - 1;
+  world.setBlockId(x, y, 4, BlockIds.AIR);
+  geometries.length = 0;
+  renderer.render(world, worldCenter(world));
+  const rebuilt = new Set(geometries.filter((geometry) => !first.has(geometry)).map((geometry) => geometry.gid.split('-')[2]));
+  assert.deepEqual([...rebuilt].sort(), ['0,0', '1,0']);
 });
 
 test('sin textura disponible, el bloque se dibuja con el color del BlockType', () => {
@@ -167,18 +213,22 @@ test('sin textura disponible, el bloque se dibuja con el color del BlockType', (
   renderer.render(world, { x: 100, y: 100, z: 100 });
 
   assert.deepEqual(colors, [[...world.blockRegistry.get(BlockIds.STONE).color]]);
+  assert.equal(renderer.renderedBlocks, 1);
 });
 
-test('la distancia de render se ajusta en caliente y recorta bloques', () => {
+test('la distancia de render se ajusta en caliente y descarta chunks lejanos', () => {
   const world = buildTerrain();
   const renderer = new BlockRenderer(countingStub(), world.blockRegistry, { get: () => null }, GameConfig);
-  const center = worldCenter(world);
+  renderer.setRenderDistance(64);
+  const corner = { x: 2 * world.blockSize, y: 200, z: 2 * world.blockSize };
 
-  renderer.render(world, center);
+  renderer.render(world, corner);
   const wide = renderer.renderedBlocks;
+  assert.equal(renderer.drawnChunks, world.chunkCount);
 
   assert.equal(renderer.setRenderDistance(4), 4);
-  renderer.render(world, center);
+  renderer.render(world, corner);
+  assert.equal(renderer.drawnChunks, 1, 'desde una esquina solo queda su chunk');
   assert.ok(renderer.renderedBlocks < wide);
 });
 
@@ -190,25 +240,68 @@ test('setRenderDistance acota a >= 1 e ignora valores no numéricos', () => {
   assert.equal(renderer.renderDistance, 8);
 });
 
-test('el conteo varía de forma gradual al caminar', () => {
+test('al cargar otra partida se liberan las mallas de los chunks que ya no existen', () => {
   const world = buildTerrain();
-  const renderer = new BlockRenderer(countingStub(), world.blockRegistry, { get: () => null }, GameConfig);
-  renderer.setRenderDistance(8);
+  const p = countingStub();
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  renderer.render(world, worldCenter(world));
+  assert.equal(renderer.meshedChunks, world.chunkCount);
 
-  const counts = [];
-  for (let step = 0; step <= 40; step += 1) {
-    renderer.render(world, { x: 100 + step * 5, y: 200, z: 320 });
-    counts.push(renderer.renderedBlocks);
-  }
-  const maxJump = Math.max(...counts.slice(1).map((count, index) => Math.abs(count - counts[index])));
-  assert.ok(maxJump < counts[0] * 0.2, `salto máximo ${maxJump} sobre ${counts[0]} bloques`);
+  world.clear();
+  world.setBlockId(1, 1, 1, BlockIds.STONE);
+  renderer.render(world, worldCenter(world));
+  assert.equal(renderer.meshedChunks, 1);
+  assert.ok(p.calls.freeGeometry > 0);
 });
 
-test('el renderer no modifica el mundo', () => {
+test('el renderer no modifica los bloques del mundo', () => {
   const world = buildTerrain();
   const before = [...world.chunks].map((chunk) => Array.from(chunk.blocks).join());
   new BlockRenderer(countingStub(), world.blockRegistry, { get: () => null }, GameConfig).render(world, worldCenter(world));
   assert.deepEqual([...world.chunks].map((chunk) => Array.from(chunk.blocks).join()), before);
+});
+
+test('ChunkMeshBuilder genera solo las caras que dan a un bloque no opaco', () => {
+  const world = new World(createDefaultBlockRegistry(), GameConfig);
+  const builder = new ChunkMeshBuilder(world.blockRegistry, 10);
+  world.setBlockId(3, 3, 3, BlockIds.STONE);
+  const [chunk] = world.chunks;
+
+  let mesh = builder.build(world, chunk);
+  assert.equal(mesh.faceCount, 6, 'un bloque suelto muestra sus seis caras');
+  const stone = mesh.groups.get(BlockIds.STONE);
+  assert.equal(stone.positions.length, 6 * 4 * 3);
+  assert.equal(stone.indices.length, 6 * 6);
+  assert.equal(stone.uvs.length, 6 * 4 * 2);
+  const xs = stone.positions.filter((_, index) => index % 3 === 0);
+  assert.deepEqual([Math.min(...xs), Math.max(...xs)], [30, 40], 'ocupa de x*tamaño a (x+1)*tamaño');
+
+  // Dos bloques pegados: la cara compartida desaparece de los dos lados.
+  world.setBlockId(4, 3, 3, BlockIds.STONE);
+  mesh = builder.build(world, chunk);
+  assert.equal(mesh.faceCount, 10);
+  assert.equal(mesh.visibleBlocks, 2);
+
+  // El vidrio no tapa: el bloque de al lado conserva su cara.
+  world.setBlockId(4, 3, 3, BlockIds.GLASS);
+  mesh = builder.build(world, chunk);
+  assert.equal(mesh.groups.get(BlockIds.STONE).faceCount, 6);
+
+  // Las normales apuntan hacia afuera de cada cara.
+  const normals = mesh.groups.get(BlockIds.STONE).normals;
+  const directions = new Set();
+  for (let index = 0; index < normals.length; index += 3) directions.add(normals.slice(index, index + 3).join());
+  assert.equal(directions.size, 6);
+});
+
+test('ChunkMeshBuilder mira el chunk vecino en los bordes', () => {
+  const world = new World(createDefaultBlockRegistry(), GameConfig);
+  const builder = new ChunkMeshBuilder(world.blockRegistry, 10);
+  const edge = GameConfig.chunk.SIZE_X - 1;
+  world.setBlockId(edge, 3, 3, BlockIds.STONE);
+  world.setBlockId(edge + 1, 3, 3, BlockIds.STONE);
+  const chunk = [...world.chunks].find((candidate) => candidate.chunkX === 0);
+  assert.equal(builder.build(world, chunk).faceCount, 5, 'la cara contra el vecino no se genera');
 });
 
 test('LightingManager normaliza la dirección una sola vez y la invierte para p5', () => {
