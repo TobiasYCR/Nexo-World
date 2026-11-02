@@ -83,12 +83,14 @@ Decisiones para Nexo World:
 
 ### 1.4 Integración con usuarios
 
-Backend 1 todavía no terminó el sistema de cuentas, así que se usan **jugadores invitados**:
+Las cuentas viven en la misma base MySQL (tablas `accounts` y `sessions`) y las atiende el mismo servidor (`server/accounts/AccountService.js`).
 
-- `POST /api/players` crea un jugador con id (UUID) y un token secreto. El navegador guarda ambos.
-- La base guarda solo el **hash SHA-256** del token.
-- La tabla `players` tiene `account_id` (nulo, único), reservado para vincular la cuenta de Backend 1 cuando exista.
-- Partidas existentes: el progreso se identifica por mundo, así que los guardados del mundo no cambian.
+- Sin sesión se juega como **invitado**: `POST /api/players` crea un jugador con id (UUID) y un token secreto que guarda el navegador. La base guarda solo el **hash SHA-256** del token.
+- Cada cuenta tiene un jugador (`players.account_id`, único). Al **registrarse**, el navegador manda el token de su invitado (`guestToken`): si ese invitado no es de nadie, pasa a ser el jugador de la cuenta y conserva su progreso. Si no, se crea un jugador nuevo con el nombre de la cuenta.
+- Con la sesión iniciada, el **token de sesión** también sirve para `GET/PUT /api/progress`: el servidor lo resuelve al jugador de la cuenta. `PlayerProgression.useAccount()` cambia de identidad al iniciar o cerrar sesión (lo llama `GameUiBridge`).
+- Iniciar sesión con una cuenta que ya tiene jugador no mezcla el progreso del invitado: cada cuenta y el invitado tienen su propia copia local.
+- Si la sesión vence, el juego sigue guardando como invitado.
+- `GameConfig.users.AUTH_SOURCE = 'local'` vuelve a las cuentas en `localStorage` (`LocalAuthClient`), sin servidor.
 
 ## 2. Modelo de datos
 
@@ -118,6 +120,8 @@ Backend 1 todavía no terminó el sistema de cuentas, así que se usan **jugador
 | `players` | `id` | Nombre, hash del token, `account_id`, alta. |
 | `progress` | `player_id, mode, world_key` | Revisión, puntuación, estadísticas y estado (JSON), última actualización. |
 | `leaderboard` | `mode, player_id` | Mejor marca, cuándo se alcanzó y en qué mundo. Índice `(mode, best_score DESC, achieved_at, player_id)`. |
+| `accounts` | `id` | Usuario, correo, claves únicas en minúsculas (`username_key`, `email_key`), credencial PBKDF2-SHA-256 con sal (JSON), alta y modificación. |
+| `sessions` | `token_hash` | Hash SHA-256 del token de sesión, cuenta y vencimiento (7 días). |
 
 Los tiempos se guardan como milisegundos epoch (`BIGINT`) para que el desempate sea exacto.
 
@@ -173,7 +177,21 @@ Los tiempos se guardan como milisegundos epoch (`BIGINT`) para que el desempate 
 
 Errores: `{ error, message }`. Códigos: 400 pedido inválido, 401 token, 404 jugador inexistente, 409 revisión vieja (incluye `current`), 422 datos incoherentes, 429 ritmo excedido, 503 falla de la base.
 
-### 4.3 Contrato de persistencia (para acordar con Backend 1)
+Cuentas (`server/http/AuthRoutes.js`, mismo contrato que `BackendAuthClient`):
+
+| Método y ruta | Uso |
+|---|---|
+| `POST /api/auth/register` `{ username, email, password, guestToken? }` | Crea la cuenta y abre sesión → `{ token, expiresAt, user }` (201). |
+| `POST /api/auth/login` `{ identifier, password, guestToken? }` | `identifier` es el usuario o el correo → `{ token, expiresAt, user }`. |
+| `POST /api/auth/logout` | Requiere token. Cierra la sesión. |
+| `GET /api/auth/session` | Requiere token → `{ token, expiresAt, user }`. |
+| `GET /api/user/profile` | Requiere token → `{ user }`. |
+| `PUT /api/user/profile` `{ username?, currentPassword?, newPassword? }` | Requiere token. Cambiar la contraseña exige la actual y cierra las demás sesiones. |
+| `POST /api/auth/recover-password` | 501: no hay servidor de correo. |
+
+`user = { id, username, email, createdAt, updatedAt, playerId }`. Errores: `{ code, message }` con los códigos que ya usa la interfaz (`USERNAME_TAKEN`, `INVALID_CREDENTIALS`, `UNAUTHORIZED`, `RATE_LIMITED`…). Diez intentos fallidos seguidos sobre el mismo usuario lo bloquean 15 minutos.
+
+### 4.3 Contrato de persistencia
 
 `server/persistence/ProgressionRepository.js` define la interfaz:
 
@@ -184,8 +202,9 @@ Errores: `{ error, message }`. Códigos: 400 pedido inválido, 401 token, 404 ju
 - `saveProgress(progress, expectedRevision)`: escritura condicional más mejor marca, en una sola transacción.
 - `topScores`
 - `standingOf`
+- `findPlayerByAccountId`, `linkPlayerToAccount`, `renameAccountPlayer`: vínculo con las cuentas.
 
-Las implementaciones son `MySqlProgressionRepository` e `InMemoryProgressionRepository` (tests). Si Backend 1 define otra persistencia, alcanza con implementar esta interfaz.
+Las implementaciones son `MySqlProgressionRepository` e `InMemoryProgressionRepository` (tests). Las cuentas usan `AccountRepository` (`MySqlAccountRepository`, `InMemoryAccountRepository`). Las dos versiones MySQL comparten la conexión (`MySqlDatabase`).
 
 ## 5. Tecnologías
 
@@ -193,16 +212,18 @@ Las implementaciones son `MySqlProgressionRepository` e `InMemoryProgressionRepo
 |---|---|---|
 | Base | MySQL 8 (probado también con MariaDB 10.11) | Pedido del equipo. |
 | Driver | `mysql2` 3.24.5 | Única dependencia nueva; el navegador no puede hablar con MySQL. |
-| Servidor | `node:http` | Sin frameworks: son seis rutas. |
+| Servidor | `node:http` | Sin frameworks: son pocas rutas. |
 | Desarrollo | Proxy de Vite `/api` → `127.0.0.1:3001` | El juego usa rutas relativas. |
 
 ## 6. Limitaciones y mejoras futuras
 
 - Clasificación no resistente a trampas (ver sección 3).
-- Sin cuentas: la identidad vive en el navegador; borrar los datos del sitio crea otro invitado.
+- Un invitado que borra los datos del sitio pierde su identidad; con una cuenta, el progreso queda en el servidor.
+- Las cuentas creadas antes con `LocalAuthClient` (en `localStorage`) no se migran: hay que registrarse de nuevo.
+- El límite de intentos de inicio de sesión vive en memoria y se reinicia con el servidor.
 - `POST /api/players` no tiene límite por IP: alguien podría crear muchos invitados. Conviene agregarlo al publicar el servidor.
 - Si el servidor no está corriendo, el navegador registra un error de red al iniciar. El progreso se guarda localmente y se envía cuando el servidor vuelve.
-- Mejoras posibles: vincular `account_id` con Backend 1, tablas por período, niveles como moneda cuando haya crafteo, y validación por servidor autoritativo si llega el multijugador.
+- Mejoras posibles: recuperación de contraseña por correo, tablas por período, niveles como moneda cuando haya crafteo, y validación por servidor autoritativo si llega el multijugador.
 
 ## Fuentes
 

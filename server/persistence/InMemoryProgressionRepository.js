@@ -29,6 +29,26 @@ export class InMemoryProgressionRepository extends ProgressionRepository {
     return null;
   }
 
+  async findPlayerByAccountId(accountId) {
+    for (const player of this.#players.values()) if (player.accountId === accountId) return { ...player };
+    return null;
+  }
+
+  async linkPlayerToAccount(playerId, accountId, name) {
+    this.#throwIfFailing();
+    const player = this.#players.get(playerId);
+    if (!player || player.accountId != null) return false;
+    if (await this.findPlayerByAccountId(accountId)) return false;
+    this.#players.set(playerId, { ...player, accountId, name });
+    return true;
+  }
+
+  async renameAccountPlayer(accountId, name) {
+    for (const [id, player] of this.#players) {
+      if (player.accountId === accountId) this.#players.set(id, { ...player, name });
+    }
+  }
+
   async getProgress(playerId, mode, worldKey) {
     return this.#copy(this.#progress.get(this.#progressKey(playerId, mode, worldKey)));
   }

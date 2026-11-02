@@ -20,6 +20,26 @@ export class GameUiBridge {
     this.toast = Toast.getInstance(hud.container);
 
     this.#bindIntents();
+    this.#bindAccount();
+  }
+
+  /**
+   * Con la sesión iniciada, el progreso se guarda a nombre de la cuenta; al
+   * cerrarla, vuelve al invitado. Se aplica al arrancar y en cada cambio.
+   */
+  #bindAccount() {
+    const progression = this.game?.progression;
+    if (!progression?.useAccount) return;
+    const apply = (session) => {
+      const user = session?.user;
+      const account = session?.isAuthenticated && session.token && user?.playerId
+        ? { playerId: user.playerId, token: session.token, name: user.username }
+        : null;
+      progression.useAccount(account);
+    };
+    const session = this.hud?.authService?.getSession?.();
+    if (session) apply(session);
+    this.intentBus.on(IntentBus.Events.AUTH_STATE_CHANGED, ({ session: changed }) => apply(changed));
   }
 
   #bindIntents() {

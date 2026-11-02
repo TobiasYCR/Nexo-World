@@ -33,7 +33,10 @@ const FINAL_REJECTIONS = new Set([
  * servidor de puntuaciones. Game solo llama a start(), update() y flush().
  *
  * La puntuación local es provisoria: la oficial es verifiedScore, la que
- * recalculó y aceptó el servidor. La interfaz nunca calcula puntos: los lee
+ * recalculó y aceptó el servidor.
+ *
+ * Con una sesión iniciada (useAccount) el progreso se guarda a nombre del
+ * jugador de la cuenta; sin sesión, a nombre del invitado de este navegador. La interfaz nunca calcula puntos: los lee
  * de acá o de los eventos scoreChanged, progressSynced y progressSyncFailed.
  */
 export class PlayerProgression {
@@ -41,6 +44,10 @@ export class PlayerProgression {
   #terrain = null;
   #worldKey = null;
   #identity = null;
+  /** Jugador de la cuenta con la sesión iniciada, o null si se juega como invitado. */
+  #account = null;
+  /** Cambia con cada cambio de cuenta: descarta respuestas que llegan tarde de la anterior. */
+  #generation = 0;
   #revision = 0;
   #dirty = false;
   #changeCounter = 0;
@@ -98,8 +105,10 @@ export class PlayerProgression {
     this.#tracker?.detach();
     this.#tracker = new ProgressTracker(terrain, this.rules, (change) => this.#onChange(change));
     if (this.events) this.#tracker.attach(this.events);
+    this.#account = this.store.loadAccountIdentity();
+    this.#generation += 1;
 
-    const cached = this.store.loadProgress(this.mode, worldKey);
+    const cached = this.store.loadProgress(this.mode, worldKey, this.#scope());
     const cachedState = cached ? this.#acceptState(cached.state) : null;
     if (cachedState) {
       this.#tracker.load(cachedState);
@@ -108,8 +117,37 @@ export class PlayerProgression {
       // Lo guardado localmente puede no haber llegado al servidor.
       this.#dirty = true;
     }
-    this.ready = this.#connect();
+    this.ready = this.#connect(this.#generation);
     return this.ready;
+  }
+
+  /**
+   * Cambia la cuenta a cuyo nombre se guarda el progreso. La interfaz lo llama
+   * al iniciar o cerrar sesión. Lo pendiente se envía antes con la cuenta anterior.
+   * @param {{playerId:string, token:string, name?:string}|null} account null para volver a invitado
+   * @returns {Promise<void>}
+   */
+  useAccount(account) {
+    const next = account && typeof account.playerId === 'string' && typeof account.token === 'string'
+      ? { playerId: account.playerId, token: account.token, name: String(account.name ?? '') }
+      : null;
+    const current = this.#account;
+    if (current?.playerId === next?.playerId && current?.token === next?.token) return this.ready;
+
+    if (next) this.store.saveAccountIdentity(next);
+    else this.store.clearAccountIdentity();
+    if (!this.#tracker) {
+      this.#account = next;
+      return this.ready;
+    }
+    const pending = this.#identity && this.#dirty ? this.flush() : Promise.resolve();
+    this.ready = pending.then(() => this.#switchTo(next));
+    return this.ready;
+  }
+
+  /** true si el progreso se está guardando a nombre de una cuenta. */
+  get hasAccount() {
+    return this.#account !== null;
   }
 
   /** Llamado por Game cada frame mientras el juego corre. */
@@ -252,7 +290,7 @@ export class PlayerProgression {
   #onChange({ delta, reason }) {
     this.#dirty = true;
     this.#changeCounter += 1;
-    this.store.saveProgress(this.mode, this.#worldKey, this.#revision, this.#tracker.state.toJSON());
+    this.#saveCache();
     this.events?.emit(GameEventTypes.SCORE_CHANGED, { score: this.score, delta, reason, breakdown: this.breakdown });
     for (const levelUp of this.#levelProgress.update(this.stats)) {
       this.events?.emit(GameEventTypes.LEVEL_UP, levelUp);
@@ -266,17 +304,25 @@ export class PlayerProgression {
     return this.validator.validate(state, this.#terrain).ok ? state : null;
   }
 
-  async #connect() {
-    const identity = await this.#ensureIdentity();
-    if (!identity) return;
+  async #connect(generation) {
+    const identity = await this.#ensureIdentity(generation);
+    if (!identity || generation !== this.#generation) return;
 
     let remote = await this.api.getProgress(identity, this.mode, this.#worldKey);
+    if (generation !== this.#generation) return;
     if (!remote.ok && remote.reason === ProgressionResult.Reasons.UNAUTHORIZED) {
+      if (this.#account) {
+        // La sesión venció o se cerró en otro lado: se sigue como invitado.
+        this.store.clearAccountIdentity();
+        await this.#switchTo(null);
+        return;
+      }
       // El servidor ya no reconoce la identidad (por ejemplo, base reiniciada): se registra otra.
       this.store.clearIdentity();
       this.#identity = null;
-      if (!(await this.#ensureIdentity())) return;
+      if (!(await this.#ensureIdentity(generation)) || generation !== this.#generation) return;
       remote = await this.api.getProgress(this.#identity, this.mode, this.#worldKey);
+      if (generation !== this.#generation) return;
     }
 
     if (!remote.ok) {
@@ -287,11 +333,16 @@ export class PlayerProgression {
     if (this.#dirty) await this.flush();
   }
 
-  async #ensureIdentity() {
+  async #ensureIdentity(generation) {
+    if (this.#account) {
+      this.#identity = { ...this.#account };
+      return this.#identity;
+    }
     this.#identity = this.store.loadIdentity();
     if (this.#identity) return this.#identity;
 
     const result = await this.api.registerPlayer(this.playerName ?? PlayerProgression.#guestName());
+    if (generation !== this.#generation) return null;
     if (!result.ok) {
       this.#fail(result);
       return null;
@@ -318,10 +369,51 @@ export class PlayerProgression {
     this.#verifiedScore = score;
     this.#rank = rank ?? this.#rank;
     this.#status = this.#dirty ? SyncStatus.IDLE : SyncStatus.SYNCED;
-    this.store.saveProgress(this.mode, this.#worldKey, this.#revision, merged.toJSON());
+    this.#saveCache();
+  }
+
+  /**
+   * Pasa a guardar a nombre de otra cuenta (o del invitado). Si el jugador es
+   * el mismo (el invitado que se registró pasa a ser el de la cuenta) se
+   * conserva el progreso en curso; si no, se carga el de la cuenta nueva.
+   */
+  #switchTo(account) {
+    const previousPlayer = this.#identity?.playerId ?? this.#account?.playerId ?? null;
+    this.#account = account;
+    this.#generation += 1;
+    this.#identity = null;
+    this.#verifiedScore = null;
+    this.#rank = null;
+    this.#lastError = null;
+    this.#status = SyncStatus.IDLE;
+
+    const nextPlayer = account?.playerId ?? this.store.loadIdentity()?.playerId ?? null;
+    if (nextPlayer !== null && nextPlayer === previousPlayer) {
+      this.#saveCache();
+    } else {
+      const cached = this.store.loadProgress(this.mode, this.#worldKey, this.#scope());
+      const state = cached ? this.#acceptState(cached.state) : null;
+      const loaded = state ?? new ProgressState();
+      this.#tracker.load(loaded);
+      this.#levelProgress.load(loaded.stats());
+      this.#revision = state ? cached.revision : 0;
+      this.#dirty = state !== null;
+    }
+    return this.#connect(this.#generation);
+  }
+
+  /** Clave de la copia local: cada cuenta tiene la suya; el invitado usa la de siempre. */
+  #scope() {
+    return this.#account?.playerId ?? null;
+  }
+
+  #saveCache() {
+    if (!this.#tracker) return;
+    this.store.saveProgress(this.mode, this.#worldKey, this.#revision, this.#tracker.state.toJSON(), this.#scope());
   }
 
   async #submit({ keepalive = false } = {}, retried = false) {
+    const generation = this.#generation;
     const changesAtSend = this.#changeCounter;
     const revision = this.#revision + 1;
     this.#status = SyncStatus.SYNCING;
@@ -330,6 +422,8 @@ export class PlayerProgression {
       { mode: this.mode, worldKey: this.#worldKey, revision, state: this.#tracker.state.toJSON() },
       { keepalive }
     );
+    // La cuenta cambió mientras viajaba el envío: la respuesta ya no es de este estado.
+    if (generation !== this.#generation) return result;
 
     if (result.ok) {
       this.#revision = revision;
@@ -338,12 +432,18 @@ export class PlayerProgression {
       this.#dirty = this.#changeCounter !== changesAtSend;
       this.#status = SyncStatus.SYNCED;
       this.#lastError = null;
-      this.store.saveProgress(this.mode, this.#worldKey, this.#revision, this.#tracker.state.toJSON());
+      this.#saveCache();
       this.events?.emit(GameEventTypes.PROGRESS_SYNCED, { score: this.#verifiedScore, rank: this.#rank });
       return result;
     }
 
     if (result.reason === ProgressionResult.Reasons.UNAUTHORIZED) {
+      if (this.#account) {
+        // Sesión vencida: se sigue como invitado y lo pendiente se guarda a su nombre.
+        this.store.clearAccountIdentity();
+        this.ready = this.#switchTo(null);
+        return this.#fail(result);
+      }
       // Credencial rechazada: se descarta para registrar una nueva en la próxima partida.
       this.store.clearIdentity();
       this.#identity = null;

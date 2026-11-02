@@ -13,6 +13,7 @@ import { ProgressionResult } from './ProgressionResult.js';
 export class ProgressionLocalStore {
   static PREFIX = 'nexo-world:progress:';
   static #IDENTITY_KEY = 'identity';
+  static #ACCOUNT_IDENTITY_KEY = 'account-identity';
 
   #storage;
   #memory = new Map();
@@ -48,15 +49,43 @@ export class ProgressionLocalStore {
     this.#remove(ProgressionLocalStore.#IDENTITY_KEY);
   }
 
-  /** @returns {{revision:number, state:object}|null} */
-  loadProgress(mode, worldKey) {
-    const record = this.#read(`${mode}:${worldKey}`);
+  /**
+   * Jugador de la cuenta con la sesión iniciada: su id y el token de sesión,
+   * que el servidor también acepta para guardar progreso.
+   * @returns {{playerId:string, token:string, name:string}|null}
+   */
+  loadAccountIdentity() {
+    const identity = this.#read(ProgressionLocalStore.#ACCOUNT_IDENTITY_KEY);
+    const valid = identity && typeof identity.playerId === 'string' && typeof identity.token === 'string';
+    return valid ? { playerId: identity.playerId, token: identity.token, name: String(identity.name ?? '') } : null;
+  }
+
+  saveAccountIdentity(identity) {
+    return this.#write(ProgressionLocalStore.#ACCOUNT_IDENTITY_KEY, identity);
+  }
+
+  clearAccountIdentity() {
+    this.#remove(ProgressionLocalStore.#ACCOUNT_IDENTITY_KEY);
+  }
+
+  /**
+   * @param {string|null} [scope] jugador de una cuenta; null para el invitado
+   *   (así el progreso de cada cuenta queda separado del de quien juega sin sesión)
+   * @returns {{revision:number, state:object}|null}
+   */
+  loadProgress(mode, worldKey, scope = null) {
+    const record = this.#read(ProgressionLocalStore.#progressKey(mode, worldKey, scope));
     if (!record || !Number.isSafeInteger(record.revision) || record.revision < 0) return null;
     return { revision: record.revision, state: record.state };
   }
 
-  saveProgress(mode, worldKey, revision, state) {
-    return this.#write(`${mode}:${worldKey}`, { revision, state });
+  saveProgress(mode, worldKey, revision, state, scope = null) {
+    return this.#write(ProgressionLocalStore.#progressKey(mode, worldKey, scope), { revision, state });
+  }
+
+  /** La clave sin cuenta es la de siempre: el progreso guardado antes de este cambio se sigue leyendo. */
+  static #progressKey(mode, worldKey, scope) {
+    return scope ? `account:${scope}:${mode}:${worldKey}` : `${mode}:${worldKey}`;
   }
 
   #read(key) {

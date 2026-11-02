@@ -1,8 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import mysql from 'mysql2/promise';
 import { ProgressionRepository } from './ProgressionRepository.js';
-
-const SCHEMA_URL = new URL('./schema.sql', import.meta.url);
+import { MySqlDatabase } from './MySqlDatabase.js';
 
 /**
  * Repositorio sobre MySQL 8 (también probado con MariaDB 10.11).
@@ -15,45 +12,26 @@ const SCHEMA_URL = new URL('./schema.sql', import.meta.url);
  *     best_score DESC, achieved_at ASC, player_id ASC.
  */
 export class MySqlProgressionRepository extends ProgressionRepository {
-  #pool = null;
+  #database;
+  #ownsDatabase;
 
   /**
-   * @param {{host:string, port:number, user:string, password:string, database:string, connectionLimit?:number}} options
+   * @param {MySqlDatabase|{host:string, port:number, user:string, password:string, database:string, connectionLimit?:number}} source
+   *   una conexión compartida, o los datos para abrir una propia
    */
-  constructor(options) {
+  constructor(source) {
     super();
-    this.options = options;
+    this.#ownsDatabase = !(source instanceof MySqlDatabase);
+    this.#database = this.#ownsDatabase ? new MySqlDatabase(source) : source;
+  }
+
+  get #pool() {
+    return this.#database.pool;
   }
 
   /** Crea la base (si el usuario tiene permiso) y las tablas que falten. */
   async init() {
-    const { database, ...connection } = this.options;
-    if (!/^[A-Za-z0-9_]{1,64}$/.test(database)) throw new Error(`Nombre de base de datos inválido: "${database}".`);
-
-    const bootstrap = await mysql.createConnection(connection);
-    try {
-      await bootstrap.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-    } catch (error) {
-      // Sin permiso para crear bases se sigue: puede existir y haberla creado un administrador.
-      if (error?.code !== 'ER_DBACCESS_DENIED_ERROR' && error?.code !== 'ER_ACCESS_DENIED_ERROR') throw error;
-    } finally {
-      await bootstrap.end();
-    }
-
-    this.#pool = mysql.createPool({
-      ...this.options,
-      connectionLimit: this.options.connectionLimit ?? 10,
-      waitForConnections: true,
-      supportBigNumbers: true,
-      bigNumberStrings: false
-    });
-
-    const schema = await readFile(SCHEMA_URL, 'utf8');
-    const statements = schema
-      .split(/;\s*(?:\r?\n|$)/)
-      .map((statement) => statement.replace(/^\s*--.*$/gm, '').trim())
-      .filter(Boolean);
-    for (const statement of statements) await this.#pool.query(statement);
+    await this.#database.init();
   }
 
   async createPlayer({ id, name, tokenHash, accountId = null, createdAt }) {
@@ -166,14 +144,32 @@ export class MySqlProgressionRepository extends ProgressionRepository {
     return { ...standing, position: Number(ahead) + 1 };
   }
 
-  async close() {
-    await this.#pool?.end();
-    this.#pool = null;
+  async findPlayerByAccountId(accountId) {
+    const [rows] = await this.#pool.query('SELECT * FROM players WHERE account_id = ?', [accountId]);
+    return rows.length ? MySqlProgressionRepository.#toPlayer(rows[0]) : null;
   }
 
-  /** MySQL devuelve JSON ya parseado; MariaDB lo devuelve como texto. */
-  static #json(value) {
-    return typeof value === 'string' ? JSON.parse(value) : value;
+  async linkPlayerToAccount(playerId, accountId, name) {
+    try {
+      const [result] = await this.#pool.query(
+        'UPDATE players SET account_id = ?, display_name = ? WHERE id = ? AND account_id IS NULL',
+        [accountId, name, playerId]
+      );
+      return result.affectedRows === 1;
+    } catch (error) {
+      // La cuenta ya tiene otro jugador (índice único de account_id).
+      if (error?.code === 'ER_DUP_ENTRY') return false;
+      throw error;
+    }
+  }
+
+  async renameAccountPlayer(accountId, name) {
+    await this.#pool.query('UPDATE players SET display_name = ? WHERE account_id = ?', [name, accountId]);
+  }
+
+  /** Cierra la conexión solo si es propia; la compartida la cierra quien la creó. */
+  async close() {
+    if (this.#ownsDatabase) await this.#database.close();
   }
 
   static #toPlayer(row) {
@@ -193,8 +189,8 @@ export class MySqlProgressionRepository extends ProgressionRepository {
       worldKey: row.world_key,
       revision: Number(row.revision),
       score: Number(row.score),
-      stats: MySqlProgressionRepository.#json(row.stats),
-      state: MySqlProgressionRepository.#json(row.state),
+      stats: MySqlDatabase.json(row.stats),
+      state: MySqlDatabase.json(row.state),
       updatedAt: Number(row.updated_at)
     };
   }

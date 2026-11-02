@@ -17,6 +17,9 @@ import { WorldCreationScreen } from '../interface/screens/WorldCreationScreen.js
 import { SettingsModel } from '../interface/models/SettingsModel.js';
 import { AuthService } from '../auth/AuthService.js';
 import { LocalAuthClient } from '../users/LocalAuthClient.js';
+import { BackendAuthClient } from '../auth/BackendAuthClient.js';
+import { ProgressionLocalStore } from '../progression/ProgressionLocalStore.js';
+import { GameConfig } from '../game/GameConfig.js';
 import { LoginScreen } from '../interface/screens/LoginScreen.js';
 import { RegisterScreen } from '../interface/screens/RegisterScreen.js';
 import { ProfileScreen } from '../interface/screens/ProfileScreen.js';
@@ -41,12 +44,8 @@ export class HUD {
     this.uiStateManager = new UiStateManager(ScreenType.MENU);
     this.screenManager = new ScreenManager(this.container, this.intentBus, this.uiStateManager);
     this.settingsModel = new SettingsModel();
-    // Las cuentas se resuelven en el navegador con LocalAuthClient. El cliente
-    // HTTP por defecto de AuthService apunta a /api/auth/*, que no existe: con
-    // él, registrarse fallaba con "No se pudo conectar con el servidor".
-    // Cuando haya servidor, se cambia esta línea por BackendAuthClient.
     this.authService = options.authService
-      ?? new AuthService({ intentBus: this.intentBus, client: new LocalAuthClient() });
+      ?? new AuthService({ intentBus: this.intentBus, client: HUD.#createAuthClient() });
     this.backend2Service = options.backend2Service ?? null;
 
     // Elementos del HUD in-game
@@ -62,6 +61,17 @@ export class HUD {
     this.#registerScreens();
     this.#setupIntentListeners();
     this.#setupKeyboardShortcuts();
+  }
+
+  /**
+   * Cuentas en el servidor (MySQL) o en el navegador, según GameConfig.users.AUTH_SOURCE.
+   * Con servidor se envía el token del invitado de este navegador, para que la
+   * cuenta nueva se quede con su progreso.
+   */
+  static #createAuthClient() {
+    if (GameConfig.users.AUTH_SOURCE === 'local') return new LocalAuthClient();
+    const progressionStore = new ProgressionLocalStore();
+    return new BackendAuthClient({ guestTokenProvider: () => progressionStore.loadIdentity()?.token });
   }
 
   #registerScreens() {

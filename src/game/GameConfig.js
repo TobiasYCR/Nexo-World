@@ -227,6 +227,11 @@ export const GameConfig = Object.freeze({
   }),
 
   users: Object.freeze({
+    /**
+     * Dónde viven las cuentas: 'server' (MySQL, a través de npm run server) o
+     * 'local' (localStorage, sin servidor: solo separa perfiles en una máquina).
+     */
+    AUTH_SOURCE: 'server',
     USERNAME_MIN_LENGTH: 3,
     USERNAME_MAX_LENGTH: 20,
     /** Letras, números, guion y guion bajo. Sin espacios ni símbolos: el nombre se usa como clave. */
