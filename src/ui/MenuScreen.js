@@ -85,6 +85,16 @@ export class MenuScreen extends Screen {
     this.authActionBtn.id = 'menu-btn-auth';
     this.authActionBtn.addEventListener('click', () => this.handleAuthAction());
 
+    this.leaderboardBtn = document.createElement('button');
+    this.leaderboardBtn.type = 'button';
+    this.leaderboardBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
+    this.leaderboardBtn.id = 'menu-btn-leaderboard';
+    this.leaderboardBtn.innerHTML = `
+      <span class="nx-btn-icon">${Icons.trophy}</span>
+      <span class="nx-btn-text">CLASIFICACIÓN</span>
+    `;
+    this.leaderboardBtn.addEventListener('click', () => this.handleLeaderboard());
+
     this.settingsBtn = document.createElement('button');
     this.settingsBtn.type = 'button';
     this.settingsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
@@ -107,6 +117,7 @@ export class MenuScreen extends Screen {
 
     nav.appendChild(this.playBtn);
     nav.appendChild(this.authActionBtn);
+    nav.appendChild(this.leaderboardBtn);
     nav.appendChild(this.settingsBtn);
     nav.appendChild(this.controlsBtn);
 
@@ -191,6 +202,10 @@ export class MenuScreen extends Screen {
     if (this.screenManager) {
       this.screenManager.open(ScreenType.SETTINGS);
     }
+  }
+
+  handleLeaderboard() {
+    this.screenManager?.open(ScreenType.LEADERBOARD);
   }
 
   handleControls() {

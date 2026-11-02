@@ -294,7 +294,7 @@ export class ProfileScreen extends Screen {
         if (level !== undefined && this.levelVal) this.levelVal.textContent = String(level);
 
         const rank = this.#backend2Service.getLeaderboardRank?.(userId);
-        if (rank !== undefined && this.rankVal) this.rankVal.textContent = `#${rank}`;
+        if (rank !== undefined && this.rankVal) this.rankVal.textContent = rank === null ? 'N/D' : `#${rank}`;
       } catch {
         // Silencioso: mantener N/D
       }
