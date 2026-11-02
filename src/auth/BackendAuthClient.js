@@ -1,19 +1,26 @@
 /**
- * Cliente HTTP REST para comunicación con los contratos de Backend 1.
+ * Cliente HTTP REST del servidor de cuentas (server/http/AuthRoutes.js).
  * Traduce peticiones de red en respuestas estandarizadas y maneja errores de conexión.
  */
 export class BackendAuthClient {
+  static #OFFLINE_MESSAGE =
+    'No se pudo conectar con el servidor de cuentas. Revisá que esté corriendo (npm run server) o jugá como invitado.';
+
   #baseUrl;
   #fetchFn;
+  #guestTokenProvider;
 
   /**
    * @param {Object} [options]
    * @param {string} [options.baseUrl]
    * @param {typeof fetch} [options.fetchFn]
+   * @param {() => (string|null|undefined)} [options.guestTokenProvider] token del jugador
+   *   invitado de este navegador; el servidor lo usa para que la cuenta conserve su progreso
    */
-  constructor({ baseUrl = '/api', fetchFn = globalThis.fetch } = {}) {
+  constructor({ baseUrl = '/api', fetchFn = globalThis.fetch, guestTokenProvider = () => null } = {}) {
     this.#baseUrl = baseUrl.replace(/\/+$/, '');
-    this.#fetchFn = fetchFn;
+    this.#fetchFn = fetchFn ? (...args) => fetchFn(...args) : null;
+    this.#guestTokenProvider = guestTokenProvider;
   }
 
   /**
@@ -23,7 +30,7 @@ export class BackendAuthClient {
   async register({ username, email, password }) {
     return this.#request('/auth/register', {
       method: 'POST',
-      body: { username, email, password }
+      body: { username, email, password, ...this.#guestToken() }
     });
   }
 
@@ -34,7 +41,7 @@ export class BackendAuthClient {
   async login({ identifier, password }) {
     return this.#request('/auth/login', {
       method: 'POST',
-      body: { identifier, password }
+      body: { identifier, password, ...this.#guestToken() }
     });
   }
 
@@ -95,6 +102,16 @@ export class BackendAuthClient {
     });
   }
 
+  #guestToken() {
+    let token = null;
+    try {
+      token = this.#guestTokenProvider?.() ?? null;
+    } catch {
+      token = null;
+    }
+    return typeof token === 'string' && token !== '' ? { guestToken: token } : {};
+  }
+
   async #request(endpoint, { method = 'GET', body = null, token = null } = {}) {
     const url = `${this.#baseUrl}${endpoint}`;
     const headers = {
@@ -132,6 +149,11 @@ export class BackendAuthClient {
         json = null;
       }
 
+      if (!response.ok && json === null && response.status >= 500) {
+        // El proxy de Vite responde 5xx sin cuerpo JSON cuando el servidor no está levantado.
+        return { ok: false, code: 'NETWORK_ERROR', message: BackendAuthClient.#OFFLINE_MESSAGE };
+      }
+
       if (!response.ok) {
         return {
           ok: false,
@@ -148,7 +170,7 @@ export class BackendAuthClient {
       return {
         ok: false,
         code: 'NETWORK_ERROR',
-        message: 'No se pudo conectar con el servidor de autenticación. Verifica tu conexión.'
+        message: BackendAuthClient.#OFFLINE_MESSAGE
       };
     }
   }

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS players (
   id CHAR(36) NOT NULL,
   display_name VARCHAR(32) NOT NULL,
   token_hash CHAR(64) NOT NULL,
-  -- Reservado para vincular la cuenta de Backend 1 cuando exista.
+  -- Cuenta dueña de este jugador (accounts.id), o NULL si es un invitado.
   account_id VARCHAR(64) NULL,
   created_at BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (id),
@@ -38,4 +38,35 @@ CREATE TABLE IF NOT EXISTS leaderboard (
   PRIMARY KEY (mode, player_id),
   KEY idx_leaderboard_rank (mode, best_score DESC, achieved_at, player_id),
   CONSTRAINT fk_leaderboard_player FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Cuentas de usuario. username_key y email_key son el nombre y el correo en
+-- minúsculas: evitan que "Leandro" y "leandro" sean dos cuentas distintas.
+-- credential guarda el resultado de PasswordHasher (PBKDF2-SHA-256 con sal).
+-- la contraseña nunca se guarda.
+CREATE TABLE IF NOT EXISTS accounts (
+  id CHAR(36) NOT NULL,
+  username VARCHAR(20) NOT NULL,
+  username_key VARCHAR(20) NOT NULL,
+  email VARCHAR(254) NOT NULL,
+  email_key VARCHAR(254) NOT NULL,
+  credential JSON NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_accounts_username (username_key),
+  UNIQUE KEY uq_accounts_email (email_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Sesiones abiertas. Como con los jugadores, se guarda el hash SHA-256 del
+-- token y no el token: una filtración de la tabla no permite entrar a cuentas.
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash CHAR(64) NOT NULL,
+  account_id CHAR(36) NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  expires_at BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (token_hash),
+  KEY idx_sessions_account (account_id),
+  KEY idx_sessions_expiry (expires_at),
+  CONSTRAINT fk_sessions_account FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

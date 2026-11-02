@@ -32,16 +32,19 @@ const STATUS_BY_REASON = Object.freeze({
  *   PUT  /api/progress                       (token) { mode, world, revision, state }
  *   GET  /api/leaderboard?mode=&limit=
  *   GET  /api/leaderboard/players/:id?mode=
+ *   /api/auth/* y /api/user/profile          ver AuthRoutes
  */
 export class ApiServer {
   static MAX_BODY_BYTES = 256 * 1024;
 
   /**
    * @param {import('../progression/ProgressionService.js').ProgressionService} service
-   * @param {{allowedOrigin:string, basePath?:string, logger?:{error:Function}}} options
+   * @param {{allowedOrigin:string, basePath?:string, logger?:{error:Function},
+   *          authRoutes?: import('./AuthRoutes.js').AuthRoutes|null}} options
    */
-  constructor(service, { allowedOrigin, basePath = '/api', logger = console }) {
+  constructor(service, { allowedOrigin, basePath = '/api', logger = console, authRoutes = null }) {
     this.service = service;
+    this.authRoutes = authRoutes;
     this.allowedOrigin = allowedOrigin;
     this.basePath = basePath;
     this.logger = logger;
@@ -112,6 +115,19 @@ export class ApiServer {
     if (route === 'GET /leaderboard') {
       this.#sendResult(response, await this.service.leaderboard(query.get('mode'), query.get('limit')));
       return;
+    }
+    if (this.authRoutes) {
+      const answer = await this.authRoutes.handle({
+        method: request.method,
+        path,
+        headers: request.headers,
+        readJson: () => this.#readJson(request, response)
+      });
+      if (answer === undefined) return;
+      if (answer !== null) {
+        this.#send(response, answer.status, answer.body);
+        return;
+      }
     }
     const standingMatch = /^\/leaderboard\/players\/([0-9a-f-]{36})$/.exec(path);
     if (request.method === 'GET' && standingMatch) {

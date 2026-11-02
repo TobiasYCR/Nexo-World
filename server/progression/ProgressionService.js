@@ -26,9 +26,11 @@ export class ProgressionService {
   /**
    * @param {import('../persistence/ProgressionRepository.js').ProgressionRepository} repository
    * @param {import('./WorldVerifier.js').WorldVerifier} worldVerifier
-   * @param {{config?: object, clock?: () => number, logger?: {error: Function}}} [options]
+   * @param {{config?: object, clock?: () => number, logger?: {error: Function},
+   *          sessions?: {resolvePlayer: (token: string) => Promise<object|null>}|null}} [options]
+   *   sessions permite usar el token de una sesión de cuenta en lugar del de invitado
    */
-  constructor(repository, worldVerifier, { config = GameConfig.progression, clock = Date.now, logger = console } = {}) {
+  constructor(repository, worldVerifier, { config = GameConfig.progression, clock = Date.now, logger = console, sessions = null } = {}) {
     this.repository = repository;
     this.worldVerifier = worldVerifier;
     this.config = config;
@@ -36,6 +38,7 @@ export class ProgressionService {
     this.validator = new ProgressValidator(this.rules);
     this.clock = clock;
     this.logger = logger;
+    this.sessions = sessions;
   }
 
   async registerPlayer(rawName) {
@@ -49,11 +52,13 @@ export class ProgressionService {
     });
   }
 
-  /** Jugador dueño del token, o null. */
+  /** Jugador dueño del token (de invitado o de una sesión de cuenta), o null. */
   async authenticate(token) {
     if (!token) return null;
     try {
-      return await this.repository.findPlayerByTokenHash(PlayerTokens.hash(token));
+      const guest = await this.repository.findPlayerByTokenHash(PlayerTokens.hash(token));
+      if (guest) return guest;
+      return this.sessions ? await this.sessions.resolvePlayer(token) : null;
     } catch (error) {
       this.logger.error('[progression] error al autenticar', error);
       return null;

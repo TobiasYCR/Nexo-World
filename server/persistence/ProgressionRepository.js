@@ -43,5 +43,18 @@ export class ProgressionRepository {
   /** @returns {Promise<Standing|null>} null si el jugador no figura en ese modo */
   async standingOf(mode, playerId) { throw new Error('no implementado'); }
 
+  /** @returns {Promise<Player|null>} jugador vinculado a una cuenta, o null */
+  async findPlayerByAccountId(accountId) { throw new Error('no implementado'); }
+
+  /**
+   * Vincula un jugador invitado a una cuenta y le pone el nombre de la cuenta.
+   * Solo si el jugador todavía no tenía cuenta y la cuenta no tenía jugador.
+   * @returns {Promise<boolean>} true si quedó vinculado
+   */
+  async linkPlayerToAccount(playerId, accountId, name) { throw new Error('no implementado'); }
+
+  /** Actualiza el nombre que muestra la clasificación cuando la cuenta cambia de usuario. */
+  async renameAccountPlayer(accountId, name) { throw new Error('no implementado'); }
+
   async close() {}
 }

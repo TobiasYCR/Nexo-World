@@ -196,3 +196,80 @@ test('el modo creativo tiene su propia clasificación', async () => {
   assert.deepEqual((await creative.progression.getLeaderboard()).entries.map(({ name }) => name), ['Creativa']);
   assert.throws(() => client({ mode: 'hardcore' }), RangeError);
 });
+
+/** Registra una cuenta en el servidor de pruebas y devuelve la identidad que arma la interfaz. */
+async function accountIdentity(server, { username, guestToken } = {}) {
+  const { body } = await server.call('POST', '/auth/register', {
+    body: { username, email: `${username}@nexo.test`, password: 'clave-segura-1', guestToken }
+  });
+  return { playerId: body.user.playerId, token: body.token, name: body.user.username };
+}
+
+test('al registrarse, el invitado sigue con el mismo progreso ahora a nombre de la cuenta', async () => {
+  const server = await api();
+  const { progression, events, storage } = await startedClient({ server });
+  progression.update(0.016, 1, 1);
+  mineOre(events);
+  await progression.flush();
+  const guestId = progression.playerId;
+  const guestScore = progression.verifiedScore;
+
+  const store = new ProgressionLocalStore(storage);
+  const account = await accountIdentity(server, { username: 'tobias', guestToken: store.loadIdentity().token });
+  assert.equal(account.playerId, guestId);
+
+  await progression.useAccount(account);
+  assert.equal(progression.hasAccount, true);
+  assert.equal(progression.playerId, guestId);
+  assert.equal(progression.score, guestScore, 'no se pierde nada');
+
+  mineOre(events, BlockIds.COAL_ORE, 1);
+  const result = await progression.flush();
+  assert.equal(result.ok, true);
+  assert.equal(progression.verifiedScore, guestScore + POINTS.ORES[BlockIds.COAL_ORE]);
+  assert.deepEqual(store.loadAccountIdentity(), account, 'la próxima vez arranca con la cuenta');
+});
+
+test('iniciar sesión con otra cuenta carga su progreso y cerrarla vuelve al del invitado', async () => {
+  const server = await api();
+  const account = await accountIdentity(server, { username: 'andrea' });
+
+  // La cuenta ya jugó en este mundo desde otra computadora.
+  const elsewhere = await startedClient({ server });
+  await elsewhere.progression.useAccount(account);
+  elsewhere.progression.update(0.016, 1, 1);
+  await elsewhere.progression.flush();
+  const accountScore = elsewhere.progression.verifiedScore;
+
+  const { progression, events } = await startedClient({ server });
+  mineOre(events);
+  mineOre(events, BlockIds.COAL_ORE, 1);
+  await progression.flush();
+  const guestScore = progression.score;
+  assert.notEqual(guestScore, accountScore);
+
+  await progression.useAccount(account);
+  assert.equal(progression.playerId, account.playerId);
+  assert.equal(progression.score, accountScore, 'se ve el progreso de la cuenta, no el del invitado');
+  assert.equal(progression.verifiedScore, accountScore);
+
+  await progression.useAccount(null);
+  assert.equal(progression.hasAccount, false);
+  assert.equal(progression.score, guestScore);
+
+  const board = await server.call('GET', '/leaderboard?mode=survival');
+  assert.equal(board.body.entries.find((entry) => entry.playerId === account.playerId).score, accountScore);
+});
+
+test('si la sesión vence, el progreso sigue guardándose como invitado', async () => {
+  const server = await api();
+  const account = await accountIdentity(server, { username: 'gonzalo' });
+  await server.call('POST', '/auth/logout', { token: account.token });
+
+  const { progression, storage } = await startedClient({ server });
+  await progression.useAccount(account);
+  assert.equal(progression.hasAccount, false);
+  assert.equal(new ProgressionLocalStore(storage).loadAccountIdentity(), null);
+  assert.notEqual(progression.playerId, account.playerId);
+  assert.ok(progression.playerId, 'quedó un invitado conectado');
+});
