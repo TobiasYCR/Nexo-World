@@ -201,6 +201,34 @@ export const GameConfig = Object.freeze({
     EFFECT_HAND_OFFSET: Object.freeze({ x: 9, y: -3, z: -15 })
   }),
 
+  /** Desafíos educativos de construcción (issue #39). */
+  education: Object.freeze({
+    /** Muestra la geometría fantasma del plano activo. */
+    SHOW_BLUEPRINT_GHOST: true,
+    /** Opacidad base de los bloques faltantes del plano. */
+    GHOST_OPACITY: 0.42,
+    /** Velocidad del pulso visual del próximo bloque sugerido. */
+    NEXT_BLOCK_PULSE_SPEED: 5,
+    /** Color RGBA de un bloque colocado con un tipo incorrecto. */
+    WRONG_BLOCK_COLOR: Object.freeze([235, 64, 64, 220]),
+    /** Límite para evitar planos que degraden la guía o la verificación. */
+    MAX_BLUEPRINT_BLOCKS: 256,
+    /** Permite apagar el efecto final sin desactivar los desafíos. */
+    SHOW_COMPLETE_EFFECT: true,
+    /** Distancia horizontal del centro del plano respecto del jugador. */
+    PLACEMENT_DISTANCE_BLOCKS: 4,
+    /** Parámetros del efecto breve de primera persona al completar. */
+    COMPLETE_EFFECT_DURATION: 1.1,
+    COMPLETE_EFFECT_PARTICLE_COUNT: 12,
+    COMPLETE_EFFECT_RADIUS: 7,
+    COMPLETE_EFFECT_HEIGHT: 1,
+    COMPLETE_EFFECT_SIZE: 1.8,
+    COMPLETE_EFFECT_SPIN_SPEED: 5,
+    COMPLETE_EFFECT_COLOR: Object.freeze([96, 220, 255]),
+    COMPLETE_EFFECT_ALPHA: 230,
+    COMPLETE_EFFECT_HAND_OFFSET: Object.freeze({ x: 9, y: -3, z: -15 })
+  }),
+
   audio: Object.freeze({
     MASTER_VOLUME: 1,
     SFX_VOLUME: 1,
