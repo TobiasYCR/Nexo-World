@@ -62,6 +62,41 @@ class FakeElement {
     this.style = {};
     this.classList = new FakeClassList(this);
     this.parentNode = null;
+    this.scrollTop = 0;
+  }
+
+  /**
+   * Equivalente mínimo de ParentNode.append: acepta nodos y los agrega al
+   * final. Lo usa ChatPanel para armar el panel sin innerHTML.
+   */
+  append(...nodes) {
+    for (const node of nodes) {
+      if (typeof node === 'string') {
+        const text = new FakeElement('span');
+        text.textContent = node;
+        this.appendChild(text);
+      } else if (node) {
+        this.appendChild(node);
+      }
+    }
+  }
+
+  /** Equivalente de ChildNode.remove: se desprende de su padre. */
+  remove() {
+    this.parentNode?.removeChild(this);
+    this.parentNode = null;
+  }
+
+  get firstChild() {
+    return this.children[0] ?? null;
+  }
+
+  /**
+   * Alto del contenido desplazable. El doble no mide texto: cada hijo cuenta
+   * como una línea, suficiente para que ChatPanel pueda asignar scrollTop.
+   */
+  get scrollHeight() {
+    return this.children.length;
   }
 
   get innerHTML() {
