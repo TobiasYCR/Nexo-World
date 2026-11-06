@@ -1,5 +1,18 @@
-import { BlockType } from './BlockType.js';
+import {
+  BlockType,
+  resolveBlockSyllables,
+  resolveBlockSyllableLines,
+  FALLBACK_SYLLABLES_DICTIONARY,
+  splitSpanishWordIntoSyllables
+} from './BlockType.js';
 import { BlockIds } from '../utils/Constants.js';
+
+export {
+  resolveBlockSyllables,
+  resolveBlockSyllableLines,
+  FALLBACK_SYLLABLES_DICTIONARY,
+  splitSpanishWordIntoSyllables
+};
 
 /**
  * Catálogo central de tipos de bloque. Es el único lugar donde se declaran
@@ -95,11 +108,25 @@ export class BlockRegistry {
 
 /** Definiciones base de Nexo World. Para sumar un bloque, agregar acá su entrada. */
 const DEFAULT_BLOCK_DEFINITIONS = [
-  { id: BlockIds.AIR, name: 'Air', label: 'Aire', solid: false, transparent: true, texture: null, color: [0, 0, 0], breakable: false, drops: [] },
+  {
+    id: BlockIds.AIR,
+    name: 'Air',
+    label: 'Aire',
+    syllables: ['AI', 'RE'],
+    syllableText: 'AI - RE',
+    solid: false,
+    transparent: true,
+    texture: null,
+    color: [0, 0, 0],
+    breakable: false,
+    drops: []
+  },
   {
     id: BlockIds.GRASS,
     name: 'Grass',
     label: 'Cesped',
+    syllables: ['CES', 'PED'],
+    syllableText: 'CES - PED',
     solid: true,
     texture: 'grass_top.png',
     textures: { top: 'grass_top.png', side: 'grass_side.png', bottom: 'dirt.png' },
@@ -113,6 +140,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.DIRT,
     name: 'Dirt',
     label: 'Tierra',
+    syllables: ['TIE', 'RRA'],
+    syllableText: 'TIE - RRA',
     solid: true,
     texture: 'dirt.png',
     color: [134, 96, 67],
@@ -125,6 +154,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.STONE,
     name: 'Stone',
     label: 'Piedra',
+    syllables: ['PIE', 'DRA'],
+    syllableText: 'PIE - DRA',
     solid: true,
     texture: 'stone.png',
     color: [128, 128, 132],
@@ -138,6 +169,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.LOG,
     name: 'Log',
     label: 'Tronco',
+    syllables: ['TRON', 'CO'],
+    syllableText: 'TRON - CO',
     solid: true,
     texture: 'log_side.png',
     textures: { top: 'log_top.png', side: 'log_side.png', bottom: 'log_top.png' },
@@ -148,6 +181,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.LEAVES,
     name: 'Leaves',
     label: 'Hojas',
+    syllables: ['HO', 'JAS'],
+    syllableText: 'HO - JAS',
     solid: true,
     transparent: true,
     texture: 'leaves.png',
@@ -155,14 +190,60 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     hardness: 0.4,
     drops: []
   },
-  { id: BlockIds.PLANKS, name: 'Planks', label: 'Tablones', solid: true, texture: 'planks.png', color: [154, 111, 62], hardness: 1.5, starter: true },
-  { id: BlockIds.SAND, name: 'Sand', label: 'Arena', solid: true, texture: 'sand.png', color: [224, 204, 150], hardness: 0.8, carvable: true },
-  { id: BlockIds.COBBLESTONE, name: 'Cobblestone', label: 'Piedra partida', solid: true, texture: 'cobblestone.png', color: [116, 116, 122], hardness: 3 },
-  { id: BlockIds.GLASS, name: 'Glass', label: 'Vidrio', solid: true, transparent: true, texture: 'glass.png', color: [170, 218, 230], hardness: 0.3, starter: true },
+  {
+    id: BlockIds.PLANKS,
+    name: 'Planks',
+    label: 'Tablones',
+    syllables: ['TA', 'BLO', 'NES'],
+    syllableText: 'TA - BLO - NES',
+    solid: true,
+    texture: 'planks.png',
+    color: [154, 111, 62],
+    hardness: 1.5,
+    starter: true
+  },
+  {
+    id: BlockIds.SAND,
+    name: 'Sand',
+    label: 'Arena',
+    syllables: ['A', 'RE', 'NA'],
+    syllableText: 'A - RE - NA',
+    solid: true,
+    texture: 'sand.png',
+    color: [224, 204, 150],
+    hardness: 0.8,
+    carvable: true
+  },
+  {
+    id: BlockIds.COBBLESTONE,
+    name: 'Cobblestone',
+    label: 'Piedra partida',
+    syllables: ['PIE', 'DRA', 'PAR', 'TI', 'DA'],
+    syllableText: 'PIE - DRA - PAR - TI - DA',
+    solid: true,
+    texture: 'cobblestone.png',
+    color: [116, 116, 122],
+    hardness: 3
+  },
+  {
+    id: BlockIds.GLASS,
+    name: 'Glass',
+    label: 'Vidrio',
+    syllables: ['VI', 'DRIO'],
+    syllableText: 'VI - DRIO',
+    solid: true,
+    transparent: true,
+    texture: 'glass.png',
+    color: [170, 218, 230],
+    hardness: 0.3,
+    starter: true
+  },
   {
     id: BlockIds.SANDSTONE,
     name: 'Sandstone',
     label: 'Arenisca',
+    syllables: ['A', 'RE', 'NIS', 'CA'],
+    syllableText: 'A - RE - NIS - CA',
     texture: 'sandstone.png',
     color: [212, 184, 122],
     hardness: 2.5,
@@ -174,6 +255,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.BEDROCK,
     name: 'Bedrock',
     label: 'Roca madre',
+    syllables: ['RO', 'CA', 'MA', 'DRE'],
+    syllableText: 'RO - CA - MA - DRE',
     texture: 'bedrock.png',
     color: [62, 62, 66],
     hardness: Infinity,
@@ -185,6 +268,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.COAL_ORE,
     name: 'CoalOre',
     label: 'Mineral de carbon',
+    syllables: ['MI', 'NE', 'RAL', 'DE', 'CAR', 'BON'],
+    syllableText: 'MI - NE - RAL - DE - CAR - BON',
     texture: 'coal_ore.png',
     color: [96, 96, 100],
     hardness: 3.5,
@@ -197,6 +282,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.IRON_ORE,
     name: 'IronOre',
     label: 'Mineral de hierro',
+    syllables: ['MI', 'NE', 'RAL', 'DE', 'HIE', 'RRO'],
+    syllableText: 'MI - NE - RAL - DE - HIE - RRO',
     texture: 'iron_ore.png',
     color: [148, 132, 118],
     hardness: 4.5,
@@ -209,6 +296,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.GOLD_ORE,
     name: 'GoldOre',
     label: 'Mineral de oro',
+    syllables: ['MI', 'NE', 'RAL', 'DE', 'O', 'RO'],
+    syllableText: 'MI - NE - RAL - DE - O - RO',
     texture: 'gold_ore.png',
     color: [170, 156, 96],
     hardness: 5.5,
@@ -221,6 +310,8 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.DIAMOND_ORE,
     name: 'DiamondOre',
     label: 'Mineral de diamante',
+    syllables: ['MI', 'NE', 'RAL', 'DE', 'DIA', 'MAN', 'TE'],
+    syllableText: 'MI - NE - RAL - DE - DIA - MAN - TE',
     texture: 'diamond_ore.png',
     color: [112, 164, 166],
     hardness: 6,

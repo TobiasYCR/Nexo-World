@@ -1,3 +1,7 @@
+import { resolveBlockSyllables, resolveBlockSyllableLines } from '../blocks/BlockType.js';
+import { SpeechService } from '../audio/SpeechService.js';
+import { Icons, setIconLabel } from './Icons.js';
+
 /**
  * Categorías del inventario creativo y asignación por tipo de bloque.
  */
@@ -65,6 +69,7 @@ export class InventoryView {
   #blockRegistry;
   #onSelect;
   #onEquip;
+  #speechService;
   #activeCategory = 'all';
   #searchQuery = '';
   #selectedBlock = null;
@@ -72,17 +77,22 @@ export class InventoryView {
   #cardElements = [];
   #popupBlock = null;
   #suppressOutsideClick = false;
+  #speakingBlockId = null;
+  #speakingSyllableIndex = -1;
+  #speakingFullWord = false;
 
   /**
    * @param {Object} options
    * @param {import('../blocks/BlockRegistry.js').BlockRegistry} options.blockRegistry
    * @param {Function} [options.onSelect]
    * @param {Function} [options.onEquip]
+   * @param {SpeechService} [options.speechService]
    */
-  constructor({ blockRegistry, onSelect = null, onEquip = null }) {
+  constructor({ blockRegistry, onSelect = null, onEquip = null, speechService = null }) {
     this.#blockRegistry = blockRegistry;
     this.#onSelect = onSelect;
     this.#onEquip = onEquip;
+    this.#speechService = speechService ?? SpeechService.getInstance();
     this.element = document.createElement('div');
     this.element.className = 'nx-inventory-view';
 
@@ -92,6 +102,10 @@ export class InventoryView {
 
   get selectedBlock() {
     return this.#selectedBlock;
+  }
+
+  get speechService() {
+    return this.#speechService;
   }
 
   #buildDOM() {
@@ -201,7 +215,7 @@ export class InventoryView {
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
     closeBtn.className = 'nx-slot-popup-close';
-    closeBtn.textContent = '✕';
+    closeBtn.innerHTML = Icons.close;
     closeBtn.setAttribute('aria-label', 'Cerrar');
     closeBtn.addEventListener('click', () => {
       this.hideSlotPopup();
@@ -314,7 +328,8 @@ export class InventoryView {
       if (this.#searchQuery) {
         const nameMatch = (block.name || '').toLowerCase().includes(this.#searchQuery);
         const labelMatch = (block.label || '').toLowerCase().includes(this.#searchQuery);
-        if (!nameMatch && !labelMatch) return false;
+        const syllableMatch = (block.syllableText || '').toLowerCase().includes(this.#searchQuery);
+        if (!nameMatch && !labelMatch && !syllableMatch) return false;
       }
 
       return true;
@@ -323,6 +338,110 @@ export class InventoryView {
     this.hideSlotPopup();
     this.#renderGrid();
     this.#renderDetails();
+  }
+
+  /**
+   * Construye un contenedor DOM con las sílabas agrupadas por línea/palabra
+   * para que nunca se corte una palabra a la mitad y cada sílaba se resalte en orden.
+   * @param {Object} block
+   * @param {string} containerClass
+   * @returns {HTMLElement}
+   */
+  #createSyllablesElement(block, containerClass = 'nx-block-syllables') {
+    const lines = resolveBlockSyllableLines(block);
+    const wrap = document.createElement('div');
+    wrap.className = containerClass;
+    wrap.dataset.blockId = String(block.id);
+
+    let globalSyllableIndex = 0;
+
+    lines.forEach((lineSyllables) => {
+      const lineEl = document.createElement('div');
+      lineEl.className = 'nx-syllable-line';
+
+      lineSyllables.forEach((syl, idxInLine) => {
+        if (idxInLine > 0) {
+          const sep = document.createElement('span');
+          sep.className = 'nx-syllable-sep';
+          sep.textContent = '-';
+          lineEl.appendChild(sep);
+        }
+        const part = document.createElement('span');
+        part.className = 'nx-syllable-part';
+        part.dataset.syllableIndex = String(globalSyllableIndex);
+        part.textContent = syl;
+        lineEl.appendChild(part);
+        globalSyllableIndex += 1;
+      });
+
+      wrap.appendChild(lineEl);
+    });
+
+    return wrap;
+  }
+
+  /**
+   * Pronuncia el bloque indicado en el modo elegido ('syllabic' o 'word') y sincroniza el resaltado visual.
+   * @param {Object} block
+   * @param {'syllabic'|'word'} [mode='syllabic']
+   */
+  speakBlock(block = null, mode = 'syllabic') {
+    const target = block ?? this.#selectedBlock;
+    if (!target || !this.#speechService) return;
+
+    this.#speakingBlockId = target.id;
+    this.#speakingSyllableIndex = -1;
+    this.#speakingFullWord = false;
+    this.#syncSyllableHighlight();
+
+    this.#speechService.speak(target, {
+      mode,
+      onSyllable: (index) => {
+        this.#speakingBlockId = target.id;
+        this.#speakingSyllableIndex = index;
+        this.#speakingFullWord = false;
+        this.#syncSyllableHighlight();
+      },
+      onCompleteWord: () => {
+        this.#speakingBlockId = target.id;
+        this.#speakingSyllableIndex = -1;
+        this.#speakingFullWord = true;
+        this.#syncSyllableHighlight();
+      },
+      onEnd: () => {
+        this.#speakingBlockId = null;
+        this.#speakingSyllableIndex = -1;
+        this.#speakingFullWord = false;
+        this.#syncSyllableHighlight();
+      }
+    });
+  }
+
+  #syncSyllableHighlight() {
+    const allContainers = [
+      ...this.gridElement.querySelectorAll('.nx-block-syllables'),
+      ...this.detailsPanel.querySelectorAll('.nx-details-syllables')
+    ];
+
+    for (const container of allContainers) {
+      const isTargetBlock = this.#speakingBlockId !== null
+        && container.dataset.blockId === String(this.#speakingBlockId);
+      container.classList.toggle('is-speaking-word', isTargetBlock && this.#speakingFullWord);
+
+      const parts = container.querySelectorAll('.nx-syllable-part');
+      parts.forEach((part) => {
+        const partIdx = Number(part.dataset.syllableIndex);
+        const isCurrentSyllable = isTargetBlock
+          && (this.#speakingFullWord || partIdx === this.#speakingSyllableIndex);
+        part.classList.toggle('is-speaking', isCurrentSyllable);
+      });
+    }
+
+    this.#cardElements.forEach((card) => {
+      const isSpeakingCard = this.#speakingBlockId !== null
+        && card.dataset.blockId === String(this.#speakingBlockId);
+      card.classList.toggle('is-speaking', isSpeakingCard);
+    });
   }
 
   #renderGrid() {
@@ -370,8 +489,26 @@ export class InventoryView {
       label.className = 'nx-block-name';
       label.textContent = block.label || block.name;
 
+      // Separación en sílabas de alto contraste (ej. TA - BLO - NES)
+      const syllablesEl = this.#createSyllablesElement(block, 'nx-block-syllables');
+
+      // Botón de pronunciación en la tarjeta
+      const speakBtn = document.createElement('button');
+      speakBtn.type = 'button';
+      speakBtn.className = 'nx-btn-speak-block';
+      setIconLabel(speakBtn, Icons.speaker, 'Escuchar');
+      speakBtn.setAttribute('aria-label', `Escuchar sílabas de ${block.label || block.name}`);
+      speakBtn.addEventListener('click', (e) => {
+        e.stopPropagation?.();
+        this.#suppressOutsideClick = true;
+        this.selectBlock(block);
+        this.speakBlock(block, 'syllabic');
+      });
+
       card.appendChild(swatch);
       card.appendChild(label);
+      card.appendChild(syllablesEl);
+      card.appendChild(speakBtn);
 
       card.addEventListener('click', () => {
         this.#suppressOutsideClick = true;
@@ -439,12 +576,48 @@ export class InventoryView {
     header.appendChild(title);
     header.appendChild(categoryBadge);
 
+    // Fila educativa: sílabas de alto contraste + botones de pronunciación
+    const eduRow = document.createElement('div');
+    eduRow.className = 'nx-details-edu-row';
+
+    const syllablesDisplay = this.#createSyllablesElement(block, 'nx-details-syllables');
+
+    const actionsWrap = document.createElement('div');
+    actionsWrap.className = 'nx-details-audio-actions';
+
+    const speakSyllablesBtn = document.createElement('button');
+    speakSyllablesBtn.type = 'button';
+    speakSyllablesBtn.className = 'nx-btn nx-btn-primary nx-btn-small nx-btn-speak-syllables';
+    setIconLabel(speakSyllablesBtn, Icons.speaker, 'Escuchar Sílabas');
+    speakSyllablesBtn.setAttribute('aria-label', `Escuchar sílabas de ${block.label || block.name}`);
+    speakSyllablesBtn.addEventListener('click', (e) => {
+      e.stopPropagation?.();
+      this.speakBlock(block, 'syllabic');
+    });
+
+    const speakWordBtn = document.createElement('button');
+    speakWordBtn.type = 'button';
+    speakWordBtn.className = 'nx-btn nx-btn-secondary nx-btn-small nx-btn-speak-word';
+    setIconLabel(speakWordBtn, Icons.speech, 'Palabra');
+    speakWordBtn.setAttribute('aria-label', `Escuchar palabra completa ${block.label || block.name}`);
+    speakWordBtn.addEventListener('click', (e) => {
+      e.stopPropagation?.();
+      this.speakBlock(block, 'word');
+    });
+
+    actionsWrap.appendChild(speakSyllablesBtn);
+    actionsWrap.appendChild(speakWordBtn);
+
+    eduRow.appendChild(syllablesDisplay);
+    eduRow.appendChild(actionsWrap);
+
     const specs = document.createElement('div');
     specs.className = 'nx-details-specs';
 
     const infoList = [
       `ID de bloque: ${block.id}`,
       `Nombre técnico: ${block.name}`,
+      `Sílabas: ${block.syllableText || resolveBlockSyllables(block).syllableText}`,
       `Dureza: ${block.hardness ?? 1}`,
       `Rompible: ${block.breakable !== false ? 'Sí' : 'No'}`,
       `Sólido: ${block.solid !== false ? 'Sí' : 'No'}`,
@@ -459,7 +632,9 @@ export class InventoryView {
     });
 
     this.detailsPanel.appendChild(header);
+    this.detailsPanel.appendChild(eduRow);
     this.detailsPanel.appendChild(specs);
+    this.#syncSyllableHighlight();
   }
 
   #handleCardKey(e, index) {

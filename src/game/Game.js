@@ -35,6 +35,8 @@ import { LandingEffect } from '../viewmodel/LandingEffect.js';
 import { DamageEffect } from '../viewmodel/DamageEffect.js';
 import { CameraEffects } from '../viewmodel/CameraEffects.js';
 import { VisualEffectsManager } from '../viewmodel/VisualEffectsManager.js';
+import { BuildChallengeManager } from '../education/BuildChallengeManager.js';
+import { BlueprintGuideOverlay } from '../viewmodel/BlueprintGuideOverlay.js';
 
 /**
  * Coordinador de sistemas. Game construye las dependencias, define el orden de
@@ -128,6 +130,14 @@ export class Game {
     this.renderer.addOverlay(this.levelUpEffect);
     this.events.on(GameEventTypes.LEVEL_UP, ({ level }) => this.levelUpEffect.trigger(level));
     this.renderer.addOverlay(this.visualEffectsManager);
+    this.buildChallenge = new BuildChallengeManager({
+      world: this.world,
+      player: this.player,
+      hotbar: this.hotbar,
+      blockRegistry: this.blockRegistry,
+      events: this.events
+    });
+    this.blueprintGuideOverlay = new BlueprintGuideOverlay(this.buildChallenge, config.world.BLOCK_SIZE);
     this.audio = new AudioManager(config.assets);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
@@ -199,16 +209,22 @@ export class Game {
     }
 
     this.#updateViewmodel(deltaTime);
-    this.hud.update(deltaTime, this.#buildDebugStats(), {
-      selectedIndex: this.hotbar.selectedIndex,
-      slots: this.hotbar.slots.map(({ blockType, count }) => ({ blockType, count }))
-    });
+    this.hud.update(
+      deltaTime,
+      this.#buildDebugStats(),
+      {
+        selectedIndex: this.hotbar.selectedIndex,
+        slots: this.hotbar.slots.map(({ blockType, count }) => ({ blockType, count }))
+      },
+      this.buildChallenge.activeChallenge()
+    );
     this.input.endFrame();
   }
 
   /** Dibujado de un frame. Delegado por completo en el renderer. */
   render() {
     this.renderer.render(this.world, this.camera);
+    this.blueprintGuideOverlay?.draw(this.p, this.camera);
   }
 
   onResize(width, height) {
@@ -315,6 +331,7 @@ export class Game {
   #updateViewmodel(deltaTime) {
     if (!this.state.isRunning) this.blockInteraction.updateBreaking(deltaTime, false);
     this.levelUpEffect.update(this.state.isRunning ? deltaTime : 0);
+    this.blueprintGuideOverlay.update(this.state.isRunning ? deltaTime : 0);
     const horizontalSpeed = this.state.isRunning
       ? Math.hypot(this.player.velocity.x, this.player.velocity.z)
       : 0;

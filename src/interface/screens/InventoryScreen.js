@@ -1,6 +1,7 @@
 import { Screen } from '../../ui/Screen.js';
 import { ScreenType } from '../../ui/ScreenType.js';
 import { IntentBus } from '../../ui/IntentBus.js';
+import { Icons } from '../../ui/Icons.js';
 import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { InventoryView } from '../../ui/InventoryView.js';
@@ -40,6 +41,21 @@ export class InventoryScreen extends Screen {
 
     this.modal.addBodyItem(this.inventoryView.element);
 
+    this.presetsBtn = new Button({
+      text: 'PLANOS DE CONSTRUCCIÓN',
+      icon: Icons.blueprint,
+      variant: 'secondary',
+      id: 'inventory-btn-presets',
+      onClick: () => {
+        if (this.intentBus) {
+          this.intentBus.emit(IntentBus.Events.OPEN_SCREEN, { screen: ScreenType.PRESETS });
+        }
+        if (this.screenManager) {
+          this.screenManager.open(ScreenType.PRESETS);
+        }
+      }
+    });
+
     this.backBtn = new Button({
       text: 'VOLVER AL JUEGO',
       variant: 'primary',
@@ -47,6 +63,7 @@ export class InventoryScreen extends Screen {
       onClick: () => this.handleBack()
     });
 
+    this.modal.addFooterItem(this.presetsBtn);
     this.modal.addFooterItem(this.backBtn);
     this.element.appendChild(this.modal.element);
   }

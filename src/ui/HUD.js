@@ -25,6 +25,8 @@ import { LoginScreen } from '../interface/screens/LoginScreen.js';
 import { RegisterScreen } from '../interface/screens/RegisterScreen.js';
 import { ProfileScreen } from '../interface/screens/ProfileScreen.js';
 import { PasswordRecoveryScreen } from '../interface/screens/PasswordRecoveryScreen.js';
+import { PresetsScreen } from '../interface/screens/PresetsScreen.js';
+import { BuildChallengeHUD } from './BuildChallengeHUD.js';
 
 /**
  * Capa de interfaz de usuario de Nexo World.
@@ -57,6 +59,7 @@ export class HUD {
     this.hotbarView = new HotbarView(9);
     this.healthBar = new HealthBar(20);
     this.debugOverlay = new DebugOverlay();
+    this.buildChallengeHud = new BuildChallengeHUD({ intentBus: this.intentBus });
     this.toast = Toast.getInstance(this.container);
 
     // El asistente responde con los datos del juego, así que necesita leer el
@@ -95,6 +98,7 @@ export class HUD {
     this.settingsScreen = new SettingsScreen(this.settingsModel, this.screenManager, this.intentBus);
     this.controlsScreen = new ControlsScreen(this.screenManager, this.intentBus);
     this.inventoryScreen = new InventoryScreen(null, this.screenManager, this.intentBus);
+    this.presetsScreen = new PresetsScreen(this.screenManager, this.intentBus);
 
     this.loginScreen = new LoginScreen(this.authService, this.screenManager, this.intentBus);
     this.registerScreen = new RegisterScreen(this.authService, this.screenManager, this.intentBus);
@@ -108,6 +112,7 @@ export class HUD {
     this.screenManager.register(ScreenType.SETTINGS, this.settingsScreen);
     this.screenManager.register(ScreenType.CONTROLS, this.controlsScreen);
     this.screenManager.register(ScreenType.INVENTORY, this.inventoryScreen);
+    this.screenManager.register(ScreenType.PRESETS, this.presetsScreen);
     this.screenManager.register(ScreenType.LOGIN, this.loginScreen);
     this.screenManager.register(ScreenType.REGISTER, this.registerScreen);
     this.screenManager.register(ScreenType.PROFILE, this.profileScreen);
@@ -170,6 +175,7 @@ export class HUD {
       const isPlaying = current === ScreenType.PLAYING;
       this.crosshair.setVisible(isPlaying);
       this.hotbarView.setVisible(isPlaying);
+      this.buildChallengeHud.setVisible(isPlaying);
       if (!isPlaying) this.chatPanel.close();
       this.healthBar.setVisible(isPlaying && this.settingsModel.get('showHealthBar'));
     });
@@ -204,6 +210,12 @@ export class HUD {
         } else if (e.code === 'KeyE') {
           e.preventDefault?.();
           this.screenManager.open(ScreenType.INVENTORY);
+        } else if (e.code === 'KeyP') {
+          e.preventDefault?.();
+          this.screenManager.open(ScreenType.PRESETS);
+        } else if (e.code === 'KeyV') {
+          e.preventDefault?.();
+          this.hotbarView.speakActiveBlock('syllabic');
         } else if (e.code === 'KeyO') {
           e.preventDefault?.();
           this.screenManager.open(ScreenType.SETTINGS);
@@ -224,6 +236,11 @@ export class HUD {
           e.preventDefault?.();
           this.screenManager.open(ScreenType.PLAYING);
         }
+      } else if (this.screenManager.currentScreenType === ScreenType.PRESETS) {
+        if (e.code === 'KeyP' || e.code === 'Escape') {
+          e.preventDefault?.();
+          this.screenManager.open(ScreenType.PLAYING);
+        }
       }
     });
   }
@@ -236,6 +253,7 @@ export class HUD {
     this.hotbarView.mount(this.container);
     this.healthBar.mount(this.container);
     this.debugOverlay.mount(this.container);
+    this.buildChallengeHud.mount(this.container);
     this.chatPanel.mount(this.container);
     this.toast.mount(this.container);
 
@@ -246,6 +264,7 @@ export class HUD {
     this.crosshair.setVisible(false);
     this.hotbarView.setVisible(false);
     this.healthBar.setVisible(false);
+    this.buildChallengeHud.setVisible(false);
   }
 
   /** Abre o cierra el chat del asistente. */
@@ -263,9 +282,12 @@ export class HUD {
    * @param {Object} [stats]
    * @param {Object} [hotbar]
    */
-  update(deltaTime, stats, hotbar) {
+  update(deltaTime, stats, hotbar, activeChallenge = undefined) {
     this.debugOverlay.update(deltaTime, stats);
     this.hotbarView.update(hotbar);
+    if (activeChallenge !== undefined) {
+      this.buildChallengeHud.update(activeChallenge);
+    }
 
     // Actualizar salud si está disponible
     if (stats && 'health' in stats) {

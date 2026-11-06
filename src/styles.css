@@ -58,7 +58,8 @@ html, body {
 .hud-crosshair[hidden],
 .hud-hotbar-container[hidden],
 .hud-hotbar-label[hidden],
-.hud-health-container[hidden] {
+.hud-health-container[hidden],
+.hud-education-panel[hidden] {
   display: none !important;
 }
 
@@ -168,67 +169,23 @@ html, body {
 }
 
 .hud-heart {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 14px;
   height: 14px;
   position: relative;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
   transition: transform 0.15s ease;
 }
 
-/* Corazón Lleno */
-.hud-heart-full::before {
-  content: "❤";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #ef4444;
-  text-shadow: 0 0 2px #000, 0 1px 3px rgba(0,0,0,0.8);
+.hud-heart svg {
+  display: block;
+  width: 14px;
+  height: 14px;
 }
 
-/* Corazón Medio */
-.hud-heart-half::before {
-  content: "❤";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #f97316;
-  clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
-  text-shadow: 0 0 2px #000;
-  z-index: 2;
-}
-
-.hud-heart-half::after {
-  content: "❤";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #334155;
-  text-shadow: 0 0 1px #000;
-}
-
-/* Corazón Vacío */
-.hud-heart-empty::before {
-  content: "❤";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #334155;
-  text-shadow: 0 0 1px #000;
-  opacity: 0.6;
+.hud-heart-empty {
+  opacity: 0.65;
 }
 
 /* ==========================================================================
@@ -272,20 +229,74 @@ html, body {
   z-index: 120;
 }
 
-/* Nombre del bloque seleccionado con alto contraste */
+/* Nombre y sílabas del bloque seleccionado con alto contraste */
 .hud-hotbar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.05em;
   color: #ffffff;
-  background: rgba(15, 23, 42, 0.85);
-  padding: 4px 14px;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 5px 14px;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.35);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: auto;
+}
+
+.hud-hotbar-name {
+  color: #f8fafc;
+}
+
+.hud-hotbar-syllables {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #fde047;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.hud-syllable-part {
+  padding: 1px 3px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.hud-syllable-part.is-speaking {
+  background: #fde047;
+  color: #0f172a;
+  text-shadow: none;
+  transform: scale(1.12);
+}
+
+.hud-hotbar-speak-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 4px 7px;
+  font-size: 12px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.hud-hotbar-speak-btn:hover {
+  background: rgba(16, 185, 129, 0.5);
+  transform: scale(1.08);
 }
 
 .hud-hotbar-label.is-fading {
@@ -418,6 +429,9 @@ html, body {
 }
 
 .nx-toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.1rem;
   line-height: 1;
 }
@@ -456,11 +470,14 @@ html, body {
 }
 
 .nx-toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: #64748b;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px;
   font-size: 0.9rem;
   border-radius: 4px;
   line-height: 1;
@@ -752,4 +769,163 @@ html, body {
 
 .nx-chat-send:hover {
   background: var(--ui-emerald-light);
+}
+
+/* ==========================================================================
+   HUD In-Game: Modo Educativo / Desafíos de Construcción con Presets
+   ========================================================================== */
+
+.hud-education-panel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: min(360px, calc(100vw - 28px));
+  z-index: 145;
+  pointer-events: auto;
+}
+
+.hud-edu-launcher {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.hud-edu-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 2px solid rgba(52, 211, 153, 0.5);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+}
+
+.hud-edu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hud-edu-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud-edu-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.hud-edu-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.hud-edu-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud-edu-progress-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.hud-edu-progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.hud-edu-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 9999px;
+  transition: width 0.25s ease;
+}
+
+.hud-edu-next-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.hud-edu-next-caption {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--ui-emerald-light);
+}
+
+.hud-edu-next-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-edu-next-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hud-edu-next-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.hud-edu-syllables {
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #fde047;
+}
+
+.hud-edu-materials {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.73rem;
+  color: #cbd5e1;
+}
+
+.hud-edu-mat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hud-edu-mat-item.is-done {
+  color: #34d399;
+  text-decoration: line-through;
+}
+
+.hud-edu-completed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid #34d399;
+  border-radius: 8px;
+  color: #ecfdf5;
+  font-weight: 800;
+  text-align: center;
+  font-size: 0.88rem;
 }

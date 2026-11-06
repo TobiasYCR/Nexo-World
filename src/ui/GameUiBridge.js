@@ -1,6 +1,7 @@
 import { IntentBus } from './IntentBus.js';
 import { ScreenType } from './ScreenType.js';
 import { Toast } from './Toast.js';
+import { SpeechService } from '../audio/SpeechService.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -130,6 +131,45 @@ export class GameUiBridge {
     // Configuración modificada
     this.intentBus.on(IntentBus.Events.SETTINGS_CHANGED, ({ key, value }) => {
       this.#applySetting(key, value);
+    });
+
+    // Modo Educativo: Iniciar desafío de construcción con preset
+    this.intentBus.on(IntentBus.Events.START_BUILD_CHALLENGE, (payload) => {
+      const presetId = payload?.presetId || payload?.id || payload?.name;
+      if (!presetId || !this.game?.buildChallenge) return;
+
+      const snapshot = this.game.buildChallenge.startChallenge(presetId, payload.options);
+      if (snapshot) {
+        this.hud?.buildChallengeHud?.update?.(snapshot);
+        this.toast.success(`Plano "${snapshot.name}" activado. ¡Sigue la guía en el mundo 3D!`, 3500);
+        if (snapshot.nextBlock) {
+          SpeechService.getInstance().speakSyllables(snapshot.nextBlock);
+        }
+      }
+    });
+
+    // Modo Educativo: Cancelar desafío activo
+    this.intentBus.on(IntentBus.Events.CANCEL_BUILD_CHALLENGE, () => {
+      this.game?.buildChallenge?.cancelChallenge?.();
+      this.hud?.buildChallengeHud?.update?.(null);
+      this.toast.info('Desafío de construcción finalizado.', 2500);
+    });
+
+    // Modo Educativo: Pronunciar bloque bajo demanda
+    this.intentBus.on(IntentBus.Events.SPEAK_BLOCK, (payload) => {
+      const block = payload?.block ?? payload;
+      if (block) {
+        SpeechService.getInstance().speak(block, payload);
+      }
+    });
+
+    // Suscribirse a cambios en el progreso del desafío para notificar finalización
+    this.game?.buildChallenge?.onChange?.((snapshot, reason) => {
+      this.hud?.buildChallengeHud?.update?.(snapshot);
+      if (reason === 'completed' && snapshot) {
+        this.toast.success(`¡Completaste el plano "${snapshot.name}"!`, 4500);
+        SpeechService.getInstance().speakWord(`¡Felicitaciones! Construiste ${snapshot.name}`);
+      }
     });
   }
 

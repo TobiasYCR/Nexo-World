@@ -43,7 +43,16 @@ export class PauseScreen extends Screen {
     `;
     this.resumeBtn.addEventListener('click', () => this.handleResume());
 
-    // 2. Guardar Partida
+    // 1.5. Planos de Construcción (Modo Educativo)
+    this.presetsBtn = document.createElement('button');
+    this.presetsBtn.type = 'button';
+    this.presetsBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
+    this.presetsBtn.id = 'pause-btn-presets';
+    this.presetsBtn.innerHTML = `
+      <span class="nx-btn-icon">${Icons.blueprint}</span>
+      <span class="nx-btn-text">PLANOS DE CONSTRUCCIÓN</span>
+    `;
+    this.presetsBtn.addEventListener('click', () => this.handlePresets());
     this.saveBtn = document.createElement('button');
     this.saveBtn.type = 'button';
     this.saveBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
@@ -99,6 +108,7 @@ export class PauseScreen extends Screen {
     this.menuBtn.addEventListener('click', () => this.handleBackToMenu());
 
     actions.appendChild(this.resumeBtn);
+    actions.appendChild(this.presetsBtn);
     actions.appendChild(this.saveBtn);
     actions.appendChild(this.loadBtn);
     actions.appendChild(this.settingsBtn);
@@ -127,6 +137,15 @@ export class PauseScreen extends Screen {
     }
     if (this.screenManager) {
       this.screenManager.open(ScreenType.PLAYING);
+    }
+  }
+
+  handlePresets() {
+    if (this.intentBus) {
+      this.intentBus.emit(IntentBus.Events.OPEN_SCREEN, { screen: ScreenType.PRESETS });
+    }
+    if (this.screenManager) {
+      this.screenManager.open(ScreenType.PRESETS);
     }
   }
 

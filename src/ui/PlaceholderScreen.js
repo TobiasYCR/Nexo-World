@@ -1,4 +1,5 @@
 import { Screen } from './Screen.js';
+import { Icons } from './Icons.js';
 
 /**
  * Pantalla de respaldo / placeholder para pantallas en construcción.
@@ -26,7 +27,7 @@ export class PlaceholderScreen extends Screen {
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
     closeBtn.className = 'nx-modal-close';
-    closeBtn.textContent = '✕';
+    closeBtn.innerHTML = Icons.close;
     closeBtn.setAttribute?.('aria-label', 'Cerrar');
     closeBtn.addEventListener('click', () => this.screenManager?.back());
 
