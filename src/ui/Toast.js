@@ -1,3 +1,5 @@
+import { Icons } from './Icons.js';
+
 /**
  * Sistema de notificaciones Toast de Nexo World.
  * Muestra avisos temporales de éxito, error, advertencia o información
@@ -59,7 +61,7 @@ export class Toast {
 
     const icon = document.createElement('span');
     icon.className = 'nx-toast-icon';
-    icon.textContent = Toast.#iconForType(type);
+    icon.innerHTML = Toast.#iconForType(type);
 
     const text = document.createElement('span');
     text.className = 'nx-toast-message';
@@ -69,7 +71,7 @@ export class Toast {
     closeBtn.type = 'button';
     closeBtn.className = 'nx-toast-close';
     closeBtn.setAttribute('aria-label', 'Cerrar aviso');
-    closeBtn.textContent = '✕';
+    closeBtn.innerHTML = Icons.close;
 
     toastItem.appendChild(icon);
     toastItem.appendChild(text);
@@ -113,14 +115,14 @@ export class Toast {
   static #iconForType(type) {
     switch (type) {
       case 'success':
-        return '✔';
+        return Icons.check;
       case 'error':
-        return '✖';
+        return Icons.error;
       case 'warning':
-        return '⚠';
+        return Icons.warning;
       case 'info':
       default:
-        return 'ℹ';
+        return Icons.info;
     }
   }
 }

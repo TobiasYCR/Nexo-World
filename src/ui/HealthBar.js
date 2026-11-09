@@ -1,5 +1,7 @@
+import { Icons } from './Icons.js';
+
 /**
- * HUD de salud del jugador (corazones pixel art).
+ * HUD de salud del jugador (corazones vectoriales).
  * Muestra la salud actual y máxima utilizando corazones llenos, medios y vacíos.
  * Se actualiza únicamente ante cambios de estado y evita escrituras redundantes al DOM.
  */
@@ -41,6 +43,7 @@ export class HealthBar {
     for (let i = 0; i < totalHearts; i++) {
       const heart = document.createElement('span');
       heart.className = 'hud-heart hud-heart-full';
+      heart.innerHTML = Icons.heartFull;
       heart.dataset.heartIndex = String(i);
       heart.setAttribute('aria-hidden', 'true');
       heartsRow.appendChild(heart);
@@ -132,6 +135,11 @@ export class HealthBar {
       }
 
       heart.className = `hud-heart hud-heart-${heartState}`;
+      heart.innerHTML = heartState === 'full'
+        ? Icons.heartFull
+        : heartState === 'half'
+          ? Icons.heartHalf
+          : Icons.heartEmpty;
     }
 
     const textLabel = `Salud: ${sanitizedCurrent} / ${sanitizedMax}`;

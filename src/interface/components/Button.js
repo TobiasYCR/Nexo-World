@@ -45,15 +45,26 @@ export class Button {
 
   render(text, icon) {
     if (this.variant === 'icon') {
-      this.element.textContent = icon || text;
+      const content = icon || text;
+      if (typeof content === 'string' && content.trim().startsWith('<svg')) {
+        this.element.innerHTML = content;
+      } else {
+        this.element.textContent = content;
+      }
       return;
     }
 
     if (icon) {
-      this.element.innerHTML = `
-        <span class="nx-btn-icon">${icon}</span>
-        <span class="nx-btn-text">${text}</span>
-      `;
+      this.element.textContent = '';
+      this.element.innerHTML = '';
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'nx-btn-icon';
+      iconSpan.innerHTML = icon;
+      const textSpan = document.createElement('span');
+      textSpan.className = 'nx-btn-text';
+      textSpan.textContent = text;
+      this.element.appendChild(iconSpan);
+      this.element.appendChild(textSpan);
     } else {
       this.element.textContent = text;
     }

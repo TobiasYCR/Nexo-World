@@ -119,6 +119,11 @@ export class BuildChallenge {
     };
   }
 
+  /** Mismo dato que snapshot(); es el nombre que consulta el asistente de consultas. */
+  activeChallenge() {
+    return this.snapshot();
+  }
+
   get isActive() {
     return this.#active !== null;
   }

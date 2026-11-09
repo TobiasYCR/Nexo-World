@@ -1,5 +1,6 @@
 import { SaveManager } from '../persistence/SaveManager.js';
 import { SaveResult } from '../persistence/SaveResult.js';
+import { Icons, setIconLabel } from './Icons.js';
 
 /**
  * Vista de selección y administración de mundos guardados.
@@ -175,13 +176,16 @@ export class WorldSelectionView {
       meta.className = 'nx-world-meta';
 
       const dateInfo = document.createElement('span');
-      dateInfo.textContent = world.savedAt ? `🕒 ${world.savedAt}` : '🕒 Fecha desconocida';
+      dateInfo.className = 'nx-world-meta-item';
+      setIconLabel(dateInfo, Icons.clock, world.savedAt ? world.savedAt : 'Fecha desconocida');
 
       const sizeInfo = document.createElement('span');
-      sizeInfo.textContent = `💾 ${(world.bytes / 1024).toFixed(1)} KB`;
+      sizeInfo.className = 'nx-world-meta-item';
+      setIconLabel(sizeInfo, Icons.storage, `${(world.bytes / 1024).toFixed(1)} KB`);
 
       const dimInfo = document.createElement('span');
-      dimInfo.textContent = `📐 ${world.dimensions}`;
+      dimInfo.className = 'nx-world-meta-item';
+      setIconLabel(dimInfo, Icons.dimensions, world.dimensions);
 
       meta.appendChild(dateInfo);
       meta.appendChild(sizeInfo);
@@ -250,7 +254,7 @@ export class WorldSelectionView {
 
     const icon = document.createElement('div');
     icon.className = 'nx-world-empty-icon';
-    icon.textContent = '🌍';
+    icon.innerHTML = Icons.world;
 
     const msg = document.createElement('p');
     msg.className = 'nx-world-empty-text';

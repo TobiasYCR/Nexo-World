@@ -129,7 +129,11 @@ export class ScreenManager {
    * Regresa a la pantalla anterior del historial o a la pantalla base.
    */
   back() {
-    if (this.currentScreenType === ScreenType.PAUSE || this.currentScreenType === ScreenType.INVENTORY) {
+    if (
+      this.currentScreenType === ScreenType.PAUSE ||
+      this.currentScreenType === ScreenType.INVENTORY ||
+      this.currentScreenType === ScreenType.PRESETS
+    ) {
       this.open(ScreenType.PLAYING);
       return;
     }

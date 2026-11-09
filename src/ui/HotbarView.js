@@ -1,18 +1,26 @@
+import { resolveBlockSyllables } from '../blocks/BlockType.js';
+import { SpeechService } from '../audio/SpeechService.js';
+import { Icons } from './Icons.js';
+
 /**
  * Visualización de la Hotbar in-game (9 slots).
  * Muestra las ranuras de acceso rápido, texturas reales de bloques,
- * cantidades, transición visual en cambio de slot y etiqueta flotante con temporizador.
+ * cantidades, transición visual en cambio de slot, etiqueta flotante con sílabas
+ * y botón de pronunciación con audio (TTS).
  * Optimizado para evitar escrituras al DOM cuando no hay cambios.
  */
 export class HotbarView {
   #slots = [];
   #selectedIndex = 0;
   #currentBlockName = '';
+  #currentBlock = null;
   #lastSlotStates = [];
   #labelFadeTimeout = null;
+  #speechService = null;
 
-  constructor(size = 9) {
+  constructor(size = 9, options = {}) {
     this.size = size;
+    this.#speechService = options.speechService ?? SpeechService.getInstance();
     this.element = document.createElement('div');
     this.element.className = 'hud-hotbar-container';
 
@@ -23,12 +31,35 @@ export class HotbarView {
     return this.#selectedIndex;
   }
 
+  get currentBlock() {
+    return this.#currentBlock;
+  }
+
   #buildDOM() {
-    // Indicador flotante del nombre del bloque seleccionado
+    // Indicador flotante del nombre y separación silábica del bloque seleccionado
     this.labelElement = document.createElement('div');
     this.labelElement.className = 'hud-hotbar-label';
-    this.labelElement.textContent = '';
     this.labelElement.hidden = true;
+
+    this.nameSpan = document.createElement('span');
+    this.nameSpan.className = 'hud-hotbar-name';
+
+    this.syllablesSpan = document.createElement('span');
+    this.syllablesSpan.className = 'hud-hotbar-syllables';
+
+    this.speakBtn = document.createElement('button');
+    this.speakBtn.type = 'button';
+    this.speakBtn.className = 'hud-hotbar-speak-btn';
+    this.speakBtn.innerHTML = Icons.speaker;
+    this.speakBtn.setAttribute('aria-label', 'Escuchar pronunciación del bloque activo');
+    this.speakBtn.addEventListener('click', (e) => {
+      e.stopPropagation?.();
+      this.speakActiveBlock('syllabic');
+    });
+
+    this.labelElement.appendChild(this.nameSpan);
+    this.labelElement.appendChild(this.syllablesSpan);
+    this.labelElement.appendChild(this.speakBtn);
 
     // Barra de slots
     this.barElement = document.createElement('div');
@@ -155,41 +186,98 @@ export class HotbarView {
       }
     }
 
-    // Actualizar nombre del bloque seleccionado
+    // Actualizar nombre y sílabas del bloque seleccionado
     const activeSlot = slotsData[this.#selectedIndex];
-    const block = activeSlot?.blockType;
-    const blockDisplayName = (activeSlot && block && activeSlot.count > 0)
-      ? (block.label || block.name || '')
-      : '';
+    const block = (activeSlot && activeSlot.blockType && activeSlot.count > 0)
+      ? activeSlot.blockType
+      : null;
+    const blockDisplayName = block ? (block.label || block.name || '') : '';
 
     if (blockDisplayName !== this.#currentBlockName || indexChanged) {
       this.#currentBlockName = blockDisplayName;
-      this.#showFloatingLabel(blockDisplayName);
+      this.#currentBlock = block;
+      this.#showFloatingLabel(blockDisplayName, block);
     }
   }
 
-  #showFloatingLabel(name) {
-    if (!name) {
-      this.labelElement.hidden = true;
-      this.labelElement.textContent = '';
-      return;
-    }
+  /**
+   * Pronuncia el bloque actualmente seleccionado en la hotbar y resalta cada sílaba.
+   * @param {'syllabic'|'word'} [mode='syllabic']
+   */
+  speakActiveBlock(mode = 'syllabic') {
+    if (!this.#currentBlock || !this.#speechService) return;
 
-    this.labelElement.textContent = name;
+    // Mantener visible el indicador mientras se pronuncia
+    if (this.#labelFadeTimeout) {
+      clearTimeout(this.#labelFadeTimeout);
+      this.#labelFadeTimeout = null;
+    }
     this.labelElement.hidden = false;
     this.labelElement.classList.remove('is-fading');
 
+    const parts = this.syllablesSpan.querySelectorAll('.hud-syllable-part');
+
+    this.#speechService.speak(this.#currentBlock, {
+      mode,
+      onSyllable: (index) => {
+        parts.forEach((p, idx) => {
+          p.classList.toggle('is-speaking', idx === index);
+        });
+      },
+      onCompleteWord: () => {
+        parts.forEach((p) => p.classList.add('is-speaking'));
+      },
+      onEnd: () => {
+        parts.forEach((p) => p.classList.remove('is-speaking'));
+        this.#scheduleLabelFade();
+      }
+    });
+  }
+
+  #showFloatingLabel(name, block = null) {
+    if (!name) {
+      this.labelElement.hidden = true;
+      this.nameSpan.textContent = '';
+      this.syllablesSpan.innerHTML = '';
+      return;
+    }
+
+    this.nameSpan.textContent = name;
+    this.syllablesSpan.innerHTML = '';
+
+    const { syllables } = resolveBlockSyllables(block || { label: name, name });
+    syllables.forEach((syl, idx) => {
+      if (idx > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'hud-syllable-sep';
+        sep.textContent = '-';
+        this.syllablesSpan.appendChild(sep);
+      }
+      const part = document.createElement('span');
+      part.className = 'hud-syllable-part';
+      part.dataset.syllableIndex = String(idx);
+      part.textContent = syl;
+      this.syllablesSpan.appendChild(part);
+    });
+
+    this.labelElement.hidden = false;
+    this.labelElement.classList.remove('is-fading');
+
+    this.#scheduleLabelFade();
+  }
+
+  #scheduleLabelFade() {
     if (this.#labelFadeTimeout) {
       clearTimeout(this.#labelFadeTimeout);
     }
 
-    // Mostrar durante 2.5 segundos y luego desvanecer
+    // Mostrar durante 3.5 segundos y luego desvanecer
     this.#labelFadeTimeout = setTimeout(() => {
       this.labelElement.classList.add('is-fading');
       this.#labelFadeTimeout = setTimeout(() => {
         this.labelElement.hidden = true;
         this.labelElement.classList.remove('is-fading');
       }, 500);
-    }, 2000);
+    }, 3500);
   }
 }

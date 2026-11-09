@@ -1,3 +1,5 @@
+import { Icons } from '../../ui/Icons.js';
+
 /**
  * Componente contenedor Modal reutilizable para las pantallas de la interfaz.
  * Proporciona estructura de diálogo accesible (role="dialog", aria-modal="true"),
@@ -8,7 +10,7 @@ export class Modal {
    * @param {Object} options
    * @param {string} options.title Título del diálogo
    * @param {string} [options.className=''] Clases CSS adicionales
-   * @param {Function} [options.onClose] Callback al cerrar (botón ✕ o escape)
+   * @param {Function} [options.onClose] Callback al cerrar (botón de cierre o escape)
    */
   constructor({
     title = '',
@@ -39,7 +41,7 @@ export class Modal {
     this.closeBtn = document.createElement('button');
     this.closeBtn.type = 'button';
     this.closeBtn.className = 'nx-modal-close';
-    this.closeBtn.innerHTML = '&#10005;'; // ✕
+    this.closeBtn.innerHTML = Icons.close;
     this.closeBtn.setAttribute?.('aria-label', 'Cerrar');
     this.closeBtn.addEventListener('click', () => this.handleClose());
 

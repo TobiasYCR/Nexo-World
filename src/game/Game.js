@@ -172,9 +172,6 @@ export class Game {
         health: this.playerHealth,
         worldGenerator: this.worldGenerator,
         progression: this.progression,
-        // Andrea Cubas todavía no expuso el contrato del modo educativo en
-        // main. Si Game llega a tenerlo, el chat lo usa sin cambiar nada: si no
-        // está, el bot dice que no puede ver los planos.
         buildChallenge: this.buildChallenge ?? null
       })
     });

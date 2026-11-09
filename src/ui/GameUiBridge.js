@@ -1,6 +1,9 @@
 import { IntentBus } from './IntentBus.js';
 import { ScreenType } from './ScreenType.js';
 import { Toast } from './Toast.js';
+import { SpeechService } from '../audio/SpeechService.js';
+import { BuildChallengeView } from './BuildChallengeView.js';
+import { GameEventTypes } from '../game/GameEvents.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -131,6 +134,73 @@ export class GameUiBridge {
     this.intentBus.on(IntentBus.Events.SETTINGS_CHANGED, ({ key, value }) => {
       this.#applySetting(key, value);
     });
+
+    // Modo Educativo: iniciar y cancelar el desafío de construcción (reglas en BuildChallenge).
+    this.intentBus.on(IntentBus.Events.START_BUILD_CHALLENGE, (payload) => {
+      this.#startChallenge(payload?.presetId ?? payload?.id);
+    });
+
+    this.intentBus.on(IntentBus.Events.CANCEL_BUILD_CHALLENGE, () => {
+      const result = this.game?.buildChallenge?.cancel?.();
+      if (result?.ok) this.toast.info('Desafío de construcción finalizado.', 2500);
+    });
+
+    // Modo Educativo: Pronunciar bloque bajo demanda
+    this.intentBus.on(IntentBus.Events.SPEAK_BLOCK, (payload) => {
+      const block = payload?.block ?? payload;
+      if (block) {
+        SpeechService.getInstance().speak(block, payload);
+      }
+    });
+
+    this.#bindBuildChallenge();
+  }
+
+  /**
+   * Conecta el desafío del juego con la interfaz: carga los planos en la
+   * pantalla de selección y actualiza el panel con cada cambio.
+   */
+  #bindBuildChallenge() {
+    const challenge = this.game?.buildChallenge;
+    const events = this.game?.events;
+    if (!challenge || !this.game.blockRegistry) return;
+    this.challengeView = new BuildChallengeView(this.game.blockRegistry);
+    this.hud?.presetsScreen?.setPresets?.(this.challengeView.presets(challenge.blueprints()));
+    this.hud?.buildChallengeHud?.update?.(this.challengeView.challenge(challenge.snapshot()));
+    if (!events) return;
+
+    const refresh = ({ snapshot }) => this.hud?.buildChallengeHud?.update?.(this.challengeView.challenge(snapshot));
+    events.on(GameEventTypes.BUILD_CHALLENGE_STARTED, refresh);
+    events.on(GameEventTypes.BUILD_CHALLENGE_PROGRESS, refresh);
+    events.on(GameEventTypes.BUILD_CHALLENGE_CANCELLED, () => this.hud?.buildChallengeHud?.update?.(null));
+    events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, ({ snapshot }) => {
+      this.toast.success(`¡Completaste el plano "${snapshot.name}"!`, 4500);
+      SpeechService.getInstance().speakWord(`¡Felicitaciones! Construiste ${snapshot.name}`);
+    });
+  }
+
+  #startChallenge(blueprintId) {
+    const challenge = this.game?.buildChallenge;
+    if (!blueprintId || !challenge) return;
+    const result = challenge.start(blueprintId);
+    if (!result.ok) {
+      this.toast.error(result.message ?? 'No se pudo ubicar el plano acá. Probá en un lugar más despejado.', 4000);
+      return;
+    }
+    // En creativo se cargan los materiales en la hotbar; en supervivencia hay que juntarlos.
+    if (this.game.progression?.mode === 'creative') this.#equipMaterials(result.snapshot);
+    this.toast.success(`Plano "${result.name}" activado. ¡Seguí la guía en el mundo!`, 3500);
+    const next = this.challengeView.challenge(result.snapshot)?.nextBlock;
+    if (next) SpeechService.getInstance().speakSyllables(next);
+  }
+
+  #equipMaterials(snapshot) {
+    const hotbar = this.game.hotbar;
+    if (!hotbar) return;
+    snapshot.materials.slice(0, hotbar.size).forEach((material, index) => {
+      hotbar.set(index, this.game.blockRegistry.get(material.blockId), Math.max(material.required, 64));
+    });
+    hotbar.select(0);
   }
 
   #applySetting(key, value) {
