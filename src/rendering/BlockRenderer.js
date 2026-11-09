@@ -19,6 +19,9 @@ export class BlockRenderer {
 
   #renderedBlocks = 0;
   #drawnChunks = 0;
+  #visibleFaces = 0;
+  #drawCalls = 0;
+  #meshRebuilds = 0;
   #renderDistance;
   #builder;
   /** clave de chunk -> { chunk, meshes: [{blockId, geometry}], visibleBlocks, minX, minZ, maxX, maxZ } */
@@ -43,6 +46,26 @@ export class BlockRenderer {
   /** Chunks dibujados el último frame. */
   get drawnChunks() {
     return this.#drawnChunks;
+  }
+
+  /** Caras dibujadas el último frame. */
+  get visibleFaces() {
+    return this.#visibleFaces;
+  }
+
+  /** Llamadas a model() del último frame: una por chunk y tipo de bloque. */
+  get drawCalls() {
+    return this.#drawCalls;
+  }
+
+  /** Chunks con malla que quedaron fuera de la distancia de render el último frame. */
+  get culledChunks() {
+    return this.#meshes.size - this.#drawnChunks;
+  }
+
+  /** Mallas de chunk armadas desde que arrancó el juego. */
+  get meshRebuilds() {
+    return this.#meshRebuilds;
   }
 
   /** Chunks con malla armada. */
@@ -104,7 +127,8 @@ export class BlockRenderer {
   }
 
   #buildEntry(world, chunk) {
-    const { groups, visibleBlocks } = this.#builder.build(world, chunk);
+    const { groups, visibleBlocks, faceCount } = this.#builder.build(world, chunk);
+    this.#meshRebuilds += 1;
     const meshes = [];
     for (const [blockId, group] of groups) {
       BlockRenderer.#nextGeometryId += 1;
@@ -115,6 +139,7 @@ export class BlockRenderer {
       chunk,
       meshes,
       visibleBlocks,
+      faceCount,
       minX: chunk.chunkX * chunk.sizeX,
       minZ: chunk.chunkZ * chunk.sizeZ,
       maxX: (chunk.chunkX + 1) * chunk.sizeX,
@@ -135,6 +160,8 @@ export class BlockRenderer {
     for (const list of this.#byType.values()) list.length = 0;
     let rendered = 0;
     let drawn = 0;
+    let faces = 0;
+    let calls = 0;
     for (const entry of this.#meshes.values()) {
       const dx = Math.max(entry.minX - viewerX, 0, viewerX - entry.maxX);
       const dz = Math.max(entry.minZ - viewerZ, 0, viewerZ - entry.maxZ);
@@ -148,10 +175,14 @@ export class BlockRenderer {
         list.push(geometry);
       }
       rendered += entry.visibleBlocks;
+      faces += entry.faceCount;
+      calls += entry.meshes.length;
       drawn += 1;
     }
     this.#renderedBlocks = rendered;
     this.#drawnChunks = drawn;
+    this.#visibleFaces = faces;
+    this.#drawCalls = calls;
 
     const p = this.p;
     p.push();

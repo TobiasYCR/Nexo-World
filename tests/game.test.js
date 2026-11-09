@@ -351,3 +351,16 @@ test('saveGame/loadGame devuelven SaveResult y sincronizan camara', async () => 
     delete globalThis.localStorage;
   }
 });
+
+test('el panel F3 muestra todos sus datos, sin N/D', async () => {
+  const game = await startGame();
+  game.hud.debugOverlay.setVisible(true);
+  game.render();
+  game.update(1);
+  const text = game.hud.debugOverlay.element.textContent;
+  assert.equal(text.includes('N/D'), false, text);
+  assert.match(text, new RegExp(`Semilla: ${game.session.seed}`));
+  assert.match(text, new RegExp(`Dimensiones: ${game.world.width}x${game.world.height}x${game.world.depth}`));
+  assert.match(text, /Draw calls: [1-9]/);
+  assert.match(text, /Reconstrucciones: [1-9]/);
+});

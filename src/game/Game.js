@@ -501,17 +501,35 @@ export class Game {
 
   #buildDebugStats() {
     const block = this.world.worldToBlock(this.player.position.x, this.player.position.y, this.player.position.z);
+    const renderStats = this.renderer.stats;
+    const target = this.blockInteraction.targetedBlock;
+    // El bioma se calcula solo con el panel abierto: no hace falta en cada frame.
+    const showingDebug = this.hud?.debugOverlay?.isVisible ?? false;
     return {
       fps: this.p.frameRate(),
       position: this.player.position,
-      renderedBlocks: this.renderer.stats.renderedBlocks,
+      renderedBlocks: renderStats.renderedBlocks,
+      visibleFaces: renderStats.visibleFaces,
+      drawCalls: renderStats.drawCalls,
+      culledChunks: renderStats.culledChunks,
+      meshRebuilds: renderStats.meshRebuilds,
+      renderDistance: renderStats.renderDistance,
       state: this.state.current,
       chunk: {
         x: MathUtils.floorDiv(block.x, this.world.chunkSizeX),
         z: MathUtils.floorDiv(block.z, this.world.chunkSizeZ)
       },
       onGround: this.player.isOnGround,
-      targetedBlock: this.blockInteraction.targetedBlock
+      isFlying: this.player.isFlying,
+      cameraLookDirection: this.camera.forward,
+      targetedBlock: target
+        ? { ...target, blockType: this.world.getBlockType(target.x, target.y, target.z) }
+        : null,
+      selectedSlot: this.hotbar.selectedIndex,
+      seed: this.#session.seed,
+      mode: this.modeRules.label,
+      biome: showingDebug ? this.worldGenerator.getBiomeAt(block.x, block.z)?.label ?? null : null,
+      dimensions: { width: this.world.width, height: this.world.height, depth: this.world.depth }
     };
   }
 }
