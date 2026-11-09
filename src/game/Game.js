@@ -4,6 +4,7 @@ import { createDefaultBlockRegistry } from '../blocks/BlockRegistry.js';
 import { World } from '../world/World.js';
 import { WorldGenerator } from '../world/WorldGenerator.js';
 import { WorldSeed } from '../world/WorldSeed.js';
+import { SpawnFinder } from '../world/SpawnFinder.js';
 import { GameModeRules } from './GameModeRules.js';
 import { Player } from '../player/Player.js';
 import { PlayerController } from '../player/PlayerController.js';
@@ -68,6 +69,7 @@ export class Game {
     this.world = new World(this.blockRegistry, config);
     this.worldGenerator = new WorldGenerator(config, { seed: options.seed });
 
+    this.spawnFinder = new SpawnFinder(Math.ceil(config.player.HEIGHT / config.world.BLOCK_SIZE));
     this.collisionSystem = new CollisionSystem(this.world);
     this.raycast = new Raycast(this.world);
 
@@ -467,14 +469,12 @@ export class Game {
   /** Ubica al jugador sobre el terreno generado, en el centro del mundo. */
   #placePlayerOnSurface() {
     const blockSize = this.world.blockSize;
-    const centerX = Math.floor(this.world.width / 2);
-    const centerZ = Math.floor(this.world.depth / 2);
-    const surfaceY = this.world.getSurfaceHeight(centerX, centerZ);
+    const spot = this.spawnFinder.find(this.world, Math.floor(this.world.width / 2), Math.floor(this.world.depth / 2));
 
     this.player.teleportTo(
-      centerX * blockSize + blockSize / 2,
-      surfaceY * blockSize,
-      centerZ * blockSize + blockSize / 2
+      spot.x * blockSize + blockSize / 2,
+      spot.y * blockSize,
+      spot.z * blockSize + blockSize / 2
     );
     this.#syncCameraToPlayer();
   }
