@@ -1,53 +1,29 @@
 # Hoja de ruta
 
-Orden sugerido de trabajo y reparto para un equipo de cuatro. Cada bloque toca módulos distintos, de modo que se pueda avanzar en paralelo con pocos conflictos.
+Estado al cierre del proyecto (noviembre de 2026).
 
-## Etapa 1 — Movimiento real
+## Hecho
 
-**Módulos:** `physics/`, `player/`
+| Área | Qué hay |
+|---|---|
+| Movimiento | Colisiones por eje, gravedad, salto, escalones y suelo estable |
+| Interacción | Raycast, resaltado, rotura progresiva por dureza, colocación sin encerrarse, hotbar que junta lo roto |
+| Presentación | Texturas, hotbar e inventario, menú, pausa, configuración, controles, sonidos de romper y colocar, mano y efectos |
+| Mundo | Generación por semilla con biomas, cuevas, minerales y árboles; aparición fuera de los árboles |
+| Modos | Supervivencia (vida, daño por caída) y creativo (bloques sin límite, sin daño, vuelo con F) |
+| Partidas | Crear con nombre, semilla y modo; guardar y cargar con el plano en curso |
+| Render | Mallas por chunk con solo las caras visibles, reconstruidas cuando el chunk cambia; recorte por distancia de a chunk |
+| Cuentas | Registro, sesión, perfil y recuperación por código de administrador, en MySQL |
+| Puntuaciones | Puntos, niveles y clasificación por modo, validados por el servidor |
+| Modo educativo | Planos con guía 3D, sílabas y lectura en voz alta |
+| Asistente | Chat de consultas sobre el juego y la partida, sin servicios externos |
+| Diagnóstico | Panel F3 con rendimiento, jugador y mundo |
 
-- Resolución de colisiones por eje en `CollisionSystem` (mover en X, resolver; luego Y; luego Z).
-- Conectar la resolución a `PlayerPhysics` y activar `gravityEnabled`.
-- Gravedad, salto y detección de suelo estable.
-- Tests de penetración y de caída sobre terreno irregular.
+## Pendiente
 
-## Etapa 2 — Interacción con bloques
-
-**Módulos:** `physics/Raycast`, `world/`, `inventory/`
-
-- Usar `Raycast` desde la cámara para resaltar el bloque apuntado.
-- Romper con clic izquierdo, colocar con clic derecho usando `RaycastHit.adjacentPosition`.
-- Impedir colocar un bloque dentro del jugador.
-- Alimentar la hotbar con lo que se rompe.
-
-## Etapa 3 — Presentación
-
-**Módulos:** `rendering/`, `ui/`, `audio/`
-
-- Texturas de bloque en `assets/textures/blocks/` (`grass.png`, `dirt.png`, `stone.png`, `wood.png`, `sand.png`).
-- Hotbar visible con el slot seleccionado.
-- Sonidos de pasos, romper y colocar bloques.
-- Menú principal y pantalla de pausa.
-
-## Etapa 4 — Persistencia y mundo grande
-
-**Módulos:** `persistence/`, `world/`
-
-- Guardado y carga con `SaveManager` sobre `localStorage`.
-- Carga y descarga de chunks según la posición del jugador.
-- Generación por chunk en lugar de generación total al inicio.
-- Semilla configurable desde el menú.
-
-## Etapa 5 — Optimización
-
-**Módulos:** `rendering/`
-
-- ~~Reemplazar el `box()` por bloque por mallas por chunk, reconstruidas solo cuando el chunk está `dirty`.~~ Hecho.
-- ~~Descartar caras internas al construir la malla.~~ Hecho.
-- Recorte por volumen de visión (hoy se recorta por distancia, de a chunk).
-
-Esta etapa se hace **al final** y queda contenida en `BlockRenderer`: si el resto del código respetó los contratos, `World`, `Player` y `UI` no cambian.
-
-## Más adelante
-
-Crafting, entidades, ciclo día/noche, biomas, cuevas, estructuras generadas, y —solo si el proyecto lo justifica— un backend en Node.js para partidas compartidas.
+- **Mundo grande:** carga y descarga de chunks según la posición del jugador y generación por chunk. Hoy el mundo es de tamaño fijo y se genera completo al empezar.
+- **Render:** recorte por volumen de visión (frustum), además del recorte por distancia.
+- **Sonido:** pasos.
+- **Asistente, etapa 2:** modelo de lenguaje con proxy en el servidor. Ver `docs/CHATBOT.md`; necesita aprobación del equipo y una clave de API.
+- **Cuentas:** recuperación por correo, si algún día el juego se publica con un servidor de correo.
+- **Más adelante:** crafteo, entidades, ciclo de día y noche, estructuras generadas y multijugador.

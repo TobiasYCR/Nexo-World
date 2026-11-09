@@ -122,6 +122,7 @@ Las cuentas viven en la misma base MySQL (tablas `accounts` y `sessions`) y las 
 | `leaderboard` | `mode, player_id` | Mejor marca, cuándo se alcanzó y en qué mundo. Índice `(mode, best_score DESC, achieved_at, player_id)`. |
 | `accounts` | `id` | Usuario, correo, claves únicas en minúsculas (`username_key`, `email_key`), credencial PBKDF2-SHA-256 con sal (JSON), alta y modificación. |
 | `sessions` | `token_hash` | Hash SHA-256 del token de sesión, cuenta y vencimiento (7 días). |
+| `password_resets` | `token_hash` | Hash del código de recuperación, cuenta, vencimiento (30 minutos) y cuándo se usó. |
 
 Los tiempos se guardan como milisegundos epoch (`BIGINT`) para que el desempate sea exacto.
 
@@ -187,9 +188,12 @@ Cuentas (`server/http/AuthRoutes.js`, mismo contrato que `BackendAuthClient`):
 | `GET /api/auth/session` | Requiere token → `{ token, expiresAt, user }`. |
 | `GET /api/user/profile` | Requiere token → `{ user }`. |
 | `PUT /api/user/profile` `{ username?, currentPassword?, newPassword? }` | Requiere token. Cambiar la contraseña exige la actual y cierra las demás sesiones. |
-| `POST /api/auth/recover-password` | 501: no hay servidor de correo. |
+| `POST /api/auth/recover-password` | 501: no hay servidor de correo; el mensaje explica cómo pedir un código. |
+| `POST /api/auth/reset-password` `{ identifier, code, newPassword }` | Contraseña nueva con el código del administrador. Cierra todas las sesiones de la cuenta. |
 
-`user = { id, username, email, createdAt, updatedAt, playerId }`. Errores: `{ code, message }` con los códigos que ya usa la interfaz (`USERNAME_TAKEN`, `INVALID_CREDENTIALS`, `UNAUTHORIZED`, `RATE_LIMITED`…). Diez intentos fallidos seguidos sobre el mismo usuario lo bloquean 15 minutos.
+`user = { id, username, email, createdAt, updatedAt, playerId }`. Errores: `{ code, message }` con los códigos que ya usa la interfaz (`USERNAME_TAKEN`, `INVALID_CREDENTIALS`, `UNAUTHORIZED`, `RATE_LIMITED`…). Diez intentos fallidos seguidos sobre el mismo usuario lo bloquean 15 minutos (lo mismo para los códigos de recuperación).
+
+Recuperar una contraseña: el administrador corre `npm run admin -- reset-password <usuario o correo>` en la máquina del servidor y obtiene un código `XXXX-XXXX` de un solo uso que vence a los 30 minutos. Generar otro anula el anterior.
 
 ### 4.3 Contrato de persistencia
 
@@ -223,7 +227,7 @@ Las implementaciones son `MySqlProgressionRepository` e `InMemoryProgressionRepo
 - El límite de intentos de inicio de sesión vive en memoria y se reinicia con el servidor.
 - `POST /api/players` no tiene límite por IP: alguien podría crear muchos invitados. Conviene agregarlo al publicar el servidor.
 - Si el servidor no está corriendo, el navegador registra un error de red al iniciar. El progreso se guarda localmente y se envía cuando el servidor vuelve.
-- Mejoras posibles: recuperación de contraseña por correo, tablas por período, niveles como moneda cuando haya crafteo, y validación por servidor autoritativo si llega el multijugador.
+- Mejoras posibles: recuperación de contraseña por correo (hoy, código de administrador), tablas por período, niveles como moneda cuando haya crafteo, y validación por servidor autoritativo si llega el multijugador.
 
 ## Fuentes
 
