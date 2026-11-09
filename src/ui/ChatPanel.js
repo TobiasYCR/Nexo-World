@@ -241,11 +241,11 @@ export class ChatPanel {
       this.#messages.shift();
       this.#list.firstChild?.remove();
     }
-    this.#list.appendChild(ChatPanel.#renderMessage(message));
+    this.#list.appendChild(ChatPanel.#renderMessage(message, this.#config.SHOW_SOURCES));
     this.#list.scrollTop = this.#list.scrollHeight;
   }
 
-  static #renderMessage({ author, text, source, isKnown }) {
+  static #renderMessage({ author, text, source, isKnown }, showSource = false) {
     const item = document.createElement('div');
     item.className = `nx-chat-message nx-chat-${author}`;
     if (author === 'bot' && isKnown === false) item.classList.add('nx-chat-unsure');
@@ -255,10 +255,9 @@ export class ChatPanel {
     body.textContent = text;
     item.appendChild(body);
 
-    // La fuente se muestra siempre que exista: es lo que permite verificar el
-    // dato contra el código, y lo que distingue una respuesta derivada de los
-    // datos del juego de una escrita a mano.
-    if (source) {
+    // La fuente permite verificar el dato contra el código. Queda guardada en
+    // cada mensaje y se muestra solo con GameConfig.chatbot.SHOW_SOURCES.
+    if (source && showSource) {
       const origin = document.createElement('p');
       origin.className = 'nx-chat-source';
       origin.textContent = `fuente: ${source}`;

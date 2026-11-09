@@ -347,6 +347,11 @@ export const GameConfig = Object.freeze({
   chatbot: Object.freeze({
     /** Nombre con el que se presenta el asistente. */
     BOT_NAME: 'Nexo',
+    /**
+     * Mostrar debajo de cada respuesta de dónde salió el dato
+     * ("GameConfig.input…"). Sirve para depurar; para quien juega es ruido.
+     */
+    SHOW_SOURCES: false,
     /** Tecla que abre y cierra el chat durante la partida. */
     TOGGLE_KEY: 'KeyT',
     /** Mensajes que conserva el panel antes de descartar los más viejos. */

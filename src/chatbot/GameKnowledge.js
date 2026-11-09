@@ -1,4 +1,5 @@
 import { ChatResponse } from './ChatResponse.js';
+import { KeyNames } from './KeyNames.js';
 import { TextNormalizer } from './TextNormalizer.js';
 import { GameConfig } from '../game/GameConfig.js';
 import { createDefaultBlockRegistry } from '../blocks/BlockRegistry.js';
@@ -112,14 +113,17 @@ export class GameKnowledge {
     }
   }
 
-  /** Acción lógica -> teclas que la disparan, leído de KEY_BINDINGS. */
+  /**
+   * Acción lógica -> nombre de las teclas que la disparan ("Espacio", "W"),
+   * leído de KEY_BINDINGS.
+   */
   get #keysByAction() {
-    const map = {};
+    const codes = {};
     for (const [key, action] of Object.entries(this.#config.input.KEY_BINDINGS)) {
-      map[action] = map[action] ?? [];
-      map[action].push(key.replace(/^Key/, ''));
+      codes[action] = codes[action] ?? [];
+      codes[action].push(key);
     }
-    return map;
+    return Object.fromEntries(Object.entries(codes).map(([action, list]) => [action, KeyNames.list(list)]));
   }
 
   /**
@@ -227,7 +231,7 @@ export class GameKnowledge {
 
     const jump = keys[InputActions.JUMP]?.join(' o ');
     return ChatResponse.known(
-      `Te movés con ${movement}. Para saltar, ${jump}. Para correr, mantené ` +
+      `Te movés con ${movement}. Para saltar, apretá ${jump}. Para correr, mantené ` +
         `${keys[InputActions.SPRINT]?.join(' o ')} mientras te movés. La cámara va con el mouse.`,
       ChatResponse.Topics.CONTROLS,
       'GameConfig.input.KEY_BINDINGS'
@@ -244,8 +248,9 @@ export class GameKnowledge {
         'GameConfig.input.KEY_BINDINGS'
       );
     }
+    const which = keys.length === 1 ? `la tecla ${keys[0]}` : `las teclas ${keys.join(' o ')}`;
     return ChatResponse.known(
-      `Para ${label}, ${keys.join(' o ')}.`,
+      `Para ${label}, apretá ${which}.`,
       ChatResponse.Topics.CONTROLS,
       'GameConfig.input.KEY_BINDINGS'
     );
