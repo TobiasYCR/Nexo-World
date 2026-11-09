@@ -108,6 +108,35 @@ export class MySqlAccountRepository extends AccountRepository {
     await this.#pool.query('DELETE FROM sessions WHERE expires_at <= ?', [now]);
   }
 
+  async createPasswordReset({ tokenHash, accountId, createdAt, expiresAt }) {
+    await this.#pool.query('DELETE FROM password_resets WHERE account_id = ? AND used_at IS NULL', [accountId]);
+    await this.#pool.query(
+      'INSERT INTO password_resets (token_hash, account_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+      [tokenHash, accountId, createdAt, expiresAt]
+    );
+  }
+
+  async findPasswordReset(tokenHash) {
+    const [rows] = await this.#pool.query('SELECT * FROM password_resets WHERE token_hash = ?', [tokenHash]);
+    if (!rows.length) return null;
+    const row = rows[0];
+    return {
+      tokenHash: row.token_hash,
+      accountId: row.account_id,
+      createdAt: Number(row.created_at),
+      expiresAt: Number(row.expires_at),
+      usedAt: row.used_at === null ? null : Number(row.used_at)
+    };
+  }
+
+  async markPasswordResetUsed(tokenHash, usedAt) {
+    const [result] = await this.#pool.query(
+      'UPDATE password_resets SET used_at = ? WHERE token_hash = ? AND used_at IS NULL',
+      [usedAt, tokenHash]
+    );
+    return result.affectedRows === 1;
+  }
+
   async close() {
     if (this.#ownsDatabase) await this.#database.close();
   }

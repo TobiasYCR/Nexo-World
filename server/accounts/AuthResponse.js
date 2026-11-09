@@ -7,6 +7,8 @@ const ERRORS = Object.freeze({
   'invalid-email': ['INVALID_EMAIL', 400],
   'invalid-request': ['INVALID_INPUT', 400],
   'invalid-credentials': ['INVALID_CREDENTIALS', 401],
+  'invalid-reset-code': ['INVALID_RESET_CODE', 400],
+  'account-not-found': ['ACCOUNT_NOT_FOUND', 404],
   'wrong-password': ['INVALID_CREDENTIALS', 401],
   unauthorized: ['UNAUTHORIZED', 401],
   'username-taken': ['USERNAME_TAKEN', 409],
@@ -23,8 +25,10 @@ const MESSAGES = Object.freeze({
   unauthorized: 'La sesión expiró o no es válida. Volvé a iniciar sesión.',
   'rate-limited': 'Demasiados intentos fallidos. Esperá unos minutos antes de volver a probar.',
   'not-supported':
-    'La recuperación de contraseña necesita un servidor de correo, que este juego todavía no tiene. ' +
-    'Si olvidaste la clave, pedile ayuda al equipo.',
+    'Este juego no manda correos. Para recuperar la contraseña, pedile a un administrador un código ' +
+    'de recuperación y usalo en "¿Olvidaste tu contraseña?".',
+  'invalid-reset-code': 'El código no es válido, ya se usó o venció. Pedile uno nuevo al administrador.',
+  'account-not-found': 'No hay ninguna cuenta con ese usuario o correo.',
   'storage-error': 'No se pudo acceder a la base de datos. Probá de nuevo en un momento.'
 });
 

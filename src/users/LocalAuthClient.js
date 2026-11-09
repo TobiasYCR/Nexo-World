@@ -133,6 +133,14 @@ export class LocalAuthClient {
     };
   }
 
+  async resetPassword() {
+    return {
+      ok: false,
+      code: 'NOT_SUPPORTED',
+      message: 'Con las cuentas guardadas en el navegador no hay administrador que dé códigos. Usá el servidor de cuentas.'
+    };
+  }
+
   // --- Sesiones locales ----------------------------------------------------
 
   #abrirSesion(cuenta) {

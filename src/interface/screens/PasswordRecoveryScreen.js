@@ -6,8 +6,12 @@ import { Button } from '../components/Button.js';
 import { AuthService } from '../../auth/AuthService.js';
 
 /**
- * Pantalla de Recuperación de Contraseña de Nexo World.
- * Permite solicitar el restablecimiento de acceso mediante correo electrónico.
+ * Recuperar el acceso con un código de administrador.
+ *
+ * El juego no manda correos: quien olvidó la contraseña le pide a un
+ * administrador un código (npm run admin -- reset-password <usuario>) y acá lo
+ * usa para poner una contraseña nueva. El código vence a los 30 minutos y sirve
+ * una sola vez.
  */
 export class PasswordRecoveryScreen extends Screen {
   #authService;
@@ -41,7 +45,9 @@ export class PasswordRecoveryScreen extends Screen {
 
     const infoP = document.createElement('p');
     infoP.className = 'nx-auth-instruction';
-    infoP.textContent = 'Ingresa el correo electrónico asociado a tu cuenta. Si está registrado en Nexo World, te enviaremos las instrucciones de recuperación.';
+    infoP.textContent =
+      'Pedile a un administrador del juego un código de recuperación. ' +
+      'Escribí tu usuario o correo, el código y tu contraseña nueva.';
     body.appendChild(infoP);
 
     this.statusMessage = document.createElement('div');
@@ -50,36 +56,39 @@ export class PasswordRecoveryScreen extends Screen {
     this.statusMessage.hidden = true;
     body.appendChild(this.statusMessage);
 
-    const emailGroup = document.createElement('div');
-    emailGroup.className = 'nx-form-group';
-    const emailLabel = document.createElement('label');
-    emailLabel.className = 'nx-form-label';
-    emailLabel.textContent = 'Correo Electrónico *';
-    emailLabel.htmlFor = 'recovery-input-email';
-
-    this.emailInput = document.createElement('input');
-    this.emailInput.id = 'recovery-input-email';
-    this.emailInput.type = 'email';
-    this.emailInput.className = 'nx-input nx-form-input';
-    this.emailInput.placeholder = 'tu@correo.com';
-    this.emailInput.required = true;
-    this.emailInput.setAttribute('aria-label', 'Correo electrónico');
-
-    this.emailInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        this.submit();
-      }
+    this.identifierInput = this.#field(body, {
+      id: 'recovery-input-identifier',
+      label: 'Usuario o correo *',
+      type: 'text',
+      placeholder: 'tu usuario o tu@correo.com',
+      autocomplete: 'username'
     });
-
-    emailGroup.appendChild(emailLabel);
-    emailGroup.appendChild(this.emailInput);
-    body.appendChild(emailGroup);
+    this.codeInput = this.#field(body, {
+      id: 'recovery-input-code',
+      label: 'Código del administrador *',
+      type: 'text',
+      placeholder: 'ABCD-EFGH',
+      autocomplete: 'one-time-code'
+    });
+    this.passwordInput = this.#field(body, {
+      id: 'recovery-input-password',
+      label: 'Contraseña nueva *',
+      type: 'password',
+      placeholder: '',
+      autocomplete: 'new-password'
+    });
+    this.confirmInput = this.#field(body, {
+      id: 'recovery-input-confirm',
+      label: 'Repetí la contraseña nueva *',
+      type: 'password',
+      placeholder: '',
+      autocomplete: 'new-password'
+    });
 
     this.modal.addBodyItem(body);
 
     this.submitBtn = new Button({
-      text: 'ENVIAR INSTRUCCIONES',
+      text: 'CAMBIAR CONTRASEÑA',
       variant: 'primary',
       id: 'recovery-btn-submit',
       onClick: () => this.submit()
@@ -98,11 +107,39 @@ export class PasswordRecoveryScreen extends Screen {
     this.element.appendChild(this.modal.element);
   }
 
+  #field(container, { id, label, type, placeholder, autocomplete }) {
+    const group = document.createElement('div');
+    group.className = 'nx-form-group';
+    const labelElement = document.createElement('label');
+    labelElement.className = 'nx-form-label';
+    labelElement.textContent = label;
+    labelElement.htmlFor = id;
+
+    const input = document.createElement('input');
+    input.id = id;
+    input.type = type;
+    input.className = 'nx-input nx-form-input';
+    input.placeholder = placeholder;
+    input.required = true;
+    input.setAttribute('autocomplete', autocomplete);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.submit();
+      }
+    });
+
+    group.appendChild(labelElement);
+    group.appendChild(input);
+    container.appendChild(group);
+    return input;
+  }
+
   show(params = {}) {
     super.show(params);
     this.clearMessage();
     setTimeout(() => {
-      this.emailInput?.focus?.();
+      this.identifierInput?.focus?.();
     }, 50);
   }
 
@@ -124,34 +161,36 @@ export class PasswordRecoveryScreen extends Screen {
   async submit() {
     this.clearMessage();
 
-    const email = (this.emailInput?.value || '').trim();
-    if (!email) {
-      this.showMessage('Por favor ingresa un correo electrónico.');
-      this.emailInput.focus();
-      return;
-    }
-
     if (!this.#authService) {
       this.showMessage('Servicio de autenticación no disponible.');
-      return;
+      return null;
     }
 
     this.submitBtn.element.disabled = true;
-    this.submitBtn.element.textContent = 'ENVIANDO...';
+    this.submitBtn.element.textContent = 'CAMBIANDO...';
 
     try {
-      const result = await this.#authService.recoverPassword(email);
+      const result = await this.#authService.resetPassword({
+        identifier: this.identifierInput.value,
+        code: this.codeInput.value,
+        newPassword: this.passwordInput.value,
+        confirmPassword: this.confirmInput.value
+      });
       if (result.ok) {
-        this.showMessage(result.message || 'Instrucciones enviadas. Revisa tu casilla.', true);
-        this.emailInput.value = '';
+        this.showMessage(result.message, true);
+        this.codeInput.value = '';
+        this.passwordInput.value = '';
+        this.confirmInput.value = '';
       } else {
-        this.showMessage(result.message || 'Error al procesar la solicitud.');
+        this.showMessage(result.message || 'No se pudo cambiar la contraseña.');
       }
+      return result;
     } catch {
       this.showMessage('Error al conectar con el servidor.');
+      return null;
     } finally {
       this.submitBtn.element.disabled = false;
-      this.submitBtn.element.textContent = 'ENVIAR INSTRUCCIONES';
+      this.submitBtn.element.textContent = 'CAMBIAR CONTRASEÑA';
     }
   }
 

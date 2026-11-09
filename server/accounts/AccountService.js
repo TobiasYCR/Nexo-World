@@ -4,6 +4,7 @@ import { UserValidator } from '../../src/users/UserValidator.js';
 import { UserAccount } from '../../src/users/UserAccount.js';
 import { PlayerTokens } from '../security/PlayerTokens.js';
 import { LoginThrottle } from '../security/LoginThrottle.js';
+import { ResetCode } from '../security/ResetCode.js';
 import { AuthResponse } from './AuthResponse.js';
 
 /**
@@ -27,7 +28,11 @@ export class AccountService {
   #throttle;
   #clock;
   #sessionTtlMs;
+  #resetTtlMs;
   #logger;
+  /** Vigencia de un código de recuperación: 30 minutos. */
+  static RESET_TTL_MS = 30 * 60 * 1000;
+
   /** Credencial de descarte para que un usuario inexistente tarde lo mismo que una contraseña errónea. */
   #dummyCredential = null;
 
@@ -43,6 +48,7 @@ export class AccountService {
     throttle = new LoginThrottle(),
     clock = Date.now,
     sessionTtlMs = GameConfig.users.SESSION_TTL_MS,
+    resetTtlMs = AccountService.RESET_TTL_MS,
     logger = console
   } = {}) {
     this.#accounts = accounts;
@@ -52,6 +58,7 @@ export class AccountService {
     this.#throttle = throttle;
     this.#clock = clock;
     this.#sessionTtlMs = sessionTtlMs;
+    this.#resetTtlMs = resetTtlMs;
     this.#logger = logger;
   }
 
@@ -178,6 +185,68 @@ export class AccountService {
 
   async recoverPassword() {
     return AuthResponse.fail('not-supported');
+  }
+
+  /**
+   * Solo para el administrador (npm run admin): genera un código de un solo uso
+   * para que alguien ponga una contraseña nueva. Lo anterior sin usar se descarta.
+   * @param {string} identifier usuario o correo
+   */
+  async issueResetCode(identifier) {
+    if (typeof identifier !== 'string' || identifier.trim() === '') return AuthResponse.fail('invalid-request');
+    return this.#guard(async () => {
+      const account = await this.#accounts.findAccountByLogin(UserAccount.normalizeUsername(identifier));
+      if (!account) return AuthResponse.fail('account-not-found');
+      const code = ResetCode.generate();
+      const now = this.#clock();
+      const expiresAt = now + this.#resetTtlMs;
+      await this.#accounts.createPasswordReset({
+        tokenHash: PlayerTokens.hash(ResetCode.normalize(code)),
+        accountId: account.id,
+        createdAt: now,
+        expiresAt
+      });
+      return AuthResponse.ok({ code, expiresAt, username: account.username, email: account.email }, 201);
+    });
+  }
+
+  /**
+   * Pone una contraseña nueva con el código del administrador. El código tiene
+   * que ser de esa cuenta, estar vigente y no haberse usado. Cierra todas las
+   * sesiones abiertas de la cuenta.
+   * @param {{identifier:string, code:string, newPassword:string}} body
+   */
+  async resetPassword(body) {
+    const { identifier, code, newPassword } = body ?? {};
+    if (typeof identifier !== 'string' || identifier.trim() === '' || typeof code !== 'string' || code.trim() === '') {
+      return AuthResponse.fail('invalid-request');
+    }
+    const invalidPassword = this.#validator.checkPassword(newPassword);
+    if (invalidPassword) return AuthResponse.fail(invalidPassword);
+    const key = `reset:${UserAccount.normalizeUsername(identifier)}`;
+
+    return this.#guard(async () => {
+      const now = this.#clock();
+      const retryAfterSeconds = this.#throttle.retryAfterSeconds(key, now);
+      if (retryAfterSeconds > 0) return AuthResponse.fail('rate-limited', { retryAfterSeconds });
+
+      const account = await this.#accounts.findAccountByLogin(UserAccount.normalizeUsername(identifier));
+      const tokenHash = PlayerTokens.hash(ResetCode.normalize(code));
+      const reset = account ? await this.#accounts.findPasswordReset(tokenHash) : null;
+      const valid = reset && reset.accountId === account.id && reset.usedAt === null && reset.expiresAt > now;
+      if (!valid) {
+        this.#throttle.recordFailure(key, now);
+        return AuthResponse.fail('invalid-reset-code');
+      }
+      if (!(await this.#accounts.markPasswordResetUsed(tokenHash, now))) return AuthResponse.fail('invalid-reset-code');
+
+      const credential = await this.#hasher.derive(newPassword);
+      if (!credential) return AuthResponse.fail('storage-error');
+      await this.#accounts.updateAccount(account.id, { credential, updatedAt: now });
+      await this.#accounts.deleteSessionsOfAccount(account.id);
+      this.#throttle.reset(key);
+      return AuthResponse.ok({ message: 'Listo: ya podés iniciar sesión con la contraseña nueva.' });
+    });
   }
 
   /**

@@ -11,6 +11,8 @@ import { PlayerTokens } from '../security/PlayerTokens.js';
  *   GET  /api/user/profile           (token) -> { user }
  *   PUT  /api/user/profile           (token) { username?, currentPassword?, newPassword? } -> { user }
  *   POST /api/auth/recover-password  -> 501, no hay servidor de correo
+ *   POST /api/auth/reset-password    { identifier, code, newPassword } -> { message }
+ *                                    (code lo genera un administrador con npm run admin)
  *
  * user = { id, username, email, createdAt, updatedAt, playerId }.
  * Errores: { code, message }.
@@ -46,6 +48,8 @@ export class AuthRoutes {
         return this.#withBody(readJson, (body) => this.accounts.updateProfile(token, body));
       case 'POST /auth/recover-password':
         return this.accounts.recoverPassword();
+      case 'POST /auth/reset-password':
+        return this.#withBody(readJson, (body) => this.accounts.resetPassword(body));
       default:
         return null;
     }

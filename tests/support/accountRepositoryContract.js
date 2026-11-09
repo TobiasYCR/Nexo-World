@@ -126,4 +126,21 @@ export function defineAccountRepositoryContract(label, createStores, { skip = fa
     assert.equal((await players.findPlayerById(first.id)).name, 'Tobi');
     assert.equal((await players.findPlayerById(second.id)).name, 'Jugador-0002');
   }));
+
+  test(`[${label}] guarda códigos de recuperación de un solo uso`, { skip }, () => withStores(async ({ accounts }) => {
+    const tobias = account('Tobias');
+    await accounts.createAccount(tobias);
+    const first = { tokenHash: PlayerTokens.hash(`${label}-reset-a-${sequence}`), accountId: tobias.id, createdAt: 1000, expiresAt: 5000 };
+    await accounts.createPasswordReset(first);
+    assert.deepEqual(await accounts.findPasswordReset(first.tokenHash), { ...first, usedAt: null });
+
+    const second = { ...first, tokenHash: PlayerTokens.hash(`${label}-reset-b-${sequence}`) };
+    await accounts.createPasswordReset(second);
+    assert.equal(await accounts.findPasswordReset(first.tokenHash), null, 'el anterior sin usar se descarta');
+
+    assert.equal(await accounts.markPasswordResetUsed(second.tokenHash, 2000), true);
+    assert.equal(await accounts.markPasswordResetUsed(second.tokenHash, 3000), false, 'solo una vez');
+    assert.equal((await accounts.findPasswordReset(second.tokenHash)).usedAt, 2000);
+    assert.equal(await accounts.findPasswordReset(PlayerTokens.hash('inexistente')), null);
+  }));
 }

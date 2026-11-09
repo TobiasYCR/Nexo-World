@@ -102,6 +102,13 @@ export class BackendAuthClient {
     });
   }
 
+  async resetPassword({ identifier, code, newPassword }) {
+    return this.#request('/auth/reset-password', {
+      method: 'POST',
+      body: { identifier, code, newPassword }
+    });
+  }
+
   #guestToken() {
     let token = null;
     try {
