@@ -48,7 +48,33 @@ export const GameConfig = Object.freeze({
     GROUND_TOLERANCE: 0.3,
     /** Desnivel que se sube sin saltar, en unidades de mundo (un bloque). */
     STEP_HEIGHT: 20,
+    /** Velocidad vertical al volar en creativo (Espacio sube, Shift baja). */
+    FLY_SPEED: 140,
     SPAWN: Object.freeze({ x: 160, y: 200, z: 160 })
+  }),
+
+  /**
+   * Reglas de cada modo de juego. El modo se elige al crear el mundo y se
+   * guarda con la partida.
+   */
+  modes: Object.freeze({
+    survival: Object.freeze({
+      LABEL: 'Supervivencia',
+      /** Colocar un bloque lo descuenta de la hotbar. */
+      INFINITE_BLOCKS: false,
+      CAN_FLY: false,
+      TAKES_DAMAGE: true,
+      /** null: el tiempo de rotura depende de la dureza del bloque. */
+      BREAK_SECONDS: null
+    }),
+    creative: Object.freeze({
+      LABEL: 'Creativo',
+      INFINITE_BLOCKS: true,
+      CAN_FLY: true,
+      TAKES_DAMAGE: false,
+      /** Igual para todos los bloques: rápido, pero sin borrar una pared de un solo clic. */
+      BREAK_SECONDS: 0.15
+    })
   }),
 
   blocks: Object.freeze({
@@ -307,7 +333,8 @@ export const GameConfig = Object.freeze({
       Space: InputActions.JUMP,
       ShiftLeft: InputActions.SPRINT,
       Escape: InputActions.PAUSE,
-      F3: InputActions.TOGGLE_DEBUG
+      F3: InputActions.TOGGLE_DEBUG,
+      KeyF: InputActions.TOGGLE_FLY
     }),
     /** Teclas 1-9: selección directa de slot de la hotbar. */
     HOTBAR_KEY_PREFIX: 'Digit'

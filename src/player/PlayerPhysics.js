@@ -20,7 +20,10 @@ export class PlayerPhysics {
     player.velocity.x = player.moveIntent.x * player.currentSpeed;
     player.velocity.z = player.moveIntent.z * player.currentSpeed;
 
-    if (wasOnGround && player.wantsToJump) {
+    if (player.isFlying) {
+      // En vuelo no hay gravedad: la altura la decide el jugador.
+      player.velocity.y = player.flyVertical * config.FLY_SPEED;
+    } else if (wasOnGround && player.wantsToJump) {
       player.velocity.y = config.JUMP_FORCE;
     } else {
       player.velocity.y += config.GRAVITY * deltaTime;

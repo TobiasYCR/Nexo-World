@@ -19,6 +19,11 @@ export class Player {
     this.wantsToJump = false;
     this.isSprinting = false;
     this.isOnGround = false;
+    /** El modo de juego permite volar (creativo). */
+    this.canFly = false;
+    this.isFlying = false;
+    /** Intención vertical al volar: 1 sube, -1 baja, 0 se queda. */
+    this.flyVertical = 0;
   }
 
   get eyePosition() {
@@ -52,5 +57,6 @@ export class Player {
   clearIntent() {
     this.moveIntent.set(0, 0, 0);
     this.wantsToJump = false;
+    this.flyVertical = 0;
   }
 }

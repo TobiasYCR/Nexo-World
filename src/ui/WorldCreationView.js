@@ -106,7 +106,7 @@ export class WorldCreationView {
     modeOptions.setAttribute('aria-label', 'Modo de juego');
 
     const modes = [
-      { id: 'creative', name: 'Creativo', desc: 'Recursos ilimitados, vuelo y construcción libre.' },
+      { id: 'creative', name: 'Creativo', desc: 'Bloques ilimitados, sin daño y vuelo con la tecla F.' },
       { id: 'survival', name: 'Supervivencia Básica', desc: 'Salud, recolección de bloques y caída al vacío.' }
     ];
 

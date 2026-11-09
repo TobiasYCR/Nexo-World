@@ -39,6 +39,19 @@ export class PlayerController {
       player.moveIntent.copyFrom(this.#forwardScaled).add(this.#rightScaled).normalize();
     }
 
+    if (player.canFly && this.input.wasActionJustPressed(InputActions.TOGGLE_FLY)) {
+      player.isFlying = !player.isFlying;
+      player.velocity.y = 0;
+    }
+    if (!player.canFly) player.isFlying = false;
+
+    if (player.isFlying) {
+      // Volando, Espacio sube y Shift baja; no hay salto ni carrera.
+      player.isSprinting = false;
+      player.flyVertical = this.input.axis(InputActions.SPRINT, InputActions.JUMP);
+      return;
+    }
+
     player.isSprinting = this.input.isActionDown(InputActions.SPRINT);
     // Borde de subida del salto: mantener la tecla no debe permitir volar.
     player.wantsToJump = this.input.wasActionJustPressed(InputActions.JUMP);

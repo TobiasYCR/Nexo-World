@@ -134,6 +134,13 @@ export class GameUiBridge {
       }
     });
 
+    // Crear un mundo nuevo con nombre, semilla y modo. WorldCreationScreen
+    // emite después SAVE_GAME con el nombre, así que queda guardado.
+    this.intentBus.on(IntentBus.Events.CREATE_WORLD, (payload) => {
+      const result = this.game?.newWorld?.({ name: payload?.name, seed: payload?.seed, mode: payload?.gameMode });
+      if (result && !result.ok) this.toast.error(result.message ?? 'No se pudo crear el mundo.');
+    });
+
     // Configuración modificada
     this.intentBus.on(IntentBus.Events.SETTINGS_CHANGED, ({ key, value }) => {
       this.#applySetting(key, value);
