@@ -80,6 +80,7 @@ export class Game {
     this.input = new InputManager(config.input);
     this.playerController = new PlayerController(this.player, this.camera, this.input);
     this.playerPhysics = new PlayerPhysics(this.player, this.collisionSystem, config.player);
+    this.playerPhysics.flyCeilingY = (this.world.height + config.player.FLY_CEILING_ABOVE_WORLD) * this.world.blockSize;
     this.events = new GameEvents();
     this.playerHealth = new PlayerHealth(config.survival, this.events);
     this.progression = options.progression ?? new PlayerProgression({

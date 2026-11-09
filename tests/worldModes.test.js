@@ -121,6 +121,11 @@ test('en creativo los bloques no se gastan, no hay daño y se vuela con F', asyn
   const flyingY = game.player.position.y;
   frames(game, 30);
   assert.ok(Math.abs(game.player.position.y - flyingY) < 0.001, 'quieto en el aire');
+  // No se puede volar sin límite fuera del mundo.
+  frames(game, 600, ['Space']);
+  const ceiling = (game.world.height + GameConfig.player.FLY_CEILING_ABOVE_WORLD) * game.world.blockSize;
+  assert.ok(game.player.position.y <= ceiling + 0.001, `subió hasta ${game.player.position.y}`);
+  assert.ok(game.player.position.y > ceiling - game.world.blockSize);
   frames(game, 1, ['KeyF']);
   assert.equal(game.player.isFlying, false);
 });

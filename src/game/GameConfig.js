@@ -50,6 +50,8 @@ export const GameConfig = Object.freeze({
     STEP_HEIGHT: 20,
     /** Velocidad vertical al volar en creativo (Espacio sube, Shift baja). */
     FLY_SPEED: 140,
+    /** Volando no se sube más que esta cantidad de bloques sobre el techo del mundo. */
+    FLY_CEILING_ABOVE_WORLD: 8,
     SPAWN: Object.freeze({ x: 160, y: 200, z: 160 })
   }),
 
