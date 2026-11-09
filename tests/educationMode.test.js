@@ -12,8 +12,10 @@ import { BlockIds } from '../src/utils/Constants.js';
 import { SpeechService, formatSyllableForSpeech } from '../src/audio/SpeechService.js';
 import { InventoryView } from '../src/ui/InventoryView.js';
 import { HotbarView } from '../src/ui/HotbarView.js';
-import { createBuildPresets } from '../src/education/BuildPresets.js';
-import { BuildChallengeManager } from '../src/education/BuildChallengeManager.js';
+import { createDefaultBlueprintRegistry } from '../src/education/BlueprintRegistry.js';
+import { BuildChallenge } from '../src/education/BuildChallenge.js';
+import { BuildChallengeView } from '../src/ui/BuildChallengeView.js';
+import { FirstPersonCamera } from '../src/camera/FirstPersonCamera.js';
 import { BuildChallengeHUD } from '../src/ui/BuildChallengeHUD.js';
 import { PresetsScreen } from '../src/interface/screens/PresetsScreen.js';
 import { World } from '../src/world/World.js';
@@ -267,116 +269,129 @@ test('HotbarView muestra las sílabas del bloque activo y permite escuchar su pr
 // 4. DESAFÍOS DE CONSTRUCCIÓN CON PRESETS (PLANOS DE CASAS) Y PUENTE UI/MOTOR
 // ============================================================================
 
-test('BuildChallengeManager gestiona presets, equipa hotbar, actualiza progreso y cumple el contrato de EducationKnowledge', () => {
+/** Mundo con piso, jugador en el centro y el desafío real del juego (BuildChallenge). */
+function challengeHarness() {
   const registry = createDefaultBlockRegistry();
   const world = new World(registry, GameConfig);
-  const player = new Player(GameConfig.player);
+  for (let x = 0; x < world.width; x += 1) {
+    for (let z = 0; z < world.depth; z += 1) world.setBlockId(x, 0, z, BlockIds.STONE);
+  }
+  const size = GameConfig.world.BLOCK_SIZE;
+  const center = { x: Math.floor(world.width / 2) * size + size / 2, y: 2 * size, z: Math.floor(world.depth / 2) * size + size / 2 };
+  const player = new Player({ ...GameConfig.player, SPAWN: center });
+  const camera = new FirstPersonCamera(GameConfig.camera);
   const hotbar = new Hotbar(9);
   const events = new GameEvents();
-
-  const manager = new BuildChallengeManager({
+  const challenge = new BuildChallenge({
     world,
     player,
-    hotbar,
+    camera,
+    blueprintRegistry: createDefaultBlueprintRegistry(registry, GameConfig.education),
     blockRegistry: registry,
-    events
+    events,
+    config: GameConfig.education
   });
+  return { registry, world, player, hotbar, events, challenge };
+}
 
-  const blueprints = manager.blueprints();
-  assert.ok(blueprints.length >= 4);
-  assert.ok(blueprints.some((b) => b.name === 'Casa de madera'));
-  assert.equal(manager.activeChallenge(), null);
+function placeNext(world, events, registry, snapshot) {
+  const { position, blockId } = snapshot.nextBlock;
+  world.setBlockId(position.x, position.y, position.z, blockId);
+  events.emit(GameEventTypes.BLOCK_PLACED, { position, blockType: registry.get(blockId) });
+}
 
-  // Iniciar el plano "Casa de madera"
-  const challenge = manager.startChallenge('wood_house', { anchor: { x: 10, y: 6, z: 10 } });
-  assert.ok(challenge !== null);
-  assert.equal(challenge.name, 'Casa de madera');
-  assert.equal(challenge.placedBlocks, 0);
-  assert.ok(challenge.totalBlocks > 0);
-  assert.ok(challenge.nextBlock !== null);
-  assert.ok(Array.isArray(challenge.nextBlock.syllables));
+test('BuildChallengeView presenta planos y progreso con sílabas, y el chat lee el mismo desafío', () => {
+  const { registry, world, events, challenge } = challengeHarness();
+  const view = new BuildChallengeView(registry);
 
-  // Verificar que los materiales del plano se equiparon en la hotbar
-  assert.equal(hotbar.getSlot(0).isEmpty, false);
+  const presets = view.presets(challenge.blueprints());
+  assert.ok(presets.length >= 3);
+  const house = presets.find((preset) => preset.name === 'Casa de madera');
+  assert.ok(house);
+  assert.equal(house.difficulty, 'Fácil');
+  assert.equal(house.totalBlocks, house.materials.reduce((total, material) => total + material.count, 0));
+  assert.ok(house.materials.every((material) => material.syllableText.includes('-') || material.syllables.length === 1));
 
-  // Verificar compatibilidad con EducationKnowledge (ChatBot)
-  const eduKnowledge = new EducationKnowledge({
-    contextProvider: () => ({ buildChallenge: manager })
-  });
-  const blueprintsAns = eduKnowledge.answer('game.education.blueprints');
-  assert.equal(blueprintsAns.isKnown, true);
-  assert.ok(blueprintsAns.text.includes('Casa de madera'));
+  assert.equal(view.challenge(challenge.snapshot()), null);
+  const started = challenge.start(house.id);
+  assert.equal(started.ok, true, started.message);
 
-  const statusAns = eduKnowledge.answer('game.status.challenge');
-  assert.equal(statusAns.isKnown, true);
-  assert.ok(statusAns.text.includes('Casa de madera'));
+  let shown = view.challenge(started.snapshot);
+  assert.equal(shown.name, 'Casa de madera');
+  assert.equal(shown.placedBlocks, 0);
+  assert.ok(Array.isArray(shown.nextBlock.syllables));
+  assert.equal(shown.nextBlock.remaining, shown.materials.find((m) => m.blockId === shown.nextBlock.blockId).remaining);
 
-  // Colocar el primer bloque requerido en el mundo y verificar que el progreso avanza
-  const firstTarget = challenge.nextBlock;
-  world.setBlockId(firstTarget.position.x, firstTarget.position.y, firstTarget.position.z, firstTarget.blockId);
-  events.emit(GameEventTypes.BLOCK_PLACED, {
-    position: firstTarget.position,
-    blockType: registry.get(firstTarget.blockId)
-  });
+  // El asistente de consultas usa el mismo objeto que la interfaz.
+  const eduKnowledge = new EducationKnowledge({ contextProvider: () => ({ buildChallenge: challenge }) });
+  assert.ok(eduKnowledge.answer('game.education.blueprints').text.includes('Casa de madera'));
+  const status = eduKnowledge.answer('game.status.challenge');
+  assert.equal(status.isKnown, true);
+  assert.ok(status.text.includes('Casa de madera'));
 
-  const updated = manager.activeChallenge();
-  assert.equal(updated.placedBlocks, 1);
+  placeNext(world, events, registry, challenge.snapshot());
+  shown = view.challenge(challenge.snapshot());
+  assert.equal(shown.placedBlocks, 1);
 
-  // Completar el resto de bloques del plano
-  while (!manager.activeChallenge().completed) {
-    manager.placeNextStep();
-  }
-
-  const finalState = manager.activeChallenge();
-  assert.equal(finalState.completed, true);
-  assert.equal(finalState.placedBlocks, finalState.totalBlocks);
-  assert.equal(finalState.progress, 1);
+  while (!challenge.snapshot().completed) placeNext(world, events, registry, challenge.snapshot());
+  shown = view.challenge(challenge.snapshot());
+  assert.equal(shown.completed, true);
+  assert.equal(shown.progress, 1);
+  assert.equal(shown.nextBlock, null);
 });
 
 test('PresetsScreen, BuildChallengeHUD y GameUiBridge se comunican desacopladamente vía IntentBus', () => {
-  const registry = createDefaultBlockRegistry();
-  const world = new World(registry, GameConfig);
-  const player = new Player(GameConfig.player);
-  const hotbar = new Hotbar(9);
-  const events = new GameEvents();
-  const buildChallenge = new BuildChallengeManager({ world, player, hotbar, blockRegistry: registry, events });
-
+  const { registry, world, hotbar, events, challenge } = challengeHarness();
   const bus = new IntentBus();
   const screenManager = new ScreenManager(dom.uiRoot, bus);
   const buildChallengeHud = new BuildChallengeHUD({ intentBus: bus });
   buildChallengeHud.mount(dom.uiRoot);
-
-  const presetsScreen = new PresetsScreen(screenManager, bus, {
-    presets: createBuildPresets(registry)
-  });
+  const presetsScreen = new PresetsScreen(screenManager, bus);
   screenManager.register(ScreenType.PRESETS, presetsScreen);
 
   const mockGame = {
-    buildChallenge,
+    buildChallenge: challenge,
+    events,
     hotbar,
     blockRegistry: registry,
+    progression: { mode: 'creative' },
     pause: () => {},
     resume: () => {}
   };
-  const mockHud = {
-    container: dom.uiRoot,
-    screenManager,
-    buildChallengeHud
-  };
-
+  const mockHud = { container: dom.uiRoot, screenManager, buildChallengeHud, presetsScreen };
   new GameUiBridge(mockGame, mockHud, bus);
 
-  // Seleccionar e iniciar un plano desde PresetsScreen
-  presetsScreen.selectAndStartPreset('sand_bridge');
+  // El puente carga los planos del juego en la pantalla de selección.
+  assert.deepEqual(presetsScreen.presets.map((preset) => preset.id), challenge.blueprints().map((blueprint) => blueprint.id));
 
-  const active = buildChallenge.activeChallenge();
-  assert.ok(active !== null);
-  assert.equal(active.id, 'sand_bridge');
-  assert.ok(buildChallengeHud.element.textContent.includes('Puente de arena'));
-  assert.ok(buildChallengeHud.element.textContent.includes('A - RE - NIS - CA'));
+  presetsScreen.selectAndStartPreset('river-bridge');
+  const active = challenge.snapshot();
+  assert.ok(active);
+  assert.equal(active.blueprintId, 'river-bridge');
+  assert.ok(buildChallengeHud.element.textContent.includes(active.name));
+  assert.equal(hotbar.getSlot(0).isEmpty, false, 'en creativo se cargan los materiales');
 
-  // Cancelar el plano mediante IntentBus
+  // Colocar un bloque actualiza el panel por eventos, sin que la interfaz recalcule nada.
+  placeNext(world, events, registry, active);
+  assert.ok(buildChallengeHud.element.textContent.includes(`1 / ${active.total}`));
+
   bus.emit(IntentBus.Events.CANCEL_BUILD_CHALLENGE);
-  assert.equal(buildChallenge.activeChallenge(), null);
+  assert.equal(challenge.snapshot(), null);
+  assert.equal(buildChallengeHud.element.textContent.includes(active.name), false);
 });
 
+test('en supervivencia el plano no regala materiales', () => {
+  const { registry, hotbar, events, challenge } = challengeHarness();
+  const bus = new IntentBus();
+  const screenManager = new ScreenManager(dom.uiRoot, bus);
+  const buildChallengeHud = new BuildChallengeHUD({ intentBus: bus });
+  const presetsScreen = new PresetsScreen(screenManager, bus);
+  new GameUiBridge(
+    { buildChallenge: challenge, events, hotbar, blockRegistry: registry, progression: { mode: 'survival' }, pause() {}, resume() {} },
+    { container: dom.uiRoot, screenManager, buildChallengeHud, presetsScreen },
+    bus
+  );
+  presetsScreen.selectAndStartPreset('wood-house');
+  assert.ok(challenge.snapshot());
+  assert.equal(hotbar.getSlot(0).isEmpty, true);
+});

@@ -51,7 +51,7 @@ export class BuildChallengeHUD {
    */
   update(activeChallenge = null) {
     const key = activeChallenge
-      ? `${activeChallenge.id}:${activeChallenge.placedBlocks}/${activeChallenge.totalBlocks}:${activeChallenge.nextBlock?.blockId ?? 'done'}`
+      ? `${activeChallenge.id}:${activeChallenge.placedBlocks}/${activeChallenge.totalBlocks}:${activeChallenge.wrongBlocks ?? 0}:${activeChallenge.nextBlock?.blockId ?? 'done'}`
       : 'none';
 
     if (key === this.#lastChallengeKey && this.element.children.length > 0) {

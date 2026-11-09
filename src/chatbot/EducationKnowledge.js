@@ -209,7 +209,7 @@ export class EducationKnowledge {
     if (!entry || typeof entry !== 'object') return null;
     const label = entry.label ?? entry.name ?? entry.block ?? entry.material ?? entry.id;
     if (!label) return null;
-    const count = entry.count ?? entry.quantity ?? entry.amount ?? entry.cantidad;
+    const count = entry.count ?? entry.required ?? entry.quantity ?? entry.amount ?? entry.cantidad;
     return count === undefined ? String(label).toLowerCase() : `${String(label).toLowerCase()} (${count})`;
   }
 

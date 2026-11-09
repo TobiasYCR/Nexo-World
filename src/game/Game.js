@@ -35,8 +35,10 @@ import { LandingEffect } from '../viewmodel/LandingEffect.js';
 import { DamageEffect } from '../viewmodel/DamageEffect.js';
 import { CameraEffects } from '../viewmodel/CameraEffects.js';
 import { VisualEffectsManager } from '../viewmodel/VisualEffectsManager.js';
-import { BuildChallengeManager } from '../education/BuildChallengeManager.js';
-import { BlueprintGuideOverlay } from '../viewmodel/BlueprintGuideOverlay.js';
+import { createDefaultBlueprintRegistry } from '../education/BlueprintRegistry.js';
+import { BuildChallenge } from '../education/BuildChallenge.js';
+import { BlueprintGhost } from '../viewmodel/BlueprintGhost.js';
+import { ChallengeCompleteEffect } from '../viewmodel/ChallengeCompleteEffect.js';
 
 /**
  * Coordinador de sistemas. Game construye las dependencias, define el orden de
@@ -80,6 +82,16 @@ export class Game {
       mode: options.mode ?? config.progression.GAME_MODE,
       levelConfig: config.levels ?? GameConfig.levels
     });
+    this.blueprintRegistry = createDefaultBlueprintRegistry(this.blockRegistry, config.education);
+    this.buildChallenge = new BuildChallenge({
+      world: this.world,
+      player: this.player,
+      camera: this.camera,
+      blueprintRegistry: this.blueprintRegistry,
+      blockRegistry: this.blockRegistry,
+      events: this.events,
+      config: config.education
+    });
     /** Mundo tal como lo generó la semilla; lo usan las reglas de progresión. */
     this.naturalTerrain = null;
 
@@ -93,6 +105,13 @@ export class Game {
     this.breakOverlay = new BreakOverlay(p, config.viewmodel.breakOverlay, config.world.BLOCK_SIZE);
     this.blockParticles = new BlockParticles(config.viewmodel.particles);
     this.levelUpEffect = new LevelUpEffect(config.levels ?? GameConfig.levels, config.camera, this.camera);
+    this.blueprintGhost = new BlueprintGhost({
+      p,
+      blockRegistry: this.blockRegistry,
+      blockSize: config.world.BLOCK_SIZE,
+      config: config.education
+    });
+    this.challengeCompleteEffect = new ChallengeCompleteEffect(config.education, config.camera, this.camera);
     this.ambientParticles = new AmbientParticles(config.viewmodel.ambientParticles, {
       world: this.world,
       blockSize: config.world.BLOCK_SIZE
@@ -124,20 +143,20 @@ export class Game {
     // Se mantienen los tres overlays existentes como entradas independientes
     // para preservar su contrato público; el manager coordina sus estados y
     // dibuja los efectos nuevos y la mano en el orden final.
+    // La guía se registra antes del resaltado para que el bloque apuntado siga
+    // siendo visible por encima del plano.
+    this.renderer.addOverlay(this.blueprintGhost);
     this.renderer.addOverlay(this.blockHighlight);
     this.renderer.addOverlay(this.breakOverlay);
     this.renderer.addOverlay(this.blockParticles);
     this.renderer.addOverlay(this.levelUpEffect);
     this.events.on(GameEventTypes.LEVEL_UP, ({ level }) => this.levelUpEffect.trigger(level));
+    this.events.on(GameEventTypes.BUILD_CHALLENGE_STARTED, ({ snapshot }) => this.blueprintGhost.update(snapshot));
+    this.events.on(GameEventTypes.BUILD_CHALLENGE_PROGRESS, ({ snapshot }) => this.blueprintGhost.update(snapshot));
+    this.events.on(GameEventTypes.BUILD_CHALLENGE_CANCELLED, () => this.blueprintGhost.clear());
+    this.events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, () => this.challengeCompleteEffect.trigger());
+    this.renderer.addOverlay(this.challengeCompleteEffect);
     this.renderer.addOverlay(this.visualEffectsManager);
-    this.buildChallenge = new BuildChallengeManager({
-      world: this.world,
-      player: this.player,
-      hotbar: this.hotbar,
-      blockRegistry: this.blockRegistry,
-      events: this.events
-    });
-    this.blueprintGuideOverlay = new BlueprintGuideOverlay(this.buildChallenge, config.world.BLOCK_SIZE);
     this.audio = new AudioManager(config.assets);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
@@ -153,9 +172,6 @@ export class Game {
         health: this.playerHealth,
         worldGenerator: this.worldGenerator,
         progression: this.progression,
-        // Andrea Cubas todavía no expuso el contrato del modo educativo en
-        // main. Si Game llega a tenerlo, el chat lo usa sin cambiar nada: si no
-        // está, el bot dice que no puede ver los planos.
         buildChallenge: this.buildChallenge ?? null
       })
     });
@@ -209,22 +225,16 @@ export class Game {
     }
 
     this.#updateViewmodel(deltaTime);
-    this.hud.update(
-      deltaTime,
-      this.#buildDebugStats(),
-      {
-        selectedIndex: this.hotbar.selectedIndex,
-        slots: this.hotbar.slots.map(({ blockType, count }) => ({ blockType, count }))
-      },
-      this.buildChallenge.activeChallenge()
-    );
+    this.hud.update(deltaTime, this.#buildDebugStats(), {
+      selectedIndex: this.hotbar.selectedIndex,
+      slots: this.hotbar.slots.map(({ blockType, count }) => ({ blockType, count }))
+    });
     this.input.endFrame();
   }
 
   /** Dibujado de un frame. Delegado por completo en el renderer. */
   render() {
     this.renderer.render(this.world, this.camera);
-    this.blueprintGuideOverlay?.draw(this.p, this.camera);
   }
 
   onResize(width, height) {
@@ -260,6 +270,7 @@ export class Game {
   }
 
   loadGame(slot) {
+    this.buildChallenge.cancel();
     const result = this.saveManager.load(slot, this.world, this.player);
     if (result.ok) {
       this.#syncCameraToPlayer();
@@ -331,7 +342,8 @@ export class Game {
   #updateViewmodel(deltaTime) {
     if (!this.state.isRunning) this.blockInteraction.updateBreaking(deltaTime, false);
     this.levelUpEffect.update(this.state.isRunning ? deltaTime : 0);
-    this.blueprintGuideOverlay.update(this.state.isRunning ? deltaTime : 0);
+    this.blueprintGhost.advance(this.state.isRunning ? deltaTime : 0);
+    this.challengeCompleteEffect.update(this.state.isRunning ? deltaTime : 0);
     const horizontalSpeed = this.state.isRunning
       ? Math.hypot(this.player.velocity.x, this.player.velocity.z)
       : 0;
