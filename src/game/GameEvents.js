@@ -14,8 +14,14 @@ export const GameEventTypes = Object.freeze({
   PROGRESS_SYNCED: 'progressSynced',
   /** No se pudo sincronizar: { reason, message }. El progreso sigue guardado localmente. */
   PROGRESS_SYNC_FAILED: 'progressSyncFailed',
-  /** Cambió el estado del desafío de construcción educativo: { challenge, reason }. */
-  BUILD_CHALLENGE_CHANGED: 'buildChallengeChanged'
+  /** Comenzó un plano: { snapshot }. */
+  BUILD_CHALLENGE_STARTED: 'buildChallengeStarted',
+  /** Cambió el progreso del plano: { snapshot }. */
+  BUILD_CHALLENGE_PROGRESS: 'buildChallengeProgress',
+  /** Se completó el plano: { snapshot }. */
+  BUILD_CHALLENGE_COMPLETED: 'buildChallengeCompleted',
+  /** Se canceló el plano activo: { snapshot }. */
+  BUILD_CHALLENGE_CANCELLED: 'buildChallengeCancelled'
 });
 
 /** Bus chico e intencional para desacoplar reglas, feedback visual y audio. */

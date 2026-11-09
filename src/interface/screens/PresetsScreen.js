@@ -4,7 +4,6 @@ import { IntentBus } from '../../ui/IntentBus.js';
 import { Icons, setIconLabel } from '../../ui/Icons.js';
 import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
-import { createBuildPresets } from '../../education/BuildPresets.js';
 import { SpeechService } from '../../audio/SpeechService.js';
 import { resolveBlockSyllables } from '../../blocks/BlockType.js';
 
@@ -25,7 +24,8 @@ export class PresetsScreen extends Screen {
    */
   constructor(screenManager = null, intentBus = null, options = {}) {
     super(ScreenType.PRESETS, screenManager, intentBus);
-    this.#presets = options.presets ?? createBuildPresets(options.blockRegistry);
+    // Los planos los entrega GameUiBridge desde game.buildChallenge (ver setPresets).
+    this.#presets = options.presets ?? [];
     this.#speechService = options.speechService ?? SpeechService.getInstance();
     this.#selectedPresetId = this.#presets[0]?.id ?? null;
 
@@ -34,6 +34,17 @@ export class PresetsScreen extends Screen {
 
   get presets() {
     return this.#presets;
+  }
+
+  /**
+   * @param {ReadonlyArray<Object>} presets planos ya preparados por BuildChallengeView
+   */
+  setPresets(presets) {
+    this.#presets = presets ?? [];
+    if (!this.#presets.some((preset) => preset.id === this.#selectedPresetId)) {
+      this.#selectedPresetId = this.#presets[0]?.id ?? null;
+    }
+    if (this.isVisible) this.renderPresets();
   }
 
   get selectedPreset() {
