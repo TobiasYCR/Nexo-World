@@ -91,8 +91,9 @@ test('el registro por defecto expone tres planos válidos', () => {
   const registry = createDefaultBlueprintRegistry(blockRegistry, GameConfig.education);
   const summaries = registry.summaries();
   assert.deepEqual(summaries.map(({ id }) => id), ['wood-house', 'stone-tower', 'river-bridge']);
-  assert.ok(registry.get('wood-house').blocks.length < registry.get('stone-tower').blocks.length);
-  assert.ok(registry.get('stone-tower').blocks.length < registry.get('river-bridge').blocks.length);
+  for (const blueprint of registry.values()) {
+    assert.ok(blueprint.blocks.length <= GameConfig.education.MAX_BLUEPRINT_BLOCKS, blueprint.id);
+  }
 });
 
 test('la ubicación rota el plano en las cuatro direcciones', () => {
@@ -318,4 +319,63 @@ test('el efecto de finalización respeta la configuración', () => {
 
   const disabled = new ChallengeCompleteEffect({ ...CONFIG.education, SHOW_COMPLETE_EFFECT: false });
   assert.equal(disabled.trigger(), false);
+});
+
+test('la casa tiene piso, columnas, paredes con puerta y ventanas, y techo a dos aguas', () => {
+  const blockRegistry = createDefaultBlockRegistry();
+  const house = createDefaultBlueprintRegistry(blockRegistry, GameConfig.education).get('wood-house');
+  const at = (x, y, z) => house.blocks.find((block) => block.x === x && block.y === y && block.z === z)?.blockId ?? BlockIds.AIR;
+  assert.deepEqual(house.size, { x: 7, y: 8, z: 6 });
+  assert.equal(at(3, 0, 3), BlockIds.COBBLESTONE, 'piso');
+  for (const [x, z] of [[0, 0], [6, 0], [0, 5], [6, 5]]) assert.equal(at(x, 1, z), BlockIds.LOG, 'columna');
+  assert.equal(at(3, 1, 0), BlockIds.AIR, 'puerta');
+  assert.equal(at(3, 2, 0), BlockIds.AIR, 'puerta');
+  assert.equal(at(1, 2, 0), BlockIds.GLASS, 'ventana');
+  assert.equal(at(3, 2, 3), BlockIds.AIR, 'adentro está vacío');
+  assert.equal(at(3, 7, 2), BlockIds.LOG, 'cumbrera');
+  assert.equal(at(0, 5, 2), BlockIds.AIR, 'el techo se angosta hacia arriba');
+});
+
+test('la casa pide los bloques por partes: un material por etapa, sin ir y venir', () => {
+  const blockRegistry = createDefaultBlockRegistry();
+  const world = new World(blockRegistry, GameConfig);
+  for (let x = 0; x < world.width; x += 1) for (let z = 0; z < world.depth; z += 1) world.setBlockId(x, 0, z, BlockIds.GRASS);
+  const size = GameConfig.world.BLOCK_SIZE;
+  const center = Math.floor(world.width / 2) * size + size / 2;
+  const player = new Player({ ...GameConfig.player, SPAWN: { x: center, y: size, z: center } });
+  const challenge = new BuildChallenge({
+    world,
+    player,
+    camera: new FirstPersonCamera(GameConfig.camera),
+    blueprintRegistry: createDefaultBlueprintRegistry(blockRegistry, GameConfig.education),
+    blockRegistry,
+    config: GameConfig.education
+  });
+  let snapshot = challenge.start('wood-house').snapshot;
+  const asked = [];
+  while (snapshot.nextBlock) {
+    const { position, blockId } = snapshot.nextBlock;
+    asked.push(blockId);
+    const supported = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+      .some(([dx, dy, dz]) => world.getBlockId(position.x + dx, position.y + dy, position.z + dz) !== BlockIds.AIR);
+    assert.ok(supported, `el bloque en ${position.x},${position.y},${position.z} se pide antes que su apoyo`);
+    world.setBlockId(position.x, position.y, position.z, blockId);
+    snapshot = challenge.refresh();
+  }
+  assert.equal(snapshot.completed, true);
+  const runs = asked.filter((blockId, index) => index === 0 || asked[index - 1] !== blockId);
+  assert.deepEqual(runs, [
+    BlockIds.COBBLESTONE, BlockIds.LOG, BlockIds.PLANKS, BlockIds.GLASS, BlockIds.PLANKS, BlockIds.LOG
+  ]);
+  const playerBlock = world.worldToBlock(player.position.x, player.position.y, player.position.z);
+  const cells = challenge.snapshot().blocks;
+  assert.ok(cells.every(({ x, z }) => x !== playerBlock.x || z !== playerBlock.z), 'no encierra al jugador');
+});
+
+test('una etapa inválida se rechaza', () => {
+  assert.throws(() => new Blueprint({
+    id: 'bad-stage',
+    name: 'Inválido',
+    blocks: [{ x: 0, y: 0, z: 0, blockId: BlockIds.PLANKS, stage: -1 }]
+  }, createDefaultBlockRegistry()), /etapa inválida/);
 });

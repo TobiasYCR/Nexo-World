@@ -93,6 +93,7 @@ export class BuildChallenge {
         actualBlockId,
         status,
         blockId: block.blockId,
+        stage: block.stage,
         name: this.blockRegistry.get(block.blockId).label
       };
     }).sort(BuildChallenge.#byBuildOrder);
@@ -157,7 +158,8 @@ export class BuildChallenge {
       x: anchor.x + block.x,
       y: anchor.y + block.y,
       z: anchor.z + block.z,
-      blockId: block.blockId
+      blockId: block.blockId,
+      stage: block.stage
     }));
     if (!blocks.every((block) => this.world.isInsideBounds(block.x, block.y, block.z))) {
       return { ok: false, reason: 'outOfBounds' };
@@ -204,8 +206,14 @@ export class BuildChallenge {
       this.player.position.z
     );
     const forward = VectorUtils.forwardFromYaw(quarterTurns * Math.PI / 2);
-    const centerX = playerBlock.x + Math.round(forward.x * this.config.PLACEMENT_DISTANCE_BLOCKS);
-    const centerZ = playerBlock.z + Math.round(forward.z * this.config.PLACEMENT_DISTANCE_BLOCKS);
+    // Un plano grande se aleja lo necesario para no quedar encima del jugador.
+    const depthAhead = Math.abs(Math.round(forward.x)) === 1 ? size.x : size.z;
+    const distance = Math.max(
+      this.config.PLACEMENT_DISTANCE_BLOCKS,
+      Math.floor(depthAhead / 2) + (this.config.SITE_PLAYER_CLEARANCE ?? 1) + 1
+    );
+    const centerX = playerBlock.x + Math.round(forward.x * distance);
+    const centerZ = playerBlock.z + Math.round(forward.z * distance);
 
     if (!this.world.isInsideBounds(centerX, 0, centerZ)) {
       return { ok: false, reason: 'outOfBounds', message: 'El plano no entra en el mundo.' };
@@ -231,7 +239,8 @@ export class BuildChallenge {
       x: anchor.x + block.x,
       y: anchor.y + block.y,
       z: anchor.z + block.z,
-      blockId: block.blockId
+      blockId: block.blockId,
+      stage: block.stage
     }));
 
     for (const block of placedBlocks) {
@@ -291,7 +300,19 @@ export class BuildChallenge {
     this.events?.emit(event, payload);
   }
 
+  /**
+   * Orden en que se pide cada bloque: por etapa del plano (piso, columnas,
+   * paredes, ventanas, techo), después de abajo hacia arriba y, dentro de una
+   * misma altura, agrupado por material. Así no se alterna de material a cada
+   * bloque.
+   */
   static #byBuildOrder(first, second) {
-    return first.y - second.y || first.z - second.z || first.x - second.x;
+    return (
+      first.stage - second.stage ||
+      first.y - second.y ||
+      first.expectedBlockId - second.expectedBlockId ||
+      first.z - second.z ||
+      first.x - second.x
+    );
   }
 }

@@ -15,9 +15,12 @@ export class Blueprint {
 
     const positions = new Set();
     const normalized = blocks.map((block, index) => {
-      const { x, y, z, blockId } = block ?? {};
+      const { x, y, z, blockId, stage = 0 } = block ?? {};
       if (![x, y, z].every(Number.isInteger) || y < 0) {
         throw new TypeError(`Blueprint "${id}": posición inválida en el bloque ${index}.`);
+      }
+      if (!Number.isInteger(stage) || stage < 0) {
+        throw new TypeError(`Blueprint "${id}": etapa inválida en el bloque ${index}.`);
       }
       const key = `${x},${y},${z}`;
       if (positions.has(key)) {
@@ -27,7 +30,7 @@ export class Blueprint {
       if (!Number.isInteger(blockId) || !blockRegistry?.has(blockId)) {
         throw new RangeError(`Blueprint "${id}": tipo de bloque inexistente en (${key}).`);
       }
-      return Object.freeze({ x, y, z, blockId });
+      return Object.freeze({ x, y, z, blockId, stage });
     });
 
     const bounds = Blueprint.#bounds(normalized);
@@ -56,7 +59,7 @@ export class Blueprint {
       for (let turn = 0; turn < quarterTurns; turn += 1) {
         [x, z] = [z, -x];
       }
-      return { x, y: block.y, z, blockId: block.blockId };
+      return { x, y: block.y, z, blockId: block.blockId, stage: block.stage };
     });
     const bounds = Blueprint.#bounds(rotated);
     return Object.freeze(rotated.map((block) => Object.freeze({
