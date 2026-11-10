@@ -17,16 +17,29 @@ export class AmbientParticles {
   }
 
   get activeCount() { return this.#active; }
+  /** Desde Configuración: apaga las partículas o cambia su cantidad (1 = normal). */
+  #userEnabled = true;
+  #densityMultiplier = 1;
+
+  setEnabled(enabled) {
+    this.#userEnabled = Boolean(enabled);
+    if (!this.#userEnabled) this.reset();
+  }
+
+  setDensityMultiplier(multiplier) {
+    if (Number.isFinite(multiplier) && multiplier >= 0) this.#densityMultiplier = multiplier;
+  }
+
   get poolSize() { return this.#pool.length; }
 
   update(deltaTime, { playerPosition = null, biome = null, enabled = true, paused = false } = {}) {
-    if (paused || !enabled || !this.config.ENABLED || !playerPosition || !biome) return;
+    if (paused || !enabled || !this.#userEnabled || !this.config.ENABLED || !playerPosition || !biome) return;
 
     const kind = AmbientParticles.#kindOf(biome);
     if (this.#kind !== null && this.#kind !== kind) this.reset();
     this.#kind = kind;
     const density = this.#density(kind);
-    const target = Math.round(this.config.MAX_PARTICLES * density);
+    const target = Math.min(this.#pool.length, Math.round(this.config.MAX_PARTICLES * density * this.#densityMultiplier));
     const safeDelta = Math.max(0, deltaTime);
     this.#spawnAccumulator += safeDelta * this.config.SPAWN_RATE;
 

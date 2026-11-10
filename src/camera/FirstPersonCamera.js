@@ -9,6 +9,10 @@ import { Vec3, VectorUtils } from '../utils/VectorUtils.js';
 export class FirstPersonCamera {
   constructor(config = GameConfig.camera) {
     this.config = config;
+    /** Campo de visión en grados; arranca en el de la configuración y se cambia desde Configuración. */
+    this.fov = config.FOV_DEGREES;
+    /** Multiplicador de la sensibilidad base (1 = la de GameConfig.camera.MOUSE_SENSITIVITY). */
+    this.sensitivityMultiplier = 1;
     this.position = new Vec3();
     this.yaw = 0;
     this.pitch = 0;
@@ -29,9 +33,10 @@ export class FirstPersonCamera {
 
   /** Rotación a partir del desplazamiento del mouse en píxeles. */
   rotate(deltaX, deltaY) {
-    this.yaw += deltaX * this.config.MOUSE_SENSITIVITY;
+    const sensitivity = this.config.MOUSE_SENSITIVITY * this.sensitivityMultiplier;
+    this.yaw += deltaX * sensitivity;
     this.pitch = MathUtils.clamp(
-      this.pitch - deltaY * this.config.MOUSE_SENSITIVITY,
+      this.pitch - deltaY * sensitivity,
       -this.config.MAX_PITCH,
       this.config.MAX_PITCH
     );
@@ -42,18 +47,21 @@ export class FirstPersonCamera {
     this.position.set(x, y, z);
   }
 
-  /** Ajusta el campo de visión (FOV) en grados en tiempo de ejecución. */
+  /**
+   * Ajusta el campo de visión (FOV) en grados. Se guarda en la cámara: la
+   * configuración del juego está congelada y asignarle valores tiraba error.
+   */
   setFov(degrees) {
-    if (typeof degrees === 'number' && degrees > 0) {
-      this.config.FOV_DEGREES = degrees;
-    }
+    if (Number.isFinite(degrees) && degrees > 0 && degrees < 180) this.fov = degrees;
   }
 
-  /** Ajusta la sensibilidad del mouse en tiempo de ejecución. */
-  setSensitivity(sensitivity) {
-    if (typeof sensitivity === 'number' && sensitivity > 0) {
-      this.config.MOUSE_SENSITIVITY = sensitivity;
-    }
+  /**
+   * Ajusta la sensibilidad como multiplicador de la base: 1 es la normal, 2 el
+   * doble. Antes el valor de la pantalla (1.0) reemplazaba a la base (0.0022)
+   * y el mouse giraba unas 450 veces más rápido.
+   */
+  setSensitivity(multiplier) {
+    if (Number.isFinite(multiplier) && multiplier > 0) this.sensitivityMultiplier = multiplier;
   }
 
   #updateBasis() {
@@ -73,7 +81,7 @@ export class FirstPersonCamera {
    */
   applyTo(p) {
     const near = this.config.NEAR_PLANE;
-    const top = near * Math.tan(MathUtils.degToRad(this.config.FOV_DEGREES) / 2);
+    const top = near * Math.tan(MathUtils.degToRad(this.fov) / 2);
     const right = top * (p.width / p.height);
     p.frustum(-right, right, top, -top, near, this.config.FAR_PLANE);
 

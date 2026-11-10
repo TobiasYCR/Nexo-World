@@ -57,6 +57,13 @@ export class BlockParticles {
     return this.#pool.filter((particle) => particle.active).map((particle) => ({ ...particle }));
   }
 
+  /** Cantidad de partículas desde Configuración (1 = normal). */
+  #densityMultiplier = 1;
+
+  setDensityMultiplier(multiplier) {
+    if (Number.isFinite(multiplier) && multiplier >= 0) this.#densityMultiplier = multiplier;
+  }
+
   /**
    * Genera entre MIN_COUNT y MAX_COUNT partículas en una posición, con el
    * color del bloque roto.
@@ -68,7 +75,7 @@ export class BlockParticles {
     const maxCount = options.maxCount ?? this.config.MAX_COUNT;
     const lifetime = options.lifetime ?? this.config.LIFETIME_SECONDS;
     const initialSpeed = options.initialSpeed ?? this.config.INITIAL_SPEED;
-    const count = minCount + Math.floor(Math.random() * (maxCount - minCount + 1));
+    const count = Math.round((minCount + Math.floor(Math.random() * (maxCount - minCount + 1))) * this.#densityMultiplier);
     const face = options.face ?? null;
     const mode = options.mode ?? 'break';
 

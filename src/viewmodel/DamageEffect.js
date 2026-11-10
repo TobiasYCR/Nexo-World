@@ -12,11 +12,19 @@ export class DamageEffect {
     this.config = config;
   }
 
+  #userEnabled = true;
+
+  /** Desde Configuración: sin el destello rojo al recibir daño. */
+  setEnabled(enabled) {
+    this.#userEnabled = Boolean(enabled);
+    if (!this.#userEnabled) this.reset();
+  }
+
   get opacity() { return this.#opacity; }
   get isActive() { return this.#remaining > 0 && this.#opacity > 0; }
 
   trigger(amount, maxHealth = 20) {
-    if (!this.config.ENABLED || !(amount > 0)) return;
+    if (!this.config.ENABLED || !this.#userEnabled || !(amount > 0)) return;
     const ratio = MathUtils.clamp01(amount / Math.max(1, maxHealth));
     const nextOpacity = Math.min(this.config.MAX_OPACITY, 0.12 + ratio * 0.75);
     this.#opacity = Math.max(this.#opacity, nextOpacity);
@@ -26,7 +34,7 @@ export class DamageEffect {
   }
 
   onDeath() {
-    if (!this.config.ENABLED) return;
+    if (!this.config.ENABLED || !this.#userEnabled) return;
     this.#death = true;
     this.#duration = this.config.DEATH_DURATION;
     this.#remaining = this.#duration;

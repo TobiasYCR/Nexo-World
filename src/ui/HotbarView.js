@@ -16,6 +16,8 @@ export class HotbarView {
   #currentBlock = null;
   #lastSlotStates = [];
   #labelFadeTimeout = null;
+  /** Desde Configuración: mostrar o no el nombre del bloque al cambiar de ranura. */
+  #showBlockName = true;
   #speechService = null;
 
   constructor(size = 9, options = {}) {
@@ -234,8 +236,13 @@ export class HotbarView {
     });
   }
 
+  setShowBlockName(show) {
+    this.#showBlockName = Boolean(show);
+    if (!this.#showBlockName) this.labelElement.hidden = true;
+  }
+
   #showFloatingLabel(name, block = null) {
-    if (!name) {
+    if (!name || !this.#showBlockName) {
       this.labelElement.hidden = true;
       this.nameSpan.textContent = '';
       this.syllablesSpan.innerHTML = '';
