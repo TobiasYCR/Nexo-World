@@ -105,9 +105,10 @@ test('remapear una tecla cambia la respuesta sin tocar el bot', () => {
   const original = new GameKnowledge().answer('game.controls.jump', 'como salto');
   const remapeado = new GameKnowledge({ config: configRemapeada }).answer('game.controls.jump', 'como salto');
 
-  assert.ok(contiene(original.text, 'Space'));
-  assert.ok(contiene(remapeado.text, 'J'), `esperaba la tecla nueva, salió: ${remapeado.text}`);
-  assert.ok(!contiene(remapeado.text, 'Space'), 'la tecla vieja no debería seguir apareciendo');
+  assert.ok(contiene(original.text, 'la tecla Espacio'), original.text);
+  assert.ok(contiene(remapeado.text, 'la tecla J'), `esperaba la tecla nueva, salió: ${remapeado.text}`);
+  assert.ok(!contiene(remapeado.text, 'Espacio'), 'la tecla vieja no debería seguir apareciendo');
+  assert.ok(!contiene(original.text, 'Space'), 'nunca el código interno de la tecla');
 });
 
 test('el daño por caída se calcula con la gravedad de la configuración', () => {
@@ -244,7 +245,7 @@ test('dayjs contesta la fecha y la distancia en días', () => {
 test('Fuse.js tolera la escritura real del jugador', () => {
   const bot = crearBot();
 
-  assert.ok(contiene(bot.ask('komo salto').text, 'Space'), 'tiene que aguantar un error de tipeo');
+  assert.ok(contiene(bot.ask('komo salto').text, 'Espacio'), 'tiene que aguantar un error de tipeo');
   assert.ok(contiene(bot.ask('holaaaa').text, GameConfig.chatbot.BOT_NAME), 'y las letras repetidas');
 });
 
@@ -614,20 +615,28 @@ test('el panel carga el bot al abrirse, una sola vez', async () => {
   assert.equal(cargas, 1, 'el bot se carga una sola vez por sesión');
 });
 
-test('el panel agrega la pregunta, la respuesta y su fuente', async () => {
+test('el panel agrega la pregunta y la respuesta; la fuente queda guardada pero no se muestra', async () => {
   const panel = new ChatPanel({ loadBot: async () => crearBot() });
   await panel.open();
   const previos = panel.messages.length;
 
   const respuesta = await panel.submit('¿cuál es la tecla para saltar?');
 
-  assert.ok(contiene(respuesta.text, 'Space'));
+  assert.ok(contiene(respuesta.text, 'Espacio'));
   assert.equal(panel.messages.length, previos + 2);
   assert.equal(panel.messages.at(-2).author, 'player');
   assert.equal(panel.messages.at(-1).source, 'GameConfig.input.KEY_BINDINGS');
 
   const nodos = panel.element.children.at(-2).children;
-  assert.ok(nodos.some((nodo) => contiene(nodo.textContent, 'fuente')), 'la fuente se muestra en pantalla');
+  assert.ok(!nodos.some((nodo) => contiene(nodo.textContent, 'fuente')), 'para quien juega, la fuente es ruido');
+});
+
+test('con SHOW_SOURCES el panel muestra la fuente debajo de la respuesta', async () => {
+  const panel = new ChatPanel({ loadBot: async () => crearBot(), config: { ...GameConfig.chatbot, SHOW_SOURCES: true } });
+  await panel.open();
+  await panel.submit('¿cuál es la tecla para saltar?');
+  const nodos = panel.element.children.at(-2).children;
+  assert.ok(nodos.some((nodo) => contiene(nodo.textContent, 'fuente')));
 });
 
 test('el panel ignora los mensajes vacíos y recorta el historial', async () => {

@@ -122,6 +122,26 @@ export class PlayerProgression {
   }
 
   /**
+   * Pasa a otro mundo (nuevo o cargado), posiblemente en otro modo. Lo
+   * pendiente del mundo anterior se envía antes de cambiar.
+   * @param {import('../world/NaturalTerrain.js').NaturalTerrain} terrain
+   * @param {string} worldKey
+   * @param {string} [mode]
+   */
+  switchWorld(terrain, worldKey, mode = this.mode) {
+    if (!this.rules.isValidMode(mode)) throw new RangeError(`Modo de juego desconocido: "${mode}".`);
+    // flush() captura modo y mundo al enviar: cambiarlos después no afecta ese envío.
+    if (this.#identity && this.#dirty) this.flush();
+    this.mode = mode;
+    this.#verifiedScore = null;
+    this.#rank = null;
+    this.#revision = 0;
+    this.#dirty = false;
+    this.#levelProgress.load(new ProgressState().stats());
+    return this.start(terrain, worldKey);
+  }
+
+  /**
    * Cambia la cuenta a cuyo nombre se guarda el progreso. La interfaz lo llama
    * al iniciar o cerrar sesión. Lo pendiente se envía antes con la cuenta anterior.
    * @param {{playerId:string, token:string, name?:string}|null} account null para volver a invitado

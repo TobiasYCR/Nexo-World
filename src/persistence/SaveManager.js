@@ -57,7 +57,7 @@ export class SaveManager {
    * @param {import('../player/Player.js').Player|null} [player]
    * @returns {{ok:boolean, reason:string|null, message:string|null, bytes?:number}}
    */
-  save(slotName, world, player = null) {
+  save(slotName, world, player = null, meta = null) {
     const { Reasons } = SaveResult;
     if (!SaveManager.#isValidSlot(slotName)) return SaveResult.fail(Reasons.INVALID_SLOT);
     if (!this.#storage) return SaveResult.fail(Reasons.STORAGE_UNAVAILABLE);
@@ -69,7 +69,10 @@ export class SaveManager {
         saveVersion: SaveManager.SAVE_VERSION,
         savedAt: Date.now(),
         world: this.worldSerializer.serialize(world),
-        player: player ? this.playerSerializer.serialize(player) : null
+        player: player ? this.playerSerializer.serialize(player) : null,
+        // Datos de la partida (nombre, semilla, modo, plano en curso). Opcional:
+        // los guardados anteriores no lo tienen y se siguen cargando.
+        meta: meta ?? null
       });
     } catch (error) {
       return SaveResult.fail(Reasons.WRITE_FAILED, String(error));
@@ -85,7 +88,7 @@ export class SaveManager {
 
   /**
    * Lee, valida y decodifica todo antes de modificar mundo o jugador.
-   * @returns {{ok:boolean, reason:string|null, message:string|null, savedAt?:number}}
+   * @returns {{ok:boolean, reason:string|null, message:string|null, savedAt?:number, meta?:object|null}}
    */
   load(slotName, world, player = null) {
     const { Reasons } = SaveResult;
@@ -125,7 +128,8 @@ export class SaveManager {
     // A partir de acá no hay validaciones pendientes: el estado se reemplaza completo.
     this.worldSerializer.apply(world, decodedWorld.chunks);
     if (decodedPlayer) this.playerSerializer.apply(player, decodedPlayer);
-    return SaveResult.ok({ savedAt: envelope.savedAt ?? null });
+    const meta = envelope.meta !== null && typeof envelope.meta === 'object' ? envelope.meta : null;
+    return SaveResult.ok({ savedAt: envelope.savedAt ?? null, meta });
   }
 
   exists(slotName) {

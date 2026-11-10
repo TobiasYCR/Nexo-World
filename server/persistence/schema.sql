@@ -70,3 +70,17 @@ CREATE TABLE IF NOT EXISTS sessions (
   KEY idx_sessions_expiry (expires_at),
   CONSTRAINT fk_sessions_account FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Códigos de recuperación de contraseña. Los genera un administrador con
+-- npm run admin (no hay servidor de correo). Se guarda el hash del código, que
+-- vence pronto y sirve una sola vez.
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash CHAR(64) NOT NULL,
+  account_id CHAR(36) NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  expires_at BIGINT UNSIGNED NOT NULL,
+  used_at BIGINT UNSIGNED NULL,
+  PRIMARY KEY (token_hash),
+  KEY idx_password_resets_account (account_id),
+  CONSTRAINT fk_password_resets_account FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

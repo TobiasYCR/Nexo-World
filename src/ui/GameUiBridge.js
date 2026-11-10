@@ -4,6 +4,7 @@ import { Toast } from './Toast.js';
 import { SpeechService } from '../audio/SpeechService.js';
 import { BuildChallengeView } from './BuildChallengeView.js';
 import { GameEventTypes } from '../game/GameEvents.js';
+import { ProgressionUiService } from '../progression/ProgressionUiService.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -24,6 +25,9 @@ export class GameUiBridge {
 
     this.#bindIntents();
     this.#bindAccount();
+    if (game?.progression && hud?.setProgressionService) {
+      hud.setProgressionService(new ProgressionUiService(game.progression, { config: game.config?.progression }));
+    }
   }
 
   /**
@@ -128,6 +132,13 @@ export class GameUiBridge {
       if (payload?.message) {
         this.toast.show(payload.message, payload.type || 'info', payload.duration || 3000);
       }
+    });
+
+    // Crear un mundo nuevo con nombre, semilla y modo. WorldCreationScreen
+    // emite después SAVE_GAME con el nombre, así que queda guardado.
+    this.intentBus.on(IntentBus.Events.CREATE_WORLD, (payload) => {
+      const result = this.game?.newWorld?.({ name: payload?.name, seed: payload?.seed, mode: payload?.gameMode });
+      if (result && !result.ok) this.toast.error(result.message ?? 'No se pudo crear el mundo.');
     });
 
     // Configuración modificada

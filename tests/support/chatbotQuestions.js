@@ -20,9 +20,9 @@
 export const preguntas = [
   // --- Controles: la respuesta está en GameConfig.input.KEY_BINDINGS --------
   { id: 1, texto: '¿cómo me muevo?', categoria: 'controles', esperado: 'responde', contiene: 'W' },
-  { id: 2, texto: '¿cuál es la tecla para saltar?', categoria: 'controles', esperado: 'responde', contiene: 'Space' },
+  { id: 2, texto: '¿cuál es la tecla para saltar?', categoria: 'controles', esperado: 'responde', contiene: 'Espacio' },
   { id: 3, texto: '¿cómo corro más rápido?', categoria: 'controles', esperado: 'responde', contiene: 'Shift' },
-  { id: 4, texto: '¿cómo pauso el juego?', categoria: 'controles', esperado: 'responde', contiene: 'Escape' },
+  { id: 4, texto: '¿cómo pauso el juego?', categoria: 'controles', esperado: 'responde', contiene: 'Esc' },
   { id: 5, texto: '¿para qué sirve F3?', categoria: 'controles', esperado: 'responde', contiene: 'depuración' },
   { id: 6, texto: '¿cómo elijo un bloque de la hotbar?', categoria: 'controles', esperado: 'responde', contiene: '1' },
 
@@ -104,7 +104,7 @@ export const preguntas = [
 
   // --- Tolerancia a la escritura real del jugador -----------------------
   { id: 48, texto: 'holaaaa', categoria: 'charla', esperado: 'responde' },
-  { id: 49, texto: 'komo salto', categoria: 'controles', esperado: 'responde', contiene: 'Space' },
+  { id: 49, texto: 'komo salto', categoria: 'controles', esperado: 'responde', contiene: 'Espacio' },
   { id: 50, texto: 'que dureza tiene la piedra partida', categoria: 'bloques', esperado: 'responde' },
 
   // --- Fuera de alcance, otra vez: el bot no es un buscador -------------

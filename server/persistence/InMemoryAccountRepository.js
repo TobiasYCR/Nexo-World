@@ -7,6 +7,7 @@ import { AccountRepository } from './AccountRepository.js';
 export class InMemoryAccountRepository extends AccountRepository {
   #accounts = new Map();
   #sessions = new Map();
+  #resets = new Map();
 
   async init() {}
 
@@ -65,6 +66,24 @@ export class InMemoryAccountRepository extends AccountRepository {
     for (const [tokenHash, session] of this.#sessions) {
       if (session.expiresAt <= now) this.#sessions.delete(tokenHash);
     }
+  }
+
+  async createPasswordReset(reset) {
+    for (const [tokenHash, existing] of this.#resets) {
+      if (existing.accountId === reset.accountId && existing.usedAt === null) this.#resets.delete(tokenHash);
+    }
+    this.#resets.set(reset.tokenHash, { ...reset, usedAt: null });
+  }
+
+  async findPasswordReset(tokenHash) {
+    return this.#copy(this.#resets.get(tokenHash));
+  }
+
+  async markPasswordResetUsed(tokenHash, usedAt) {
+    const reset = this.#resets.get(tokenHash);
+    if (!reset || reset.usedAt !== null) return false;
+    reset.usedAt = usedAt;
+    return true;
   }
 
   #copy(value) {

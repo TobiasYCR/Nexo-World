@@ -13,6 +13,8 @@ import { GameEventTypes } from '../game/GameEvents.js';
  */
 export class BlockInteraction {
   #listeners = new Map();
+  /** Creativo: colocar no gasta bloques y romper no los junta. */
+  #infiniteBlocks = false;
 
   constructor(world, player, hotbar, raycast, config = GameConfig, events = null) {
     this.world = world;
@@ -23,6 +25,15 @@ export class BlockInteraction {
     this.events = events;
     this.breaker = new BlockBreaker(world, config);
     this.hit = null;
+  }
+
+  /** @param {boolean} infinite */
+  setInfiniteBlocks(infinite) {
+    this.#infiniteBlocks = Boolean(infinite);
+  }
+
+  get infiniteBlocks() {
+    return this.#infiniteBlocks;
   }
 
   get breakingBlock() {
@@ -73,7 +84,9 @@ export class BlockInteraction {
     if (!type.breakable) return false;
 
     this.world.setBlockId(hit.block.x, hit.block.y, hit.block.z, BlockIds.AIR);
-    for (const dropId of type.drops) this.hotbar.add(this.world.blockRegistry.get(dropId));
+    if (!this.#infiniteBlocks) {
+      for (const dropId of type.drops) this.hotbar.add(this.world.blockRegistry.get(dropId));
+    }
     this.#emit(GameEventTypes.BLOCK_BROKEN, {
       position: { x: hit.block.x, y: hit.block.y, z: hit.block.z },
       blockType: type
@@ -100,7 +113,7 @@ export class BlockInteraction {
 
     // El tipo se captura antes de consumir: removeAt lo despeja si era el último.
     const blockType = slot.blockType;
-    if (this.hotbar.removeAt(this.hotbar.selectedIndex, 1) === 0) return false;
+    if (!this.#infiniteBlocks && this.hotbar.removeAt(this.hotbar.selectedIndex, 1) === 0) return false;
     this.world.setBlockId(adjacent.x, adjacent.y, adjacent.z, blockType.id);
     this.#emit(GameEventTypes.BLOCK_PLACED, {
       position: { x: adjacent.x, y: adjacent.y, z: adjacent.z },

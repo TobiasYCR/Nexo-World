@@ -287,6 +287,41 @@ export class AuthService {
     }
   }
 
+  /**
+   * Pone una contraseña nueva con el código que da un administrador
+   * (npm run admin -- reset-password). No inicia sesión: después hay que
+   * ingresar con la contraseña nueva.
+   * @param {{identifier:string, code:string, newPassword:string, confirmPassword:string}} params
+   */
+  async resetPassword({ identifier, code, newPassword, confirmPassword }) {
+    if (this.#isBusy) {
+      return { ok: false, code: 'REQUEST_IN_FLIGHT', message: 'Procesando solicitud...' };
+    }
+    if (!identifier || !identifier.trim()) {
+      return { ok: false, code: 'INVALID_INPUT', message: 'Ingresá tu usuario o correo.' };
+    }
+    if (!code || !code.trim()) {
+      return { ok: false, code: 'INVALID_INPUT', message: 'Ingresá el código que te dio el administrador.' };
+    }
+    const passwordCheck = this.validatePassword(newPassword);
+    if (!passwordCheck.ok) return passwordCheck;
+    if (newPassword !== confirmPassword) {
+      return { ok: false, code: 'PASSWORD_MISMATCH', message: 'Las contraseñas no coinciden.' };
+    }
+    if (typeof this.#client.resetPassword !== 'function') {
+      return { ok: false, code: 'NOT_SUPPORTED', message: 'Este modo de cuentas no permite restablecer contraseñas.' };
+    }
+
+    this.#isBusy = true;
+    try {
+      const response = await this.#client.resetPassword({ identifier: identifier.trim(), code: code.trim(), newPassword });
+      if (!response.ok) return { ok: false, code: response.code, message: response.message };
+      return { ok: true, message: response.data?.message || 'Contraseña actualizada. Ya podés iniciar sesión.' };
+    } finally {
+      this.#isBusy = false;
+    }
+  }
+
   // ==========================================================================
   // Validaciones
   // ==========================================================================

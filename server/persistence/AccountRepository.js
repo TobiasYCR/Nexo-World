@@ -52,5 +52,20 @@ export class AccountRepository {
   /** Borra las sesiones vencidas. */
   async deleteExpiredSessions(now) { throw new Error('no implementado'); }
 
+  /**
+   * Guarda un código de recuperación y descarta los anteriores sin usar de la cuenta.
+   * @param {{tokenHash:string, accountId:string, createdAt:number, expiresAt:number}} reset
+   */
+  async createPasswordReset(reset) { throw new Error('no implementado'); }
+
+  /** @returns {Promise<{tokenHash, accountId, createdAt, expiresAt, usedAt:number|null}|null>} */
+  async findPasswordReset(tokenHash) { throw new Error('no implementado'); }
+
+  /**
+   * Marca el código como usado. Solo funciona una vez.
+   * @returns {Promise<boolean>} true si estaba sin usar
+   */
+  async markPasswordResetUsed(tokenHash, usedAt) { throw new Error('no implementado'); }
+
   async close() {}
 }

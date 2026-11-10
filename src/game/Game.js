@@ -3,6 +3,9 @@ import { GameState, GameStates } from './GameState.js';
 import { createDefaultBlockRegistry } from '../blocks/BlockRegistry.js';
 import { World } from '../world/World.js';
 import { WorldGenerator } from '../world/WorldGenerator.js';
+import { WorldSeed } from '../world/WorldSeed.js';
+import { SpawnFinder } from '../world/SpawnFinder.js';
+import { GameModeRules } from './GameModeRules.js';
 import { Player } from '../player/Player.js';
 import { PlayerController } from '../player/PlayerController.js';
 import { PlayerPhysics } from '../player/PlayerPhysics.js';
@@ -47,6 +50,8 @@ import { ChallengeCompleteEffect } from '../viewmodel/ChallengeCompleteEffect.js
  */
 export class Game {
   #viewmodelState = { isBreaking: false, horizontalSpeed: 0, isOnGround: false };
+  /** Nombre (si se guardó), semilla y modo de la partida en curso. */
+  #session = { name: null, seed: 0, mode: 'survival' };
 
   /**
    * @param {object} p instancia de p5
@@ -64,6 +69,7 @@ export class Game {
     this.world = new World(this.blockRegistry, config);
     this.worldGenerator = new WorldGenerator(config, { seed: options.seed });
 
+    this.spawnFinder = new SpawnFinder(Math.ceil(config.player.HEIGHT / config.world.BLOCK_SIZE));
     this.collisionSystem = new CollisionSystem(this.world);
     this.raycast = new Raycast(this.world);
 
@@ -74,6 +80,7 @@ export class Game {
     this.input = new InputManager(config.input);
     this.playerController = new PlayerController(this.player, this.camera, this.input);
     this.playerPhysics = new PlayerPhysics(this.player, this.collisionSystem, config.player);
+    this.playerPhysics.flyCeilingY = (this.world.height + config.player.FLY_CEILING_ABOVE_WORLD) * this.world.blockSize;
     this.events = new GameEvents();
     this.playerHealth = new PlayerHealth(config.survival, this.events);
     this.progression = options.progression ?? new PlayerProgression({
@@ -176,6 +183,13 @@ export class Game {
       })
     });
     this.saveManager = new SaveManager();
+    this.#session = { name: null, seed: this.worldGenerator.seed, mode: this.progression.mode };
+    this.#applyModeRules(this.progression.mode);
+  }
+
+  /** Nombre, semilla y modo de la partida en curso. */
+  get session() {
+    return { ...this.#session };
   }
 
   /** Prepara mundo, jugador e interfaz. La carga de texturas no bloquea el arranque. */
@@ -184,6 +198,7 @@ export class Game {
     this.naturalTerrain = NaturalTerrain.fromGeneration(this.world, this.worldGenerator);
     this.#placePlayerOnSurface();
     this.#fillStarterHotbar();
+    this.#session.seed = this.worldGenerator.seed;
 
     this.hud.mount();
     this.input.attach(canvasElement);
@@ -215,7 +230,7 @@ export class Game {
       if (!wasOnGround && this.player.isOnGround) {
         const impactSpeed = this.#landingImpactSpeed(previousVelocityY, deltaTime);
         this.events.emit(GameEventTypes.PLAYER_LANDED, { position: this.player.position, impactSpeed });
-        this.playerHealth.applyFallImpact(impactSpeed);
+        if (this.modeRules.takesDamage) this.playerHealth.applyFallImpact(impactSpeed);
       }
       this.#handleVoidFall();
       if (this.playerHealth.isDead) this.#respawn();
@@ -266,18 +281,94 @@ export class Game {
 
   saveGame(slot) {
     this.progression.flush();
-    return this.saveManager.save(slot, this.world, this.player);
+    const result = this.saveManager.save(slot, this.world, this.player, {
+      name: slot,
+      seed: this.#session.seed,
+      mode: this.#session.mode,
+      challenge: this.buildChallenge.exportState()
+    });
+    if (result.ok) this.#session.name = slot;
+    return result;
   }
 
+  /**
+   * Crea un mundo nuevo y reemplaza el actual (lo que no se guardó se pierde).
+   * @param {{name?:string, seed?:string|number, mode?:string}} [options]
+   *   seed acepta un número o cualquier texto; vacío elige una al azar
+   * @returns {{ok:boolean, reason?:string, message?:string, seed?:number, mode?:string}}
+   */
+  newWorld({ name = null, seed, mode = this.#session.mode } = {}) {
+    if (!GameModeRules.isValid(mode, this.config.modes)) {
+      return { ok: false, reason: 'invalidMode', message: `Modo de juego desconocido: "${mode}".` };
+    }
+    const numericSeed = WorldSeed.from(seed);
+
+    this.buildChallenge.cancel();
+    this.world.clear();
+    this.worldGenerator = new WorldGenerator(this.config, { seed: numericSeed });
+    this.worldGenerator.generate(this.world);
+    this.naturalTerrain = NaturalTerrain.fromGeneration(this.world, this.worldGenerator);
+
+    this.#session = { name: typeof name === 'string' && name.trim() !== '' ? name.trim() : null, seed: numericSeed, mode };
+    this.#applyModeRules(mode);
+    this.#resetPlayerState();
+    this.hotbar.clear();
+    this.#fillStarterHotbar();
+    this.progression.switchWorld(this.naturalTerrain, WorldKey.fromGenerator(this.worldGenerator, this.world), mode);
+    return { ok: true, seed: numericSeed, mode };
+  }
+
+  /**
+   * Carga una partida. Si se guardó con otra semilla o en otro modo, también
+   * se cambian el generador, las reglas del modo y la progresión; los
+   * guardados anteriores a este formato conservan la semilla y el modo actuales.
+   */
   loadGame(slot) {
     this.buildChallenge.cancel();
     const result = this.saveManager.load(slot, this.world, this.player);
-    if (result.ok) {
-      this.#syncCameraToPlayer();
-      this.levelUpEffect.reset();
-      this.visualEffectsManager.reset();
+    if (!result.ok) return result;
+
+    const meta = result.meta ?? {};
+    const seed = Number.isInteger(meta.seed) ? meta.seed >>> 0 : this.#session.seed;
+    const mode = GameModeRules.isValid(meta.mode, this.config.modes) ? meta.mode : this.#session.mode;
+    if (seed !== this.#session.seed || mode !== this.#session.mode) {
+      if (seed !== this.worldGenerator.seed) {
+        // El terreno natural sale de la semilla, no de lo guardado: se genera aparte.
+        this.worldGenerator = new WorldGenerator(this.config, { seed });
+        const pristine = new World(this.blockRegistry, this.config);
+        this.worldGenerator.generate(pristine);
+        this.naturalTerrain = NaturalTerrain.fromGeneration(pristine, this.worldGenerator);
+      }
+      this.#applyModeRules(mode);
+      this.progression.switchWorld(this.naturalTerrain, WorldKey.fromGenerator(this.worldGenerator, this.world), mode);
     }
+    this.#session = { name: slot, seed, mode };
+
+    this.playerHealth.reset();
+    this.#syncCameraToPlayer();
+    this.levelUpEffect.reset();
+    this.visualEffectsManager.reset();
+    if (meta.challenge) this.buildChallenge.restoreState(meta.challenge);
     return result;
+  }
+
+  /** Aplica las reglas del modo a los sistemas que cambian con él. */
+  #applyModeRules(mode) {
+    this.modeRules = new GameModeRules(mode, this.config.modes);
+    this.blockInteraction.setInfiniteBlocks(this.modeRules.infiniteBlocks);
+    this.blockInteraction.breaker.setFixedDuration(this.modeRules.breakSeconds);
+    this.player.canFly = this.modeRules.canFly;
+    if (!this.modeRules.canFly) this.player.isFlying = false;
+  }
+
+  /** Jugador en el suelo, con vida completa y sin efectos pendientes. */
+  #resetPlayerState() {
+    this.player.isFlying = false;
+    this.#placePlayerOnSurface();
+    this.playerHealth.reset();
+    this.blockInteraction.updateBreaking(0, false);
+    this.levelUpEffect.reset();
+    this.visualEffectsManager.reset();
   }
 
   /** Bloque bajo la mira, expuesto para que el renderer dibuje el resaltado. */
@@ -314,7 +405,7 @@ export class Game {
   /** Caer al vacío mata una sola vez; la reaparición la resuelve #respawn en el mismo frame. */
   #handleVoidFall() {
     if (this.player.position.y >= this.config.player.VOID_Y) return;
-    if (!this.playerHealth.kill(DamageCauses.VOID)) this.#placePlayerOnSurface();
+    if (!this.modeRules.takesDamage || !this.playerHealth.kill(DamageCauses.VOID)) this.#placePlayerOnSurface();
   }
 
   #respawn() {
@@ -379,14 +470,12 @@ export class Game {
   /** Ubica al jugador sobre el terreno generado, en el centro del mundo. */
   #placePlayerOnSurface() {
     const blockSize = this.world.blockSize;
-    const centerX = Math.floor(this.world.width / 2);
-    const centerZ = Math.floor(this.world.depth / 2);
-    const surfaceY = this.world.getSurfaceHeight(centerX, centerZ);
+    const spot = this.spawnFinder.find(this.world, Math.floor(this.world.width / 2), Math.floor(this.world.depth / 2));
 
     this.player.teleportTo(
-      centerX * blockSize + blockSize / 2,
-      surfaceY * blockSize,
-      centerZ * blockSize + blockSize / 2
+      spot.x * blockSize + blockSize / 2,
+      spot.y * blockSize,
+      spot.z * blockSize + blockSize / 2
     );
     this.#syncCameraToPlayer();
   }
@@ -395,10 +484,12 @@ export class Game {
    * Hotbar inicial con los bloques marcados como starter en el registro. Deja
    * ranuras libres para lo que el jugador recolecta (minerales, arenisca...).
    */
+  /** En creativo la hotbar se llena con todos los bloques que se pueden colocar. */
   #fillStarterHotbar() {
-    for (const blockType of this.blockRegistry.starterTypes()) {
-      this.hotbar.add(blockType, this.config.inventory.STARTER_BLOCK_COUNT);
-    }
+    const types = this.modeRules?.infiniteBlocks
+      ? this.blockRegistry.placeableTypes().filter((type) => type.isBreakable).slice(0, this.hotbar.size)
+      : this.blockRegistry.starterTypes();
+    for (const blockType of types) this.hotbar.add(blockType, this.config.inventory.STARTER_BLOCK_COUNT);
   }
 
   /** Pointer Lock necesita un gesto del usuario; se engancha al clic en el canvas. */
@@ -411,17 +502,35 @@ export class Game {
 
   #buildDebugStats() {
     const block = this.world.worldToBlock(this.player.position.x, this.player.position.y, this.player.position.z);
+    const renderStats = this.renderer.stats;
+    const target = this.blockInteraction.targetedBlock;
+    // El bioma se calcula solo con el panel abierto: no hace falta en cada frame.
+    const showingDebug = this.hud?.debugOverlay?.isVisible ?? false;
     return {
       fps: this.p.frameRate(),
       position: this.player.position,
-      renderedBlocks: this.renderer.stats.renderedBlocks,
+      renderedBlocks: renderStats.renderedBlocks,
+      visibleFaces: renderStats.visibleFaces,
+      drawCalls: renderStats.drawCalls,
+      culledChunks: renderStats.culledChunks,
+      meshRebuilds: renderStats.meshRebuilds,
+      renderDistance: renderStats.renderDistance,
       state: this.state.current,
       chunk: {
         x: MathUtils.floorDiv(block.x, this.world.chunkSizeX),
         z: MathUtils.floorDiv(block.z, this.world.chunkSizeZ)
       },
       onGround: this.player.isOnGround,
-      targetedBlock: this.blockInteraction.targetedBlock
+      isFlying: this.player.isFlying,
+      cameraLookDirection: this.camera.forward,
+      targetedBlock: target
+        ? { ...target, blockType: this.world.getBlockType(target.x, target.y, target.z) }
+        : null,
+      selectedSlot: this.hotbar.selectedIndex,
+      seed: this.#session.seed,
+      mode: this.modeRules.label,
+      biome: showingDebug ? this.worldGenerator.getBiomeAt(block.x, block.z)?.label ?? null : null,
+      dimensions: { width: this.world.width, height: this.world.height, depth: this.world.depth }
     };
   }
 }

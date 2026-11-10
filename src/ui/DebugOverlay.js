@@ -92,10 +92,12 @@ export class DebugOverlay {
       targetedInfo = `${bName} en [${tb.x ?? tb.blockX}, ${tb.y ?? tb.blockY}, ${tb.z ?? tb.blockZ}]`;
     }
 
-    const worldWidth = GameConfig.world?.WIDTH ?? 64;
-    const worldHeight = GameConfig.world?.HEIGHT ?? 32;
-    const worldDepth = GameConfig.world?.DEPTH ?? 64;
-    const renderDist = GameConfig.rendering?.RENDER_DISTANCE_CHUNKS ?? 8;
+    const dimensions = stats.dimensions ?? {
+      width: GameConfig.world.WORLD_WIDTH,
+      height: GameConfig.world.WORLD_HEIGHT,
+      depth: GameConfig.world.WORLD_DEPTH
+    };
+    const renderDist = stats.renderDistance ?? GameConfig.rendering.RENDER_DISTANCE;
 
     const lines = [
       '=== NEXO WORLD — F3 (Diagnóstico) ===',
@@ -107,12 +109,12 @@ export class DebugOverlay {
       `[Jugador]`,
       `  XYZ: ${MathUtils.roundTo(x, 2)} / ${MathUtils.roundTo(y, 2)} / ${MathUtils.roundTo(z, 2)}`,
       `  Bloque: [${blockX}, ${blockY}, ${blockZ}] | Chunk: [${chunkX}, ${chunkZ}]`,
-      `  En suelo: ${stats.onGround ? 'Sí' : 'No'} | Mirando hacia: ${facing}`,
+      `  En suelo: ${stats.onGround ? 'Sí' : 'No'}${stats.isFlying ? ' (volando)' : ''} | Mirando hacia: ${facing}`,
       `  Bloque apuntado: ${targetedInfo}`,
       `  Slot seleccionado: ${typeof stats.selectedSlot === 'number' ? stats.selectedSlot + 1 : 'N/D'}`,
       `[Mundo]`,
-      `  Semilla: ${stats.seed ?? 'N/D'} | Bioma: ${stats.biome ?? 'Plains'}`,
-      `  Dimensiones: ${worldWidth}x${worldHeight}x${worldDepth} | Distancia render: ${renderDist} chunks`,
+      `  Semilla: ${stats.seed ?? 'N/D'} | Bioma: ${stats.biome ?? 'N/D'} | Modo: ${stats.mode ?? 'N/D'}`,
+      `  Dimensiones: ${dimensions.width}x${dimensions.height}x${dimensions.depth} | Distancia render: ${renderDist} bloques`,
       `  Estado juego: ${stats.state ?? 'running'}`
     ];
 

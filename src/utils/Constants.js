@@ -32,7 +32,9 @@ export const InputActions = Object.freeze({
   JUMP: 'jump',
   SPRINT: 'sprint',
   PAUSE: 'pause',
-  TOGGLE_DEBUG: 'toggleDebug'
+  TOGGLE_DEBUG: 'toggleDebug',
+  /** Solo en modo creativo: activa o desactiva el vuelo. */
+  TOGGLE_FLY: 'toggleFly'
 });
 
 /** Botones de mouse normalizados (coinciden con MouseEvent.button). */

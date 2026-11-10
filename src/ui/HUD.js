@@ -27,6 +27,7 @@ import { ProfileScreen } from '../interface/screens/ProfileScreen.js';
 import { PasswordRecoveryScreen } from '../interface/screens/PasswordRecoveryScreen.js';
 import { PresetsScreen } from '../interface/screens/PresetsScreen.js';
 import { BuildChallengeHUD } from './BuildChallengeHUD.js';
+import { LeaderboardScreen } from '../interface/screens/LeaderboardScreen.js';
 
 /**
  * Capa de interfaz de usuario de Nexo World.
@@ -104,6 +105,7 @@ export class HUD {
     this.registerScreen = new RegisterScreen(this.authService, this.screenManager, this.intentBus);
     this.profileScreen = new ProfileScreen(this.authService, this.backend2Service, this.screenManager, this.intentBus);
     this.passwordRecoveryScreen = new PasswordRecoveryScreen(this.authService, this.screenManager, this.intentBus);
+    this.leaderboardScreen = new LeaderboardScreen(this.backend2Service, this.screenManager, this.intentBus);
 
     this.screenManager.register(ScreenType.MENU, this.menuScreen);
     this.screenManager.register(ScreenType.WORLD_SELECTION, this.worldSelectionScreen);
@@ -117,6 +119,17 @@ export class HUD {
     this.screenManager.register(ScreenType.REGISTER, this.registerScreen);
     this.screenManager.register(ScreenType.PROFILE, this.profileScreen);
     this.screenManager.register(ScreenType.PASSWORD_RECOVERY, this.passwordRecoveryScreen);
+    this.screenManager.register(ScreenType.LEADERBOARD, this.leaderboardScreen);
+  }
+
+  /**
+   * Conecta la progresión del juego con el perfil y la clasificación.
+   * @param {import('../progression/ProgressionUiService.js').ProgressionUiService} service
+   */
+  setProgressionService(service) {
+    this.backend2Service = service;
+    this.profileScreen.setBackend2Service(service);
+    this.leaderboardScreen.setService(service);
   }
 
   #setupIntentListeners() {

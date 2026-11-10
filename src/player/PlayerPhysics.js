@@ -10,6 +10,8 @@ export class PlayerPhysics {
     this.player = player;
     this.collisionSystem = collisionSystem;
     this.config = config;
+    /** Altura máxima de los pies al volar, en unidades de mundo (Game la fija según el mundo). */
+    this.flyCeilingY = Infinity;
   }
 
   update(deltaTime) {
@@ -20,7 +22,13 @@ export class PlayerPhysics {
     player.velocity.x = player.moveIntent.x * player.currentSpeed;
     player.velocity.z = player.moveIntent.z * player.currentSpeed;
 
-    if (wasOnGround && player.wantsToJump) {
+    if (player.isFlying) {
+      // En vuelo no hay gravedad: la altura la decide el jugador, hasta el techo de vuelo.
+      player.velocity.y = player.flyVertical * config.FLY_SPEED;
+      if (player.velocity.y > 0 && player.position.y + player.velocity.y * deltaTime > this.flyCeilingY) {
+        player.velocity.y = Math.max(0, (this.flyCeilingY - player.position.y) / deltaTime);
+      }
+    } else if (wasOnGround && player.wantsToJump) {
       player.velocity.y = config.JUMP_FORCE;
     } else {
       player.velocity.y += config.GRAVITY * deltaTime;

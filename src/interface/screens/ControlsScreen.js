@@ -92,7 +92,8 @@ export class ControlsScreen extends Screen {
           { label: 'Izquierda', key: keyFor(InputActions.MOVE_LEFT, 'A') },
           { label: 'Derecha', key: keyFor(InputActions.MOVE_RIGHT, 'D') },
           { label: 'Saltar', key: keyFor(InputActions.JUMP, 'Espacio') },
-          { label: 'Correr', key: keyFor(InputActions.SPRINT, 'Shift') }
+          { label: 'Correr', key: keyFor(InputActions.SPRINT, 'Shift') },
+          { label: 'Volar (creativo): Espacio sube, Shift baja', key: keyFor(InputActions.TOGGLE_FLY, 'F') }
         ]
       },
       {

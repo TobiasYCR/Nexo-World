@@ -15,5 +15,6 @@ export const ScreenType = Object.freeze({
   REGISTER: 'register',
   PROFILE: 'profile',
   PASSWORD_RECOVERY: 'password-recovery',
-  PRESETS: 'presets'
+  PRESETS: 'presets',
+  LEADERBOARD: 'leaderboard'
 });

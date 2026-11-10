@@ -119,6 +119,53 @@ export class BuildChallenge {
     };
   }
 
+  /**
+   * Lo mínimo para retomar el desafío al cargar la partida: qué plano, dónde y
+   * girado cómo. El progreso no se guarda: sale de los bloques del mundo.
+   * @returns {{blueprintId:string, rotation:number, anchor:{x:number,y:number,z:number}}|null}
+   */
+  exportState() {
+    if (!this.#active) return null;
+    return { blueprintId: this.#active.blueprint.id, rotation: this.#active.rotation, anchor: { ...this.#active.anchor } };
+  }
+
+  /**
+   * Retoma un desafío guardado con exportState(). Si el plano ya no existe o no
+   * entra en el mundo, no se retoma y la partida carga igual.
+   * @returns {{ok:boolean, reason?:string, snapshot?:object}}
+   */
+  restoreState(state) {
+    if (this.#active) this.#cancelActive(true);
+    if (!state) return { ok: false, reason: 'noState' };
+    let blueprint;
+    try {
+      blueprint = this.blueprintRegistry.get(state.blueprintId);
+    } catch {
+      return { ok: false, reason: 'unknownBlueprint' };
+    }
+    const { anchor, rotation } = state;
+    if (!Number.isInteger(rotation) || !anchor || ![anchor.x, anchor.y, anchor.z].every(Number.isInteger)) {
+      return { ok: false, reason: 'invalidState' };
+    }
+    const blocks = blueprint.rotated(rotation).map((block) => ({
+      x: anchor.x + block.x,
+      y: anchor.y + block.y,
+      z: anchor.z + block.z,
+      blockId: block.blockId
+    }));
+    if (!blocks.every((block) => this.world.isInsideBounds(block.x, block.y, block.z))) {
+      return { ok: false, reason: 'outOfBounds' };
+    }
+
+    this.#active = { blueprint, rotation, anchor: { ...anchor }, blocks, completedEmitted: false };
+    const snapshot = this.snapshot();
+    // Un plano que ya estaba terminado no vuelve a festejarse al cargar.
+    this.#active.completedEmitted = snapshot.completed;
+    this.#emit(GameEventTypes.BUILD_CHALLENGE_STARTED, { snapshot });
+    this.#emit(GameEventTypes.BUILD_CHALLENGE_PROGRESS, { snapshot });
+    return { ok: true, snapshot };
+  }
+
   /** Mismo dato que snapshot(); es el nombre que consulta el asistente de consultas. */
   activeChallenge() {
     return this.snapshot();

@@ -49,7 +49,11 @@ export class Renderer {
   get stats() {
     return {
       renderedBlocks: this.blockRenderer.renderedBlocks,
-      renderDistance: this.blockRenderer.renderDistance
+      renderDistance: this.blockRenderer.renderDistance,
+      visibleFaces: this.blockRenderer.visibleFaces,
+      drawCalls: this.blockRenderer.drawCalls,
+      culledChunks: this.blockRenderer.culledChunks,
+      meshRebuilds: this.blockRenderer.meshRebuilds
     };
   }
 }

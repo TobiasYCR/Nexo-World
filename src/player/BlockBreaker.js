@@ -6,6 +6,8 @@ import { GameConfig } from '../game/GameConfig.js';
  */
 export class BlockBreaker {
   #elapsed = 0;
+  /** Segundos fijos para romper cualquier bloque (creativo), o null para usar la dureza. */
+  #fixedSeconds = null;
 
   constructor(world, config = GameConfig) {
     this.world = world;
@@ -29,9 +31,14 @@ export class BlockBreaker {
     this.#elapsed += deltaTime;
     const secondsPerHardness = this.config.blocks.BREAK_TIME_PER_HARDNESS
       ?? this.config.viewmodel.breakOverlay.BREAK_DURATION_PER_HARDNESS;
-    const duration = Math.max(Number.EPSILON, type.hardness * secondsPerHardness);
+    const duration = Math.max(Number.EPSILON, this.#fixedSeconds ?? type.hardness * secondsPerHardness);
     this.breakProgress = Math.min(1, this.#elapsed / duration);
     return this.breakProgress >= 1;
+  }
+
+  /** @param {number|null} seconds */
+  setFixedDuration(seconds) {
+    this.#fixedSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : null;
   }
 
   reset() {
