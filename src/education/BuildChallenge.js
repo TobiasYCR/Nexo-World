@@ -59,8 +59,7 @@ export class BuildChallenge {
       blueprint,
       rotation: placement.rotation,
       anchor: placement.anchor,
-      blocks: placement.blocks,
-      completedEmitted: false
+      blocks: placement.blocks
     };
 
     const snapshot = this.snapshot();
@@ -165,10 +164,13 @@ export class BuildChallenge {
       return { ok: false, reason: 'outOfBounds' };
     }
 
-    this.#active = { blueprint, rotation, anchor: { ...anchor }, blocks, completedEmitted: false };
+    this.#active = { blueprint, rotation, anchor: { ...anchor }, blocks };
     const snapshot = this.snapshot();
-    // Un plano que ya estaba terminado no vuelve a festejarse al cargar.
-    this.#active.completedEmitted = snapshot.completed;
+    // Un plano que ya estaba terminado no se retoma ni se vuelve a festejar.
+    if (snapshot.completed) {
+      this.#active = null;
+      return { ok: false, reason: 'alreadyCompleted' };
+    }
     this.#emit(GameEventTypes.BUILD_CHALLENGE_STARTED, { snapshot });
     this.#emit(GameEventTypes.BUILD_CHALLENGE_PROGRESS, { snapshot });
     return { ok: true, snapshot };
@@ -283,12 +285,18 @@ export class BuildChallenge {
     if (typeof unsubscribe === 'function') this.#unsubscribers.push(unsubscribe);
   }
 
+  /**
+   * Al completarse, el desafío termina: se festeja una vez y se descarta. Si
+   * después se rompe un bloque de la construcción, no vuelve a aparecer.
+   */
   #emitProgress(snapshot) {
     this.#emit(GameEventTypes.BUILD_CHALLENGE_PROGRESS, { snapshot });
-    if (snapshot.completed && !this.#active.completedEmitted) {
-      this.#active.completedEmitted = true;
-      this.#emit(GameEventTypes.BUILD_CHALLENGE_COMPLETED, { snapshot });
-    }
+    if (snapshot.completed) this.#finish(snapshot);
+  }
+
+  #finish(snapshot) {
+    this.#active = null;
+    this.#emit(GameEventTypes.BUILD_CHALLENGE_COMPLETED, { snapshot });
   }
 
   #cancelActive(emit, snapshot = this.snapshot()) {

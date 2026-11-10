@@ -333,8 +333,10 @@ test('BuildChallengeView presenta planos y progreso con sílabas, y el chat lee 
   shown = view.challenge(challenge.snapshot());
   assert.equal(shown.placedBlocks, 1);
 
-  while (!challenge.snapshot().completed) placeNext(world, events, registry, challenge.snapshot());
-  shown = view.challenge(challenge.snapshot());
+  let finished = null;
+  events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, ({ snapshot }) => { finished = snapshot; });
+  while (challenge.snapshot()) placeNext(world, events, registry, challenge.snapshot());
+  shown = view.challenge(finished);
   assert.equal(shown.completed, true);
   assert.equal(shown.progress, 1);
   assert.equal(shown.nextBlock, null);

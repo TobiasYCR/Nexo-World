@@ -186,6 +186,7 @@ export class GameUiBridge {
     events.on(GameEventTypes.BUILD_CHALLENGE_PROGRESS, refresh);
     events.on(GameEventTypes.BUILD_CHALLENGE_CANCELLED, () => this.hud?.buildChallengeHud?.update?.(null));
     events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, ({ snapshot }) => {
+      this.hud?.buildChallengeHud?.update?.(null);
       this.toast.success(`¡Completaste el plano "${snapshot.name}"!`, 4500);
       SpeechService.getInstance().speakWord(`¡Felicitaciones! Construiste ${snapshot.name}`);
     });

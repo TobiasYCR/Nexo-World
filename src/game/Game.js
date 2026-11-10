@@ -163,7 +163,10 @@ export class Game {
     this.events.on(GameEventTypes.BUILD_CHALLENGE_STARTED, ({ snapshot }) => this.blueprintGhost.update(snapshot));
     this.events.on(GameEventTypes.BUILD_CHALLENGE_PROGRESS, ({ snapshot }) => this.blueprintGhost.update(snapshot));
     this.events.on(GameEventTypes.BUILD_CHALLENGE_CANCELLED, () => this.blueprintGhost.clear());
-    this.events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, () => this.challengeCompleteEffect.trigger());
+    this.events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, () => {
+      this.blueprintGhost.clear();
+      this.challengeCompleteEffect.trigger();
+    });
     this.renderer.addOverlay(this.challengeCompleteEffect);
     this.renderer.addOverlay(this.visualEffectsManager);
     this.audio = new AudioManager(config.assets);

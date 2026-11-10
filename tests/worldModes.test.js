@@ -203,3 +203,18 @@ test('si el mundo no se puede crear, el puente devuelve el motivo y no se guarda
   assert.equal(request.result.ok, false);
   assert.equal(new SaveManager().exists('Roto'), false);
 });
+
+test('un plano terminado no se retoma al cargar la partida', async () => {
+  const game = await startGame();
+  game.newWorld({ name: 'Hecha', seed: 'hecha', mode: 'creative' });
+  let snapshot = game.buildChallenge.start('stone-tower').snapshot;
+  const state = game.buildChallenge.exportState();
+  while (snapshot?.nextBlock) {
+    const { position, blockId } = snapshot.nextBlock;
+    game.world.setBlockId(position.x, position.y, position.z, blockId);
+    snapshot = game.buildChallenge.refresh();
+  }
+  assert.equal(game.buildChallenge.isActive, false);
+  assert.equal(game.buildChallenge.restoreState(state).reason, 'alreadyCompleted');
+  assert.equal(game.buildChallenge.isActive, false);
+});
