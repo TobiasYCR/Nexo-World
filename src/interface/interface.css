@@ -160,6 +160,90 @@
   background: rgba(15, 23, 42, 0.6);
 }
 
+/* Ayuda de teclado: acciones y teclas alineadas en tarjetas legibles. */
+.nx-controls-dialog {
+  max-width: 720px;
+}
+
+.nx-controls-dialog .nx-modal-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 12px;
+}
+
+.nx-controls-group {
+  min-width: 0;
+  padding: 16px;
+  background: var(--nx-bg-card);
+  border: 1px solid var(--nx-border-dialog);
+  border-radius: var(--nx-radius-md);
+}
+
+.nx-controls-group:first-child {
+  grid-row: span 2;
+}
+
+.nx-controls-group-title {
+  margin: 0 0 12px;
+  color: var(--nx-emerald-light);
+  font-size: 0.84rem;
+  letter-spacing: 0.08em;
+}
+
+.nx-controls-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.nx-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 39px;
+  padding: 8px 0;
+  border-top: 1px solid var(--nx-border-subtle);
+}
+
+.nx-control-name {
+  min-width: 0;
+  color: var(--nx-text-primary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.nx-control-hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--nx-text-secondary);
+  font-size: 0.7rem;
+}
+
+.nx-key-badge {
+  flex-shrink: 0;
+  padding: 5px 8px;
+  color: #e2e8f0;
+  background: var(--nx-bg-input);
+  border: 1px solid #475569;
+  border-bottom-width: 2px;
+  border-radius: var(--nx-radius-sm);
+  font-family: var(--nx-font-family);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .nx-controls-dialog .nx-modal-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nx-controls-group:first-child {
+    grid-row: auto;
+  }
+}
+
 /* ==========================================================================
    Botones (.nx-btn, .nx-btn-*)
    ========================================================================== */

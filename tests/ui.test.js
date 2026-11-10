@@ -184,6 +184,9 @@ test('ControlsScreen lista todas las categorías y teclas configuradas', () => {
   controls.mount(dom.uiRoot);
 
   assert.equal(controls.id, ScreenType.CONTROLS);
+  assert.equal(controls.element.querySelectorAll('.nx-controls-group').length, 3);
+  assert.equal(controls.element.querySelectorAll('.nx-key-badge').length, 15);
+  assert.equal(controls.element.querySelector('.nx-control-hint').textContent, 'Espacio sube · Shift baja');
 });
 
 test('KeyboardInput ignora teclas cuando el foco está en un input de texto', () => {

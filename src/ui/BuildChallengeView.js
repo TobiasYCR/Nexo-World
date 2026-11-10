@@ -1,6 +1,10 @@
 import { resolveBlockSyllables } from '../blocks/BlockType.js';
 
-const DIFFICULTY_LABELS = Object.freeze(['Fácil', 'Media', 'Difícil']);
+const DIFFICULTY_BY_BLUEPRINT = Object.freeze({
+  'stone-tower': 'Fácil',
+  'river-bridge': 'Media',
+  'wood-house': 'Difícil'
+});
 
 /**
  * Traduce los datos del desafío de construcción (BuildChallenge, en
@@ -20,18 +24,18 @@ export class BuildChallengeView {
   }
 
   /**
-   * Planos para la pantalla de selección. La dificultad sale del orden del
-   * registro, que lista los planos de menor a mayor.
+   * Planos para la pantalla de selección. La dificultad pertenece al plano,
+   * independientemente del orden en que se registre.
    * @param {ReadonlyArray<{id:string, name:string, description:string, materials:Array<{blockId:number, required:number}>}>} summaries
    */
   presets(summaries) {
-    return Object.freeze((summaries ?? []).map((summary, index) => {
+    return Object.freeze((summaries ?? []).map((summary) => {
       const materials = summary.materials.map((material) => this.#material(material.blockId, { count: material.required }));
       return Object.freeze({
         id: summary.id,
         name: summary.name,
         description: summary.description,
-        difficulty: DIFFICULTY_LABELS[Math.min(index, DIFFICULTY_LABELS.length - 1)],
+        difficulty: DIFFICULTY_BY_BLUEPRINT[summary.id] ?? 'Media',
         totalBlocks: materials.reduce((total, material) => total + material.count, 0),
         materials: Object.freeze(materials)
       });

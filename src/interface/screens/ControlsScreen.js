@@ -47,6 +47,13 @@ export class ControlsScreen extends Screen {
         label.className = 'nx-control-name';
         label.textContent = item.label;
 
+        if (item.hint) {
+          const hint = document.createElement('small');
+          hint.className = 'nx-control-hint';
+          hint.textContent = item.hint;
+          label.appendChild(hint);
+        }
+
         const badge = document.createElement('kbd');
         badge.className = 'nx-key-badge';
         badge.textContent = item.key;
@@ -93,7 +100,7 @@ export class ControlsScreen extends Screen {
           { label: 'Derecha', key: keyFor(InputActions.MOVE_RIGHT, 'D') },
           { label: 'Saltar', key: keyFor(InputActions.JUMP, 'Espacio') },
           { label: 'Correr', key: keyFor(InputActions.SPRINT, 'Shift') },
-          { label: 'Volar (creativo): Espacio sube, Shift baja', key: keyFor(InputActions.TOGGLE_FLY, 'F') }
+          { label: 'Activar vuelo (creativo)', hint: 'Espacio sube · Shift baja', key: keyFor(InputActions.TOGGLE_FLY, 'F') }
         ]
       },
       {

@@ -307,8 +307,16 @@ test('BuildChallengeView presenta planos y progreso con sílabas, y el chat lee 
   const presets = view.presets(challenge.blueprints());
   assert.ok(presets.length >= 3);
   const house = presets.find((preset) => preset.name === 'Casa de madera');
+  const tower = presets.find((preset) => preset.id === 'stone-tower');
+  const bridge = presets.find((preset) => preset.id === 'river-bridge');
   assert.ok(house);
-  assert.equal(house.difficulty, 'Fácil');
+  assert.equal(tower.difficulty, 'Fácil');
+  assert.equal(bridge.difficulty, 'Media');
+  assert.equal(house.difficulty, 'Difícil');
+  assert.deepEqual(
+    view.presets([...challenge.blueprints()].reverse()).map(({ id, difficulty }) => [id, difficulty]),
+    [['river-bridge', 'Media'], ['stone-tower', 'Fácil'], ['wood-house', 'Difícil']]
+  );
   assert.equal(house.totalBlocks, house.materials.reduce((total, material) => total + material.count, 0));
   assert.ok(house.materials.every((material) => material.syllableText.includes('-') || material.syllables.length === 1));
 
