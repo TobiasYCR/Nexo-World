@@ -9,13 +9,13 @@ Estado al cierre del proyecto (noviembre de 2026).
 | Movimiento | Colisiones por eje, gravedad, salto, escalones y suelo estable |
 | Interacción | Raycast, resaltado, rotura progresiva por dureza, colocación sin encerrarse, hotbar que junta lo roto |
 | Presentación | Texturas, hotbar e inventario, menú, pausa, configuración (todos los ajustes aplicados), controles, sonidos de romper, colocar y pasos, mano y efectos |
-| Mundo | Generación por semilla con biomas, cuevas, minerales y árboles; aparición fuera de los árboles |
+| Mundo | 96 × 96 por semilla, chato, con biomas, cuevas chicas, minerales y árboles; zona de construcción llana en el centro |
 | Modos | Supervivencia (vida, daño por caída) y creativo (bloques sin límite, sin daño, vuelo con F) |
 | Partidas | Crear con nombre, semilla y modo; guardar y cargar con el plano en curso |
 | Render | Mallas por chunk con solo las caras visibles y caras iguales unidas (greedy meshing), armadas por cercanía y liberadas al alejarse; recorte por distancia y por cono de visión |
 | Cuentas | Registro, sesión, perfil y recuperación por código de administrador, en MySQL |
 | Puntuaciones | Puntos, niveles y clasificación por modo, validados por el servidor |
-| Modo educativo | Planos con guía 3D, sílabas y lectura en voz alta |
+| Modo educativo | Planos ubicados en llano y armados por etapas, con guía 3D, sílabas y lectura en voz alta |
 | Asistente | Chat de consultas sobre el juego y la partida, sin servicios externos |
 | Diagnóstico | Panel F3 con rendimiento, jugador y mundo |
 

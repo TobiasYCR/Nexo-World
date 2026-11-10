@@ -7,9 +7,9 @@ import { InputActions, BlockIds } from '../utils/Constants.js';
 export const GameConfig = Object.freeze({
   world: Object.freeze({
     BLOCK_SIZE: 20,
-    WORLD_WIDTH: 32,
+    WORLD_WIDTH: 96,
     WORLD_HEIGHT: 24,
-    WORLD_DEPTH: 32,
+    WORLD_DEPTH: 96,
     /** Altura base del terreno generado, en bloques. */
     BASE_TERRAIN_HEIGHT: 6,
     /** Amplitud vertical del ruido, en bloques. */
@@ -95,13 +95,29 @@ export const GameConfig = Object.freeze({
     /** Frecuencia del ruido que reparte biomas: más chico, regiones más grandes. */
     BIOME_SCALE: 0.02,
     /** Ancho de la franja de mezcla de alturas entre biomas, en unidades de puntaje de bioma. */
-    HEIGHT_SMOOTHING: 0.14,
+    HEIGHT_SMOOTHING: 0.2,
     /** Capas inferiores con roca madre: y=0 siempre, las siguientes con probabilidad decreciente. */
     BEDROCK_LAYERS: 3,
     /** Bloques libres que se garantizan sobre el punto más alto del terreno. */
     SKY_MARGIN: 4,
     /** Frecuencia del ruido que agrupa árboles y abre claros en los bosques. */
     TREE_CLUSTER_SCALE: 0.08
+  }),
+
+  /**
+   * Zona de construcción: cuadrado llano de llanura en el centro del mundo,
+   * donde aparece el jugador. Sin árboles ni cuevas.
+   */
+  buildZone: Object.freeze({
+    ENABLED: true,
+    /** Medio lado del cuadrado llano, en bloques (12 → 25 × 25). */
+    RADIUS: 12,
+    /** Ancho de la franja que pasa del llano al terreno natural, en bloques. */
+    BLEND: 10,
+    /** Bloques alrededor de la zona sin árboles, para que las copas no la invadan. */
+    TREE_CLEARANCE: 3,
+    /** Bloques alrededor de la zona sin cuevas. */
+    CAVE_CLEARANCE: 2
   }),
 
   /** Peso relativo de cada bioma en el reparto del mapa (0 lo desactiva). */
@@ -117,13 +133,13 @@ export const GameConfig = Object.freeze({
     /** Frecuencia del ruido de túneles: más alto, túneles más cortos y retorcidos. */
     FREQUENCY: 0.07,
     /** Grosor de los túneles (distancia a 0.5 en ambos campos de ruido). */
-    TUNNEL_RADIUS: 0.035,
+    TUNNEL_RADIUS: 0.018,
     /** Frecuencia del ruido de cavernas: más chico, salas más grandes. */
     CAVERN_FREQUENCY: 0.045,
     /** Umbral de cavernas: más alto, menos y más chicas. */
-    THRESHOLD: 0.7,
+    THRESHOLD: 0.8,
     /** Estira las cuevas en horizontal (>1 = más chatas). */
-    VERTICAL_SQUASH: 1.7,
+    VERTICAL_SQUASH: 2.2,
     /** Altura (y) mínima y máxima donde puede haber cuevas. */
     MIN_DEPTH: 4,
     MAX_DEPTH: 36,
@@ -131,7 +147,7 @@ export const GameConfig = Object.freeze({
     SURFACE_MARGIN: 4,
     /** Entradas: zonas donde la cueva puede abrirse al exterior. */
     ENTRANCE_SCALE: 0.06,
-    ENTRANCE_THRESHOLD: 0.78
+    ENTRANCE_THRESHOLD: 0.86
   }),
 
   /**

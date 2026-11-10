@@ -77,7 +77,7 @@ test('el frustum culling descarta los chunks que quedan detrás de la cámara', 
   const world = generatedWorld();
   const p = createP5Stub();
   const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
-  renderer.setRenderDistance(200);
+  renderer.setRenderDistance((world.width + world.depth) * SIZE);
   const camera = new FirstPersonCamera(GameConfig.camera);
   // En el borde +Z del mundo, mirando hacia afuera (+Z): todo el mundo queda atrás.
   camera.yaw = Math.PI;
@@ -89,7 +89,10 @@ test('el frustum culling descarta los chunks que quedan detrás de la cámara', 
   assert.equal(renderer.culledChunks, world.chunkCount);
 
   renderer.setFrustumCulling(false);
-  renderer.render(world, camera.position, camera);
+  // Las mallas se arman de a MESH_BUILDS_PER_FRAME por frame.
+  for (let frame = 0; frame * GameConfig.rendering.MESH_BUILDS_PER_FRAME <= world.chunkCount; frame += 1) {
+    renderer.render(world, camera.position, camera);
+  }
   assert.equal(renderer.drawnChunks, world.chunkCount);
 });
 

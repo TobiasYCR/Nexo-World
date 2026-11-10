@@ -47,6 +47,9 @@ export class BiomeRegistry {
 
 /**
  * Valores pensados para un mundo de 48 bloques de alto (REFERENCE_HEIGHT).
+ * El terreno es deliberadamente chato: llanuras, bosques y desiertos casi sin
+ * desnivel y montañas que son colinas, para que se pueda construir en casi
+ * cualquier parte.
  * Los pesos salen de GameConfig.biomes para poder ajustar la proporción de
  * cada bioma sin tocar estas definiciones.
  */
@@ -61,7 +64,7 @@ function defaultBiomeDefinitions(weights) {
       subsurfaceBlock: BlockIds.DIRT,
       subsurfaceDepth: 3,
       terrainHeight: 20,
-      terrainVariation: 2,
+      terrainVariation: 1,
       noiseScale: 0.03,
       treeDensity: 0.012,
       treeSpacing: 6
@@ -74,8 +77,8 @@ function defaultBiomeDefinitions(weights) {
       surfaceBlock: BlockIds.GRASS,
       subsurfaceBlock: BlockIds.DIRT,
       subsurfaceDepth: 4,
-      terrainHeight: 22,
-      terrainVariation: 4,
+      terrainHeight: 21,
+      terrainVariation: 2,
       noiseScale: 0.045,
       treeDensity: 0.16,
       treeClustering: 0.6,
@@ -91,7 +94,7 @@ function defaultBiomeDefinitions(weights) {
       subsurfaceBlock: BlockIds.SANDSTONE,
       subsurfaceDepth: 5,
       terrainHeight: 19,
-      terrainVariation: 3,
+      terrainVariation: 2,
       noiseScale: 0.06,
       treeDensity: 0
     },
@@ -104,7 +107,7 @@ function defaultBiomeDefinitions(weights) {
       subsurfaceBlock: BlockIds.DIRT,
       subsurfaceDepth: 2,
       terrainHeight: 23,
-      terrainVariation: 19,
+      terrainVariation: 9,
       terrainShape: TerrainShapes.RIDGED,
       noiseScale: 0.035,
       treeDensity: 0.006,

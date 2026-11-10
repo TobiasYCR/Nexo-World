@@ -120,8 +120,8 @@ test('Leaderboard: orden descendente, desempate por fecha y luego por id', () =>
 
 test('WorldKey identifica el mundo generado y rechaza claves mal formadas', () => {
   const { generator, world, worldKey } = defaultWorld();
-  assert.equal(worldKey, `s${GameConfig.world.SEED}-v2-32x24x32`);
-  assert.deepEqual(WorldKey.parse(worldKey), { seed: GameConfig.world.SEED, version: 2, width: 32, height: 24, depth: 32 });
+  assert.equal(worldKey, `s${GameConfig.world.SEED}-v3-96x24x96`);
+  assert.deepEqual(WorldKey.parse(worldKey), { seed: GameConfig.world.SEED, version: 3, width: 96, height: 24, depth: 96 });
   assert.equal(WorldKey.fromGenerator(generator, world), worldKey);
   for (const invalid of ['', 'otro', 's1-v2-32x24', 's99999999999-v2-1x1x1', `${'s1'.repeat(40)}-v2-1x1x1`, null]) {
     assert.equal(WorldKey.parse(invalid), null, String(invalid));
