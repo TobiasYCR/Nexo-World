@@ -181,6 +181,7 @@ export class Game {
         health: this.playerHealth,
         worldGenerator: this.worldGenerator,
         progression: this.progression,
+        session: this.session,
         buildChallenge: this.buildChallenge ?? null
       })
     });

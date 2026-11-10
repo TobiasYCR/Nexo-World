@@ -32,9 +32,27 @@ export class AccountKnowledge {
       'game.meta.account': () => this.#register(),
       'game.accounts.register': () => this.#register(),
       'game.accounts.guest': () => this.#guestProgress(),
-      'game.accounts.session': () => this.#session()
+      'game.accounts.session': () => this.#session(),
+      'game.accounts.recover': () => this.#recover()
     };
     return handlers[intentId]?.() ?? null;
+  }
+
+  #recover() {
+    if ((this.#config.users ?? {}).AUTH_SOURCE === 'local') {
+      return ChatResponse.known(
+        'Con las cuentas guardadas en este navegador no hay forma de recuperarla: tendrías que crear una cuenta nueva.',
+        ChatResponse.Topics.ACCOUNTS,
+        'GameConfig.users.AUTH_SOURCE'
+      );
+    }
+    return ChatResponse.known(
+      'Pedile a un administrador del juego un código de recuperación. Después andá a INICIAR SESIÓN → ' +
+        '¿Olvidaste tu contraseña?, y escribí tu usuario o correo, el código y tu contraseña nueva. ' +
+        'El código sirve una sola vez y vence a los 30 minutos.',
+      ChatResponse.Topics.ACCOUNTS,
+      'server/accounts/AccountService.resetPassword'
+    );
   }
 
   #register() {

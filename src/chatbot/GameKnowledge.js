@@ -29,7 +29,8 @@ export class GameKnowledge {
     [InputActions.JUMP]: 'saltar',
     [InputActions.SPRINT]: 'correr',
     [InputActions.PAUSE]: 'pausar',
-    [InputActions.TOGGLE_DEBUG]: 'mostrar el panel de depuración'
+    [InputActions.TOGGLE_DEBUG]: 'mostrar el panel de depuración',
+    [InputActions.TOGGLE_FLY]: 'volar'
   });
 
   /**
@@ -168,6 +169,10 @@ export class GameKnowledge {
       'game.status.health': () => this.#statusHealth(),
       'game.status.hotbar': () => this.#statusHotbar(),
       'game.status.world': () => this.#statusWorld(),
+      'game.controls.fly': () => this.#controlsFly(),
+      'game.world.create': () => this.#worldCreate(),
+      'game.world.modes': () => this.#worldModes(),
+      'game.status.mode': () => this.#statusMode(),
       'game.about': () => this.#about()
     };
 
@@ -763,6 +768,55 @@ export class GameKnowledge {
       ChatResponse.Topics.STATUS,
       'Hotbar (estado de la partida)'
     );
+  }
+
+  #controlsFly() {
+    const fly = this.#keysByAction[InputActions.TOGGLE_FLY]?.join(' o ') ?? 'F';
+    const up = this.#keysByAction[InputActions.JUMP]?.join(' o ') ?? 'Espacio';
+    const down = this.#keysByAction[InputActions.SPRINT]?.join(' o ') ?? 'Shift';
+    const modes = this.#config.modes ?? {};
+    const flyingModes = Object.values(modes).filter((mode) => mode.CAN_FLY).map((mode) => mode.LABEL.toLowerCase());
+    return ChatResponse.known(
+      `Se puede volar solo en modo ${flyingModes.join(' o ') || 'creativo'}. Apretá la tecla ${fly} para empezar ` +
+        `o dejar de volar. Volando, ${up} sube y ${down} baja.`,
+      ChatResponse.Topics.CONTROLS,
+      'GameConfig.input.KEY_BINDINGS + GameConfig.modes'
+    );
+  }
+
+  #worldCreate() {
+    return ChatResponse.known(
+      'Desde el menú: JUGAR → CREAR NUEVO MUNDO. Le ponés un nombre, una semilla (un número o una palabra; ' +
+        'la misma semilla da siempre el mismo mundo, y si la dejás vacía se elige al azar) y el modo: ' +
+        'supervivencia o creativo. El mundo queda guardado con ese nombre.',
+      ChatResponse.Topics.WORLD,
+      'WorldCreationScreen + Game.newWorld'
+    );
+  }
+
+  #worldModes() {
+    const modes = Object.values(this.#config.modes ?? {});
+    if (modes.length === 0) return null;
+    const describe = (mode) => {
+      const rules = [
+        mode.INFINITE_BLOCKS ? 'bloques sin límite' : 'los bloques se gastan y se juntan al romper',
+        mode.TAKES_DAMAGE ? 'te podés lastimar' : 'sin daño',
+        mode.CAN_FLY ? 'podés volar' : 'no se vuela'
+      ];
+      return `${mode.LABEL}: ${rules.join(', ')}`;
+    };
+    return ChatResponse.known(
+      `Hay ${modes.length} modos. ${modes.map(describe).join('. ')}. El modo se elige al crear el mundo.`,
+      ChatResponse.Topics.WORLD,
+      'GameConfig.modes'
+    );
+  }
+
+  #statusMode() {
+    const session = this.#context?.session;
+    if (!session) return this.#noGame();
+    const label = this.#config.modes?.[session.mode]?.LABEL ?? session.mode;
+    return ChatResponse.known(`Estás jugando en modo ${label.toLowerCase()}.`, ChatResponse.Topics.STATUS, 'game.session.mode');
   }
 
   #statusWorld() {
