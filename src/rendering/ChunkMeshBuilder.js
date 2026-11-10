@@ -23,7 +23,7 @@ const FACES = Object.freeze([
  * Geometría de un chunk agrupada por tipo de bloque.
  *
  * Una cara se genera solo si el vecino en esa dirección no es opaco (aire,
- * vidrio, hojas o fuera del mundo). Así, las paredes de las cuevas y el
+ * vidrio, hojas o fuera del mundo) ni es del mismo tipo. Así, las paredes de las cuevas y el
  * interior del terreno no generan nada, y cada tipo de bloque del chunk se
  * dibuja con una sola llamada en lugar de un box() por bloque.
  *
@@ -59,17 +59,17 @@ export class ChunkMeshBuilder {
     let faceCount = 0;
 
     /** Vecino dentro del chunk sin pasar por World; en los bordes, World resuelve el chunk vecino. */
-    const neighborOpaque = (localX, y, localZ) => {
+    const neighborId = (localX, y, localZ) => {
       if (localX >= 0 && localX < chunk.sizeX && localZ >= 0 && localZ < chunk.sizeZ) {
-        return registry.isOpaque(chunk.getBlock(localX, y, localZ));
+        return chunk.getBlock(localX, y, localZ);
       }
-      return registry.isOpaque(world.getBlockId(originX + localX, y, originZ + localZ));
+      return world.getBlockId(originX + localX, y, originZ + localZ);
     };
 
     chunk.forEachSolid((localX, y, localZ, blockId) => {
       let blockHasFace = false;
       for (const face of FACES) {
-        if (neighborOpaque(localX + face.dx, y + face.dy, localZ + face.dz)) continue;
+        if (ChunkMeshBuilder.#hidesFace(registry, blockId, neighborId(localX + face.dx, y + face.dy, localZ + face.dz))) continue;
         let group = groups.get(blockId);
         if (!group) {
           group = { positions: [], normals: [], uvs: [], indices: [], faceCount: 0 };
@@ -132,7 +132,7 @@ export class ChunkMeshBuilder {
               neighbor[0] = cell[0] + face.dx;
               neighbor[1] = cell[1] + face.dy;
               neighbor[2] = cell[2] + face.dz;
-              if (!registry.isOpaque(blockAt(neighbor))) {
+              if (!ChunkMeshBuilder.#hidesFace(registry, id, blockAt(neighbor))) {
                 value = id;
                 visible[(cell[1] * chunk.sizeZ + cell[2]) * chunk.sizeX + cell[0]] = 1;
                 any = true;
@@ -212,6 +212,15 @@ export class ChunkMeshBuilder {
     if (face.dy !== 0) return [offset[0], offset[2]];
     const horizontal = face.dx !== 0 ? 2 : 0;
     return [offset[horizontal], extent[1] - offset[1]];
+  }
+
+  /**
+   * Una cara no se ve si el vecino es opaco, o si es del mismo tipo aunque sea
+   * transparente: entre dos hojas o dos vidrios no hace falta dibujar nada. En
+   * un bosque, las caras internas de las copas eran el 70 % de toda la malla.
+   */
+  static #hidesFace(registry, blockId, neighborId) {
+    return neighborId === blockId || registry.isOpaque(neighborId);
   }
 
   /** Eje (0 = x, 1 = y, 2 = z) del único bit encendido en un índice de octante. */

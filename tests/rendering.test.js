@@ -107,7 +107,12 @@ test('las texturas cargadas usan filtro NEAREST en ambos sentidos', async () => 
 });
 
 /** Estas pruebas miran la lógica del renderer: alcanza con un mundo de 2 × 2 chunks. */
-const SMALL = { ...GameConfig, world: { ...GameConfig.world, WORLD_WIDTH: 32, WORLD_DEPTH: 32 } };
+// Sin tope de tiempo para armar mallas: las pruebas cuentan chunks por frame.
+const SMALL = {
+  ...GameConfig,
+  world: { ...GameConfig.world, WORLD_WIDTH: 32, WORLD_DEPTH: 32 },
+  rendering: { ...GameConfig.rendering, MESH_BUILD_BUDGET_MS: Infinity }
+};
 
 function buildTerrain() {
   const world = new World(createDefaultBlockRegistry(), SMALL);
@@ -142,7 +147,7 @@ test('BlockRenderer dibuja una malla por chunk y tipo, y cambia de material una 
   const world = buildTerrain();
   const p = countingStub();
   const textures = { get: (name) => (name === 'grass_top.png' ? { name } : null) };
-  const renderer = new BlockRenderer(p, world.blockRegistry, textures, GameConfig);
+  const renderer = new BlockRenderer(p, world.blockRegistry, textures, SMALL);
   // Radio que cubre todo el mundo: así se dibujan todos los chunks.
   renderer.setRenderDistance(world.width + world.depth);
 
@@ -162,7 +167,7 @@ test('las mallas se arman una vez y se rehacen solo en el chunk que cambia', () 
   const p = countingStub();
   const geometries = [];
   p.model = (geometry) => geometries.push(geometry);
-  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, SMALL);
   renderer.setRenderDistance(64);
   const center = worldCenter(world);
 
@@ -191,7 +196,7 @@ test('un bloque en el borde rehace también la malla del chunk vecino', () => {
   const p = countingStub();
   const geometries = [];
   p.model = (geometry) => geometries.push(geometry);
-  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, SMALL);
   renderer.setRenderDistance(64);
   renderer.render(world, worldCenter(world));
   const first = new Set(geometries);
@@ -211,7 +216,7 @@ test('sin textura disponible, el bloque se dibuja con el color del BlockType', (
   const p = countingStub();
   const colors = [];
   p.ambientMaterial = (...rgb) => colors.push(rgb);
-  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, SMALL);
 
   renderer.render(world, { x: 100, y: 100, z: 100 });
 
@@ -221,7 +226,7 @@ test('sin textura disponible, el bloque se dibuja con el color del BlockType', (
 
 test('la distancia de render se ajusta en caliente y descarta chunks lejanos', () => {
   const world = buildTerrain();
-  const renderer = new BlockRenderer(countingStub(), world.blockRegistry, { get: () => null }, GameConfig);
+  const renderer = new BlockRenderer(countingStub(), world.blockRegistry, { get: () => null }, SMALL);
   renderer.setRenderDistance(64);
   const corner = { x: 2 * world.blockSize, y: 200, z: 2 * world.blockSize };
 
@@ -236,7 +241,7 @@ test('la distancia de render se ajusta en caliente y descarta chunks lejanos', (
 });
 
 test('setRenderDistance acota a >= 1 e ignora valores no numéricos', () => {
-  const renderer = new BlockRenderer(countingStub(), createDefaultBlockRegistry(), { get: () => null }, GameConfig);
+  const renderer = new BlockRenderer(countingStub(), createDefaultBlockRegistry(), { get: () => null }, SMALL);
   assert.equal(renderer.setRenderDistance(0), 1);
   assert.equal(renderer.setRenderDistance(7.6), 8);
   assert.equal(renderer.setRenderDistance(Number.NaN), 8);
@@ -246,7 +251,7 @@ test('setRenderDistance acota a >= 1 e ignora valores no numéricos', () => {
 test('al cargar otra partida se liberan las mallas de los chunks que ya no existen', () => {
   const world = buildTerrain();
   const p = countingStub();
-  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, SMALL);
   renderer.render(world, worldCenter(world));
   assert.equal(renderer.meshedChunks, world.chunkCount);
 
@@ -260,7 +265,7 @@ test('al cargar otra partida se liberan las mallas de los chunks que ya no exist
 test('el renderer no modifica los bloques del mundo', () => {
   const world = buildTerrain();
   const before = [...world.chunks].map((chunk) => Array.from(chunk.blocks).join());
-  new BlockRenderer(countingStub(), world.blockRegistry, { get: () => null }, GameConfig).render(world, worldCenter(world));
+  new BlockRenderer(countingStub(), world.blockRegistry, { get: () => null }, SMALL).render(world, worldCenter(world));
   assert.deepEqual([...world.chunks].map((chunk) => Array.from(chunk.blocks).join()), before);
 });
 

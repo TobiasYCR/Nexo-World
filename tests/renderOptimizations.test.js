@@ -76,7 +76,8 @@ test('greedy meshing: un piso de 3×3 es un solo rectángulo arriba, con la text
 test('el frustum culling descarta los chunks que quedan detrás de la cámara', () => {
   const world = generatedWorld();
   const p = createP5Stub();
-  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, GameConfig);
+  const config = { ...GameConfig, rendering: { ...GameConfig.rendering, MESH_BUILD_BUDGET_MS: Infinity } };
+  const renderer = new BlockRenderer(p, world.blockRegistry, { get: () => null }, config);
   renderer.setRenderDistance((world.width + world.depth) * SIZE);
   const camera = new FirstPersonCamera(GameConfig.camera);
   // En el borde +Z del mundo, mirando hacia afuera (+Z): todo el mundo queda atrás.
@@ -141,4 +142,36 @@ test('en las cuatro paredes la textura queda derecha: u horizontal y v hacia aba
       assert.equal(new Set(sameColumn).size, 2, 'u no cambia al subir: la imagen no está girada');
     }
   }
+});
+
+test('entre dos hojas o dos vidrios no se dibuja la cara que comparten', () => {
+  const world = new World(createDefaultBlockRegistry(), GameConfig);
+  world.setBlockId(4, 4, 4, BlockIds.LEAVES);
+  world.setBlockId(5, 4, 4, BlockIds.LEAVES);
+  world.setBlockId(8, 4, 4, BlockIds.GLASS);
+  world.setBlockId(8, 5, 4, BlockIds.GLASS);
+  world.setBlockId(10, 4, 4, BlockIds.GLASS);
+  world.setBlockId(11, 4, 4, BlockIds.LEAVES);
+  const [chunk] = world.chunks;
+  for (const greedy of [false, true]) {
+    const mesh = new ChunkMeshBuilder(world.blockRegistry, SIZE).build(world, chunk, { greedy });
+    const area = coverage(mesh);
+    const total = (blockId) => [...area].filter(([key]) => key.startsWith(`${blockId}|`)).reduce((sum, [, value]) => sum + value, 0);
+    // Dos hojas juntas: 12 caras menos las 2 que se tocan. Una hoja suelta al lado del vidrio: 6.
+    assert.equal(total(BlockIds.LEAVES), 10 + 6, `greedy ${greedy}`);
+    // Dos vidrios apilados: 10. Un vidrio al lado de una hoja sí muestra esa cara: 6.
+    assert.equal(total(BlockIds.GLASS), 10 + 6, `greedy ${greedy}`);
+  }
+});
+
+test('con un tope de tiempo se arma al menos una malla por frame', () => {
+  const config = { ...GameConfig, rendering: { ...GameConfig.rendering, MESH_BUILD_BUDGET_MS: 0 } };
+  const world = generatedWorld(config);
+  const renderer = new BlockRenderer(createP5Stub(), world.blockRegistry, { get: () => null }, config);
+  renderer.setRenderDistance(world.width);
+  const center = { x: (world.width / 2) * SIZE, y: 200, z: (world.depth / 2) * SIZE };
+  renderer.render(world, center);
+  assert.equal(renderer.meshedChunks, 1);
+  renderer.render(world, center);
+  assert.equal(renderer.meshedChunks, 2);
 });

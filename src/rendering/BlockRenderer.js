@@ -35,6 +35,7 @@ export class BlockRenderer {
   #frustumCulling = true;
   #greedyMeshing = true;
   #buildsPerFrame;
+  #buildBudgetMs;
   #releaseMargin;
   /** clave de chunk -> { chunk, meshes: [{blockId, geometry}], visibleBlocks, minX, minZ, maxX, maxZ } */
   #meshes = new Map();
@@ -48,6 +49,7 @@ export class BlockRenderer {
     this.blockSize = config.world.BLOCK_SIZE;
     this.#builder = new ChunkMeshBuilder(blockRegistry, this.blockSize);
     this.#buildsPerFrame = config.rendering.MESH_BUILDS_PER_FRAME ?? 8;
+    this.#buildBudgetMs = config.rendering.MESH_BUILD_BUDGET_MS ?? Infinity;
     this.#releaseMargin = config.rendering.MESH_RELEASE_MARGIN ?? 16;
     this.#frustumCulling = config.rendering.FRUSTUM_CULLING ?? true;
     this.#greedyMeshing = config.rendering.GREEDY_MESHING ?? true;
@@ -145,7 +147,10 @@ export class BlockRenderer {
 
   /**
    * Arma las mallas que faltan o están viejas dentro de la distancia de render
-   * (hasta MESH_BUILDS_PER_FRAME por frame, de la más cercana a la más lejana)
+   * (de la más cercana a la más lejana, hasta MESH_BUILDS_PER_FRAME por frame y
+   * mientras no se pase MESH_BUILD_BUDGET_MS: armar ocho de golpe trababa el
+   * juego al caminar; siempre se arma al menos una, así un bloque colocado se
+   * ve en el mismo frame)
    * y libera las de chunks lejanos o que ya no existen.
    */
   #syncMeshes(world, viewerPosition) {
@@ -177,11 +182,13 @@ export class BlockRenderer {
     }
 
     pending.sort((first, second) => first.distance - second.distance);
+    const startedAt = performance.now();
     for (const { chunk } of pending.slice(0, this.#buildsPerFrame)) {
       const cached = this.#meshes.get(chunk.key);
       if (cached) this.#release(cached);
       this.#meshes.set(chunk.key, this.#buildEntry(world, chunk));
       chunk.markClean();
+      if (performance.now() - startedAt >= this.#buildBudgetMs) break;
     }
 
     for (const [key, entry] of this.#meshes) {

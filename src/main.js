@@ -1,6 +1,7 @@
 import p5 from 'p5';
 import { Game } from './game/Game.js';
 import { GameUiBridge } from './ui/GameUiBridge.js';
+import { GameConfig } from './game/GameConfig.js';
 
 /** ?seed=123 en la URL genera un mundo reproducible con esa semilla. */
 function seedFromUrl() {
@@ -21,6 +22,7 @@ const sketch = (p) => {
   let uiBridge = null;
 
   p.setup = () => {
+    p.pixelDensity(GameConfig.rendering.PIXEL_DENSITY);
     const canvas = p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
     canvas.parent('game-root');
 
