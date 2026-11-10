@@ -245,6 +245,12 @@ export const GameConfig = Object.freeze({
     SHOW_COMPLETE_EFFECT: true,
     /** Distancia horizontal del centro del plano respecto del jugador. */
     PLACEMENT_DISTANCE_BLOCKS: 4,
+    /** Hasta cuántos bloques del punto de adelante se busca terreno llano para el plano. */
+    SITE_SEARCH_RADIUS_BLOCKS: 12,
+    /** Desnivel tolerado bajo el plano, en bloques; se prefiere siempre uno sin desnivel. */
+    SITE_MAX_UNEVENNESS: 1,
+    /** Bloques libres entre el plano y el jugador, para que no quede encerrado. */
+    SITE_PLAYER_CLEARANCE: 1,
     /** Parámetros del efecto breve de primera persona al completar. */
     COMPLETE_EFFECT_DURATION: 1.1,
     COMPLETE_EFFECT_PARTICLE_COUNT: 12,

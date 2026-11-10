@@ -25,6 +25,7 @@ const CONFIG = {
   education: {
     ...GameConfig.education,
     PLACEMENT_DISTANCE_BLOCKS: 1,
+    SITE_PLAYER_CLEARANCE: 0,
     MAX_BLUEPRINT_BLOCKS: 32
   }
 };
@@ -116,20 +117,115 @@ test('la ubicación rota el plano en las cuatro direcciones', () => {
   ]);
 });
 
-test('rechaza un plano fuera del mundo y uno que choca con un bloque irrompible', () => {
-  const { challenge, camera, world } = harness();
+test('rechaza un plano fuera del mundo', () => {
+  const { challenge } = harness();
   challenge.player.teleportTo(10, 20, 10);
   const outside = challenge.start('single');
   assert.equal(outside.ok, false);
   assert.equal(outside.reason, 'outOfBounds');
+});
 
-  challenge.player.teleportTo(8 * 20 + 10, 20, 8 * 20 + 10);
+/** Mundo de prueba con piso de pasto a la altura dada. */
+function grassFloor(world, height = 1) {
+  for (let x = 0; x < world.width; x += 1) {
+    for (let z = 0; z < world.depth; z += 1) {
+      for (let y = 0; y < height; y += 1) world.setBlockId(x, y, z, y === height - 1 ? BlockIds.GRASS : BlockIds.DIRT);
+    }
+  }
+}
+
+function footprint(snapshot) {
+  return snapshot.blocks.map(({ x, z }) => `${x},${z}`);
+}
+
+test('un plano no se apoya sobre un árbol: se corre al suelo despejado más cercano', () => {
+  const { challenge, camera, world } = harness();
+  grassFloor(world);
   camera.yaw = 0;
-  const expected = { x: 7, y: 0, z: 7 };
-  world.setBlockId(expected.x, expected.y, expected.z, BlockIds.BEDROCK);
-  const blocked = challenge.start('line');
-  assert.equal(blocked.ok, false);
-  assert.equal(blocked.reason, 'unbreakableCollision');
+  // Árbol justo donde caería la línea (7,7 y 8,7).
+  for (let y = 1; y < 4; y += 1) world.setBlockId(7, y, 7, BlockIds.LOG);
+  world.setBlockId(8, 4, 7, BlockIds.LEAVES);
+
+  const started = challenge.start('line');
+  assert.equal(started.ok, true);
+  const cells = footprint(started.snapshot);
+  assert.ok(!cells.includes('7,7') && !cells.includes('8,7'), cells.join('|'));
+  assert.ok(started.snapshot.blocks.every(({ y }) => y === 1), 'sobre el pasto, no sobre las hojas');
+});
+
+test('un plano prefiere el suelo sin desnivel y nunca un escalón de más de uno', () => {
+  const { challenge, camera, world } = harness();
+  grassFloor(world);
+  camera.yaw = 0;
+  // Escalón de un bloque bajo el lugar preferido: hay suelo llano al lado.
+  world.setBlockId(8, 1, 7, BlockIds.GRASS);
+  const started = challenge.start('line');
+  assert.equal(started.ok, true);
+  const cells = started.snapshot.blocks.map(({ x, z }) => [x, z]);
+  const heights = cells.map(([x, z]) => world.getSurfaceHeight(x, z));
+  assert.equal(new Set(heights).size, 1, `alturas ${heights}`);
+
+  // Terreno en escalera: cada columna un bloque más alta que la anterior.
+  for (let x = 0; x < world.width; x += 1) {
+    for (let z = 0; z < world.depth; z += 1) {
+      for (let y = 1; y < world.height; y += 1) {
+        world.setBlockId(x, y, z, y <= (x % 2) * 3 ? BlockIds.STONE : BlockIds.AIR);
+      }
+    }
+  }
+  const steep = challenge.start('line');
+  assert.equal(steep.ok, false);
+  assert.equal(steep.reason, 'noFlatSite');
+});
+
+test('el plano no encierra al jugador', () => {
+  const { challenge, camera, world, player } = harness();
+  grassFloor(world);
+  camera.yaw = 0;
+  const finder = challenge.siteFinder;
+  const playerBlock = world.worldToBlock(player.position.x, player.position.y, player.position.z);
+  const anchor = finder.find(world, playerBlock, { x: 3, y: 3, z: 3 }, playerBlock);
+  assert.ok(anchor);
+  const covers = playerBlock.x >= anchor.x && playerBlock.x < anchor.x + 3 &&
+    playerBlock.z >= anchor.z && playerBlock.z < anchor.z + 3;
+  assert.equal(covers, false);
+});
+
+test('la casa del juego se ubica en llano dentro de un mundo generado', async () => {
+  const { WorldGenerator } = await import('../src/world/WorldGenerator.js');
+  const { createDefaultBlueprintRegistry: registryOf } = await import('../src/education/BlueprintRegistry.js');
+  const blockRegistry = createDefaultBlockRegistry();
+  let placed = 0;
+  for (const seed of [1, 7, 42, 2024, 20260904]) {
+    const world = new World(blockRegistry, GameConfig);
+    new WorldGenerator(GameConfig, { seed }).generate(world);
+    const size = GameConfig.world.BLOCK_SIZE;
+    const x = Math.floor(world.width / 2);
+    const z = Math.floor(world.depth / 2);
+    const player = new Player({ ...GameConfig.player, SPAWN: { x: x * size + size / 2, y: world.getSurfaceHeight(x, z) * size, z: z * size + size / 2 } });
+    const challenge = new BuildChallenge({
+      world,
+      player,
+      camera: new FirstPersonCamera(GameConfig.camera),
+      blueprintRegistry: registryOf(blockRegistry, GameConfig.education),
+      blockRegistry,
+      config: GameConfig.education
+    });
+    const started = challenge.start('wood-house');
+    if (!started.ok) {
+      assert.equal(started.reason, 'noFlatSite');
+      continue;
+    }
+    placed += 1;
+    const floor = started.snapshot.blocks.filter(({ y }) => y === started.snapshot.anchor.y);
+    for (const { x: bx, z: bz } of floor) {
+      const ground = world.getBlockId(bx, world.getSurfaceHeight(bx, bz) - 1, bz);
+      assert.ok(![BlockIds.LOG, BlockIds.LEAVES].includes(ground), `semilla ${seed}: suelo ${ground}`);
+      assert.ok(started.snapshot.anchor.y - world.getSurfaceHeight(bx, bz) <= GameConfig.education.SITE_MAX_UNEVENNESS);
+    }
+    assert.equal(started.snapshot.wrong, 0, `semilla ${seed}: nada ocupa el lugar del plano`);
+  }
+  assert.ok(placed >= 4, `solo se ubicó en ${placed} de 5 mundos`);
 });
 
 test('verifica correctos, incorrectos, roturas y bloques ajenos al plano', () => {
