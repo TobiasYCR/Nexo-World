@@ -3,6 +3,7 @@ import { GameEventTypes } from '../game/GameEvents.js';
 import { BlockIds } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 import { VectorUtils } from '../utils/VectorUtils.js';
+import { BuildSiteFinder } from './BuildSiteFinder.js';
 
 /**
  * Reglas de un desafío activo. No conoce p5 ni la interfaz: solo ubica un
@@ -23,6 +24,11 @@ export class BuildChallenge {
     this.blockRegistry = blockRegistry;
     this.events = events;
     this.config = config;
+    this.siteFinder = new BuildSiteFinder({
+      searchRadius: config.SITE_SEARCH_RADIUS_BLOCKS,
+      maxUnevenness: config.SITE_MAX_UNEVENNESS,
+      playerClearance: config.SITE_PLAYER_CLEARANCE
+    });
 
     this.#listen(GameEventTypes.BLOCK_PLACED);
     this.#listen(GameEventTypes.BLOCK_BROKEN);
@@ -205,24 +211,21 @@ export class BuildChallenge {
       return { ok: false, reason: 'outOfBounds', message: 'El plano no entra en el mundo.' };
     }
 
-    const anchor = {
-      x: centerX - Math.floor(size.x / 2),
-      y: 0,
-      z: centerZ - Math.floor(size.z / 2)
-    };
-    for (let z = 0; z < size.z; z += 1) {
-      for (let x = 0; x < size.x; x += 1) {
-        const worldX = anchor.x + x;
-        const worldZ = anchor.z + z;
-        if (!this.world.isInsideBounds(worldX, 0, worldZ)) {
-          return { ok: false, reason: 'outOfBounds', message: 'El plano no entra en el mundo.' };
-        }
-      }
+    // Se apoya en el suelo llano y despejado más cercano al punto de adelante:
+    // nunca arriba de un árbol ni en una ladera.
+    const anchor = this.siteFinder.find(
+      this.world,
+      { x: centerX, z: centerZ },
+      size,
+      { x: playerBlock.x, z: playerBlock.z }
+    );
+    if (!anchor) {
+      return {
+        ok: false,
+        reason: 'noFlatSite',
+        message: 'No hay terreno llano y despejado cerca. Probá en una zona sin árboles ni desniveles.'
+      };
     }
-    // La celda central define el suelo. Las demás celdas se validan como
-    // parte del plano: si hay un árbol u otro bloque irrompible, el inicio se
-    // rechaza en lugar de elevar silenciosamente toda la construcción.
-    anchor.y = this.world.getSurfaceHeight(centerX, centerZ);
 
     const placedBlocks = blocks.map((block) => ({
       x: anchor.x + block.x,
