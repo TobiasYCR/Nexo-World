@@ -25,8 +25,9 @@ function coverage(mesh) {
   for (const [blockId, group] of mesh.groups) {
     for (let quad = 0; quad < group.faceCount; quad += 1) {
       const normal = group.normals.slice(quad * 12, quad * 12 + 3).join();
-      const width = group.uvs[quad * 8 + 6];
-      const height = group.uvs[quad * 8 + 7];
+      const uvs = group.uvs.slice(quad * 8, quad * 8 + 8);
+      const width = Math.max(uvs[0], uvs[2], uvs[4], uvs[6]);
+      const height = Math.max(uvs[1], uvs[3], uvs[5], uvs[7]);
       const key = `${blockId}|${normal}`;
       totals.set(key, (totals.get(key) ?? 0) + width * height);
     }
@@ -67,7 +68,7 @@ test('greedy meshing: un piso de 3×3 es un solo rectángulo arriba, con la text
   assert.equal(mesh.faceCount, 6, 'una cara por lado');
   assert.equal(mesh.visibleBlocks, 9);
   const top = [...Array(planks.faceCount).keys()].find((quad) => planks.normals[quad * 12 + 1] === 1);
-  assert.deepEqual(planks.uvs.slice(top * 8, top * 8 + 8), [0, 0, 3, 0, 0, 3, 3, 3]);
+  assert.deepEqual(planks.uvs.slice(top * 8, top * 8 + 8), [0, 0, 0, 3, 3, 0, 3, 3]);
   const ys = planks.positions.slice(top * 12, top * 12 + 12).filter((_, index) => index % 3 === 1);
   assert.deepEqual(new Set(ys), new Set([2 * SIZE]));
 });
@@ -114,4 +115,27 @@ test('las mallas se arman de a pocas, las cercanas primero, y se liberan al alej
   for (let frame = 0; frame < 10; frame += 1) renderer.render(world, farCorner);
   assert.ok(p.calls.freeGeometry > 0, 'las mallas de la esquina vieja se liberaron');
   assert.equal(renderer.meshedChunks, nearCount, 'mismo radio, misma cantidad de chunks');
+});
+
+test('en las cuatro paredes la textura queda derecha: u horizontal y v hacia abajo', () => {
+  const world = new World(createDefaultBlockRegistry(), GameConfig);
+  world.setBlockId(4, 4, 4, BlockIds.LOG);
+  const [chunk] = world.chunks;
+  for (const greedy of [false, true]) {
+    const mesh = new ChunkMeshBuilder(world.blockRegistry, SIZE).build(world, chunk, { greedy });
+    const log = mesh.groups.get(BlockIds.LOG);
+    for (let quad = 0; quad < log.faceCount; quad += 1) {
+      if (log.normals[quad * 12 + 1] !== 0) continue;
+      for (let vertex = 0; vertex < 4; vertex += 1) {
+        const y = log.positions[quad * 12 + vertex * 3 + 1];
+        const v = log.uvs[quad * 8 + vertex * 2 + 1];
+        assert.equal(v, y === 5 * SIZE ? 0 : 1, `cara ${quad}: el borde de arriba de la imagen va arriba`);
+      }
+      const us = new Set([0, 1, 2, 3].map((vertex) => log.uvs[quad * 8 + vertex * 2]));
+      const sameColumn = [0, 1, 2, 3].filter((vertex) => log.uvs[quad * 8 + vertex * 2] === 0)
+        .map((vertex) => log.positions[quad * 12 + vertex * 3 + 1]);
+      assert.deepEqual(us, new Set([0, 1]));
+      assert.equal(new Set(sameColumn).size, 2, 'u no cambia al subir: la imagen no está girada');
+    }
+  }
 });

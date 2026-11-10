@@ -43,26 +43,17 @@ export class BlueprintRegistry {
   }
 }
 
-/** Tres planos de dificultad creciente, todos con bloques del registro base. */
+/** Tres planos para construir, todos con bloques del registro base. */
 export function createDefaultBlueprintRegistry(blockRegistry, config = GameConfig.education) {
   const registry = new BlueprintRegistry(blockRegistry, config.MAX_BLUEPRINT_BLOCKS);
   registry.registerAll([
     {
       id: 'wood-house',
       name: 'Casa de madera',
-      description: 'Construye una pequeña casa con piso, paredes y techo.',
-      blocks: [
-        ...filledLayer(3, 3, 0, BlockIds.PLANKS),
-        { x: 0, y: 1, z: 0, blockId: BlockIds.LOG },
-        { x: 2, y: 1, z: 0, blockId: BlockIds.LOG },
-        { x: 0, y: 1, z: 2, blockId: BlockIds.LOG },
-        { x: 2, y: 1, z: 2, blockId: BlockIds.LOG },
-        { x: 1, y: 1, z: 0, blockId: BlockIds.PLANKS },
-        { x: 1, y: 1, z: 2, blockId: BlockIds.PLANKS },
-        { x: 0, y: 1, z: 1, blockId: BlockIds.PLANKS },
-        { x: 2, y: 1, z: 1, blockId: BlockIds.PLANKS },
-        ...filledLayer(3, 3, 2, BlockIds.PLANKS)
-      ]
+      description:
+        'Construye una casa con piso de piedra partida, columnas de tronco, paredes de madera, ' +
+        'puerta, ventanas de vidrio y techo a dos aguas.',
+      blocks: woodHouseBlocks()
     },
     {
       id: 'stone-tower',
@@ -90,6 +81,76 @@ export function createDefaultBlueprintRegistry(blockRegistry, config = GameConfi
     }
   ]);
   return registry;
+}
+
+/**
+ * Casa de 7 × 6 con techo a dos aguas. Cada parte es una etapa del plano, así
+ * se construye como una casa de verdad y se pide un solo material por vez:
+ *
+ * 0. Piso de piedra partida.
+ * 1. Columnas de tronco en las cuatro esquinas.
+ * 2. Paredes de tablones, con la puerta al frente y los huecos de las ventanas.
+ * 3. Ventanas de vidrio.
+ * 4. Techo plano de tablones, que sobresale como alero a los costados.
+ * 5. Frontones de tablones (los triángulos de adelante y atrás).
+ * 6. Faldones del techo, de tronco, que suben hasta la cumbrera.
+ */
+function woodHouseBlocks() {
+  const WIDTH = 7;
+  const DEPTH = 6;
+  const WALL_HEIGHT = 3;
+  const lastX = WIDTH - 1;
+  const lastZ = DEPTH - 1;
+  const middleX = Math.floor(WIDTH / 2);
+  const blocks = [];
+  const add = (x, y, z, blockId, stage) => blocks.push({ x, y, z, blockId, stage });
+
+  for (let z = 0; z < DEPTH; z += 1) {
+    for (let x = 0; x < WIDTH; x += 1) add(x, 0, z, BlockIds.COBBLESTONE, 0);
+  }
+
+  const corners = [[0, 0], [lastX, 0], [0, lastZ], [lastX, lastZ]];
+  for (const [x, z] of corners) {
+    for (let y = 1; y <= WALL_HEIGHT; y += 1) add(x, y, z, BlockIds.LOG, 1);
+  }
+
+  const door = (x, y, z) => z === 0 && x === middleX && y <= 2;
+  const window = (x, y, z) => y === 2 && (
+    (z === 0 && (x === 1 || x === lastX - 1)) ||
+    (z === lastZ && (x === 2 || x === lastX - 2)) ||
+    ((x === 0 || x === lastX) && (z === 2 || z === 3))
+  );
+  for (let y = 1; y <= WALL_HEIGHT; y += 1) {
+    for (let z = 0; z < DEPTH; z += 1) {
+      for (let x = 0; x < WIDTH; x += 1) {
+        const onWall = x === 0 || x === lastX || z === 0 || z === lastZ;
+        const isCorner = (x === 0 || x === lastX) && (z === 0 || z === lastZ);
+        if (!onWall || isCorner || door(x, y, z)) continue;
+        add(x, y, z, window(x, y, z) ? BlockIds.GLASS : BlockIds.PLANKS, window(x, y, z) ? 3 : 2);
+      }
+    }
+  }
+
+  const ceiling = WALL_HEIGHT + 1;
+  for (let z = 0; z < DEPTH; z += 1) {
+    for (let x = 0; x < WIDTH; x += 1) add(x, ceiling, z, BlockIds.PLANKS, 4);
+  }
+
+  // Cada escalón del techo se mete un bloque hacia el centro.
+  for (let step = 1; step <= middleX; step += 1) {
+    const y = ceiling + step;
+    const left = step;
+    const right = lastX - step;
+    for (let x = left + 1; x < right; x += 1) {
+      add(x, y, 0, BlockIds.PLANKS, 5);
+      add(x, y, lastZ, BlockIds.PLANKS, 5);
+    }
+    for (let z = 0; z < DEPTH; z += 1) {
+      add(left, y, z, BlockIds.LOG, 6);
+      if (right !== left) add(right, y, z, BlockIds.LOG, 6);
+    }
+  }
+  return blocks;
 }
 
 function filledLayer(width, depth, y, blockId, offsetX = 0, offsetZ = 0) {
