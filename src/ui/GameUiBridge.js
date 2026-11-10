@@ -142,6 +142,7 @@ export class GameUiBridge {
     // emite después SAVE_GAME con el nombre, así que queda guardado.
     this.intentBus.on(IntentBus.Events.CREATE_WORLD, (payload) => {
       const result = this.game?.newWorld?.({ name: payload?.name, seed: payload?.seed, mode: payload?.gameMode });
+      if (payload && result) payload.result = result;
       if (result && !result.ok) this.toast.error(result.message ?? 'No se pudo crear el mundo.');
     });
 
