@@ -27,7 +27,8 @@ Proyecto de la materia P.I.S.W.D. Equipo: Andrea Cubas, Tobias Caballero, Leandr
   - Planos de construcción con guía 3D en el mundo.
   - Nombres de bloques en sílabas y lectura en voz alta (Web Speech API).
 - **Asistente de consultas:** chat que responde sobre el juego y la partida a partir de los datos del juego, sin servicios externos.
-- **Render por mallas de chunk:** solo se dibujan las caras visibles.
+- **Render por mallas de chunk:** solo las caras visibles, caras iguales unidas (greedy meshing), recorte por distancia y por cono de visión.
+- **Configuración:** sensibilidad, FOV, volumen, distancia de render, partículas, efectos, escala de la interfaz y optimizaciones; se guarda y se aplica al instante.
 
 ## Stack
 
