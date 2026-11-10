@@ -253,8 +253,15 @@ test('verifica correctos, incorrectos, roturas y bloques ajenos al plano', () =>
   world.setBlockId(position.x, position.y, position.z, BlockIds.PLANKS);
   events.emit(GameEventTypes.BLOCK_PLACED, { position });
   events.emit(GameEventTypes.BLOCK_PLACED, { position });
-  assert.equal(challenge.snapshot().completed, true);
   assert.equal(completed, 1);
+  assert.equal(challenge.snapshot(), null, 'terminado, el plano se descarta');
+
+  // Romper un bloque de la construcción ya terminada no revive el plano.
+  world.setBlockId(position.x, position.y, position.z, BlockIds.AIR);
+  events.emit(GameEventTypes.BLOCK_BROKEN, { position });
+  assert.equal(challenge.snapshot(), null);
+  assert.equal(challenge.isActive, false);
+  assert.equal(completed, 1, 'no se festeja de nuevo');
 });
 
 test('un bloque incorrecto impide completar hasta corregirlo', () => {
@@ -273,7 +280,7 @@ test('un bloque incorrecto impide completar hasta corregirlo', () => {
 
   world.setBlockId(second.x, second.y, second.z, BlockIds.PLANKS);
   events.emit(GameEventTypes.BLOCK_PLACED, { position: second });
-  assert.equal(challenge.snapshot().completed, true);
+  assert.equal(challenge.isActive, false, 'corregido, se completa y termina');
 });
 
 test('iniciar otro desafío reemplaza al activo y emite cancelación', () => {
@@ -368,7 +375,7 @@ test('la casa pide los bloques por partes: un material por etapa, sin ir y venir
     BlockIds.COBBLESTONE, BlockIds.LOG, BlockIds.PLANKS, BlockIds.GLASS, BlockIds.PLANKS, BlockIds.LOG
   ]);
   const playerBlock = world.worldToBlock(player.position.x, player.position.y, player.position.z);
-  const cells = challenge.snapshot().blocks;
+  const cells = snapshot.blocks;
   assert.ok(cells.every(({ x, z }) => x !== playerBlock.x || z !== playerBlock.z), 'no encierra al jugador');
 });
 

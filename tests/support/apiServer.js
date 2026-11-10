@@ -32,12 +32,13 @@ export async function startTestApi({
   repository = new InMemoryProgressionRepository(),
   accountRepository = new InMemoryAccountRepository(),
   clock = new FakeClock(),
-  throttle = new LoginThrottle()
+  throttle = new LoginThrottle(),
+  healthCheck = null
 } = {}) {
   const verifier = new WorldVerifier({ maxWidth: 256, maxHeight: 128, maxDepth: 256, cacheSize: 4 });
   const accounts = new AccountService(accountRepository, repository, { hasher: fastHasher, throttle, clock: clock.read, logger: silentLogger });
   const service = new ProgressionService(repository, verifier, { clock: clock.read, logger: silentLogger, sessions: accounts });
-  const api = new ApiServer(service, { allowedOrigin: '*', logger: silentLogger, authRoutes: new AuthRoutes(accounts) });
+  const api = new ApiServer(service, { allowedOrigin: '*', logger: silentLogger, authRoutes: new AuthRoutes(accounts), healthCheck });
   const port = await api.listen(0, '127.0.0.1');
   const origin = `http://127.0.0.1:${port}`;
 

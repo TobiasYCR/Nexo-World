@@ -42,8 +42,10 @@ export class ApiServer {
    * @param {{allowedOrigin:string, basePath?:string, logger?:{error:Function},
    *          authRoutes?: import('./AuthRoutes.js').AuthRoutes|null}} options
    */
-  constructor(service, { allowedOrigin, basePath = '/api', logger = console, authRoutes = null }) {
+  constructor(service, { allowedOrigin, basePath = '/api', logger = console, authRoutes = null, healthCheck = null }) {
     this.service = service;
+    /** Devuelve qué almacenamiento se usa y lanza si la base no responde. */
+    this.healthCheck = healthCheck;
     this.authRoutes = authRoutes;
     this.allowedOrigin = allowedOrigin;
     this.basePath = basePath;
@@ -88,7 +90,16 @@ export class ApiServer {
     const route = `${request.method} ${path}`;
 
     if (route === 'GET /health') {
-      this.#send(response, 200, { ok: true });
+      if (!this.healthCheck) {
+        this.#send(response, 200, { ok: true });
+        return;
+      }
+      try {
+        this.#send(response, 200, { ok: true, ...(await this.healthCheck()) });
+      } catch (error) {
+        this.logger.error('[api] la base de datos no responde', error);
+        this.#send(response, 503, { ok: false, error: 'database-unreachable' });
+      }
       return;
     }
     if (route === 'POST /players') {

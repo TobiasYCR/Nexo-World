@@ -215,3 +215,15 @@ test('pedidos mal formados reciben errores claros', async () => {
   assert.equal(preflight.status, 204);
   assert.match(preflight.headers.get('access-control-allow-headers'), /Authorization/);
 });
+
+test('/api/health dice qué base usa y avisa si no responde', async () => {
+  const healthy = await api({ healthCheck: async () => ({ storage: 'mysql', database: 'nexo_world' }) });
+  const ok = await healthy.call('GET', '/health');
+  assert.equal(ok.status, 200);
+  assert.deepEqual(ok.body, { ok: true, storage: 'mysql', database: 'nexo_world' });
+
+  const down = await api({ healthCheck: async () => { throw new Error('ECONNREFUSED'); } });
+  const failed = await down.call('GET', '/health');
+  assert.equal(failed.status, 503);
+  assert.deepEqual(failed.body, { ok: false, error: 'database-unreachable' });
+});

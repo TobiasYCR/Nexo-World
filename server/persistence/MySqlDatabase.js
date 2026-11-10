@@ -34,6 +34,11 @@ export class MySqlDatabase {
     return this.#pool;
   }
 
+  /** Consulta mínima para saber si MySQL responde. Lanza si no. */
+  async ping() {
+    await this.pool.query('SELECT 1');
+  }
+
   async close() {
     await this.#pool?.end();
     this.#pool = null;
