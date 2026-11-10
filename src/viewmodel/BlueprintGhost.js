@@ -96,7 +96,14 @@ export class BlueprintGhost {
         this.#paint(p, null, [r, g, b], a, null);
         p.stroke?.(r, g, b, 255);
         p.strokeWeight?.(config.HIGHLIGHT_STROKE_WEIGHT);
-        p.model?.(group.geometry);
+        // Una celda incorrecta puede estar rodeada por otras celdas del plano.
+        // Dibujar una caja evita mallas vacías y deja el rojo fuera del bloque real.
+        for (const block of group.blocks) {
+          p.push();
+          p.translate?.((block.x + 0.5) * this.blockSize, (block.y + 0.5) * this.blockSize, (block.z + 0.5) * this.blockSize);
+          p.box?.(this.blockSize * 1.02);
+          p.pop();
+        }
         continue;
       }
 
@@ -128,7 +135,9 @@ export class BlueprintGhost {
       p.tint?.(255, 255, 255, alpha);
       p.texture(texture);
     } else {
-      p.noTint?.();
+      // En p5 1.x noTint() deja _tint en null, pero el shader WebGL
+      // espera un vector RGBA incluso al dibujar sin textura.
+      p.tint?.(255, 255, 255, 255);
       p.fill?.(r, g, b, alpha);
       p.ambientMaterial?.(r, g, b, alpha);
     }
@@ -152,14 +161,14 @@ export class BlueprintGhost {
   }
 
   dispose() {
-    for (const group of this.#groups) this.p?.freeGeometry?.(group.geometry);
+    for (const group of this.#groups) if (group.geometry) this.p?.freeGeometry?.(group.geometry);
     this.#groups = [];
     this.#snapshot = null;
     this.#signature = '';
   }
 
   #rebuild() {
-    for (const group of this.#groups) this.p?.freeGeometry?.(group.geometry);
+    for (const group of this.#groups) if (group.geometry) this.p?.freeGeometry?.(group.geometry);
     this.#groups = [];
     this.#buildCount += 1;
     if (!this.#snapshot) return;
@@ -175,6 +184,7 @@ export class BlueprintGhost {
         group = {
           blockId: block.expectedBlockId,
           status: block.status,
+          blocks: [],
           positionKeys: new Set(),
           positions: [],
           normals: [],
@@ -184,13 +194,15 @@ export class BlueprintGhost {
         };
         grouped.set(key, group);
       }
-      this.#pushBlock(group, block, occupied);
+      if (block.status === 'wrong') group.blocks.push(block);
+      else this.#pushBlock(group, block, occupied);
     }
 
     for (const group of grouped.values()) {
+      if (group.status !== 'wrong' && group.positions.length === 0) continue;
       this.#groups.push({
         ...group,
-        geometry: this.#toGeometry(group)
+        geometry: group.status === 'wrong' ? null : this.#toGeometry(group)
       });
     }
   }
