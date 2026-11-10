@@ -77,7 +77,7 @@ function fakeFetch(files) {
   return { fetch, requested };
 }
 
-const ALL_FILES = new Set(['/audio/sfx/block_place.wav', '/audio/sfx/block_break.wav']);
+const ALL_FILES = new Set(['/audio/sfx/block_place.wav', '/audio/sfx/block_break.wav', '/audio/sfx/step_1.wav', '/audio/sfx/step_2.wav']);
 
 function build({ files = ALL_FILES, context = new FakeAudioContext() } = {}) {
   const { fetch, requested } = fakeFetch(files);
@@ -107,7 +107,7 @@ test('preload descarga los bytes sin crear el AudioContext', async () => {
   const { audio, requested, contexts } = build();
   const result = await audio.preload();
 
-  assert.deepEqual(requested.sort(), ['/audio/sfx/block_break.wav', '/audio/sfx/block_place.wav']);
+  assert.deepEqual(requested.sort(), [...ALL_FILES].sort());
   assert.equal(contexts.length, 0, 'el contexto necesita un gesto del usuario');
   assert.equal(result.missing.length, 0);
   assert.equal(audio.play(SoundIds.BLOCK_PLACE), null, 'sin unlock no suena');
@@ -118,15 +118,15 @@ test('unlock decodifica lo precargado sin volver a descargar', async () => {
   await audio.preload();
   assert.equal(await audio.unlock(), true);
 
-  assert.equal(requested.length, 2);
-  assert.equal(context.decoded.length, 2);
+  assert.equal(requested.length, ALL_FILES.size);
+  assert.equal(context.decoded.length, ALL_FILES.size);
   assert.equal(audio.isLoaded(SoundIds.BLOCK_BREAK), true);
 });
 
 test('unlock sin preload previo descarga el catálogo igual', async () => {
   const { audio, requested } = build();
   await audio.unlock();
-  assert.equal(requested.length, 2);
+  assert.equal(requested.length, ALL_FILES.size);
   assert.equal(audio.isLoaded(SoundIds.BLOCK_PLACE), true);
 });
 
@@ -174,7 +174,9 @@ test('los volúmenes se acotan a [0, 1] y las categorías desconocidas se rechaz
 
 test('un archivo ausente deja ese sonido mudo sin lanzar', async (t) => {
   t.mock.method(console, 'warn', () => {});
-  const { audio } = build({ files: new Set(['/audio/sfx/block_place.wav']) });
+  const files = new Set(ALL_FILES);
+  files.delete('/audio/sfx/block_break.wav');
+  const { audio } = build({ files });
   const result = await audio.preload();
   await audio.unlock();
 

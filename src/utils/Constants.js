@@ -66,5 +66,7 @@ export const AudioCategories = Object.freeze({
 /** Identificadores lógicos de sonido. Las rutas se resuelven en AssetCatalog. */
 export const SoundIds = Object.freeze({
   BLOCK_PLACE: 'blockPlace',
-  BLOCK_BREAK: 'blockBreak'
+  BLOCK_BREAK: 'blockBreak',
+  STEP_1: 'step1',
+  STEP_2: 'step2'
 });

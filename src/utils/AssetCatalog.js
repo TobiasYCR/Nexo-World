@@ -12,7 +12,9 @@ export class AssetCatalog {
   /** Sonidos conocidos: ruta relativa a la base de audio y categoría de mezcla. */
   static SOUNDS = Object.freeze({
     [SoundIds.BLOCK_PLACE]: Object.freeze({ path: 'sfx/block_place.wav', category: AudioCategories.SFX }),
-    [SoundIds.BLOCK_BREAK]: Object.freeze({ path: 'sfx/block_break.wav', category: AudioCategories.SFX })
+    [SoundIds.BLOCK_BREAK]: Object.freeze({ path: 'sfx/block_break.wav', category: AudioCategories.SFX }),
+    [SoundIds.STEP_1]: Object.freeze({ path: 'sfx/step_1.wav', category: AudioCategories.SFX }),
+    [SoundIds.STEP_2]: Object.freeze({ path: 'sfx/step_2.wav', category: AudioCategories.SFX })
   });
 
   constructor(assetsConfig, sounds = AssetCatalog.SOUNDS) {

@@ -261,7 +261,10 @@ export const GameConfig = Object.freeze({
     MASTER_VOLUME: 1,
     SFX_VOLUME: 1,
     MUSIC_VOLUME: 0.6,
-    AMBIENT_VOLUME: 0.8
+    AMBIENT_VOLUME: 0.8,
+    /** Bloques caminados entre un paso y el siguiente (corriendo se recorre más rápido). */
+    STEP_DISTANCE_BLOCKS: 1.7,
+    STEP_VOLUME: 0.45
   }),
 
   camera: Object.freeze({
