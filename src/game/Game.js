@@ -116,6 +116,7 @@ export class Game {
     this.blueprintGhost = new BlueprintGhost({
       p,
       blockRegistry: this.blockRegistry,
+      textureManager: this.textureManager,
       blockSize: config.world.BLOCK_SIZE,
       config: config.education
     });
@@ -437,6 +438,7 @@ export class Game {
     if (!this.state.isRunning) this.blockInteraction.updateBreaking(deltaTime, false);
     this.levelUpEffect.update(this.state.isRunning ? deltaTime : 0);
     this.blueprintGhost.advance(this.state.isRunning ? deltaTime : 0);
+    this.blueprintGhost.setHeldBlock(this.hotbar.selectedSlot?.isEmpty ? null : this.hotbar.selectedBlockType?.id);
     this.challengeCompleteEffect.update(this.state.isRunning ? deltaTime : 0);
     const horizontalSpeed = this.state.isRunning
       ? Math.hypot(this.player.velocity.x, this.player.velocity.z)
