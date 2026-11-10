@@ -5,6 +5,7 @@ import { World } from '../world/World.js';
 import { WorldGenerator } from '../world/WorldGenerator.js';
 import { WorldSeed } from '../world/WorldSeed.js';
 import { SpawnFinder } from '../world/SpawnFinder.js';
+import { FootstepPlayer } from '../audio/FootstepPlayer.js';
 import { GameModeRules } from './GameModeRules.js';
 import { Player } from '../player/Player.js';
 import { PlayerController } from '../player/PlayerController.js';
@@ -165,6 +166,7 @@ export class Game {
     this.renderer.addOverlay(this.challengeCompleteEffect);
     this.renderer.addOverlay(this.visualEffectsManager);
     this.audio = new AudioManager(config.assets);
+    this.footsteps = new FootstepPlayer(config.audio, config.world.BLOCK_SIZE);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
     // El asistente lee el estado vivo de la partida. Se pasa un proveedor y no
@@ -179,6 +181,7 @@ export class Game {
         health: this.playerHealth,
         worldGenerator: this.worldGenerator,
         progression: this.progression,
+        session: this.session,
         buildChallenge: this.buildChallenge ?? null
       })
     });
@@ -442,6 +445,12 @@ export class Game {
     const biome = this.state.isRunning
       ? this.worldGenerator.getBiomeAt(blockPosition.x, blockPosition.z)
       : null;
+    const step = this.footsteps.update(this.state.isRunning ? deltaTime : 0, {
+      horizontalSpeed,
+      onGround: this.player.isOnGround,
+      flying: this.player.isFlying
+    });
+    if (step) this.audio.play(step, { volume: this.footsteps.volume });
     this.#viewmodelState.isBreaking = this.state.isRunning && this.blockInteraction.breakingBlock !== null;
     this.#viewmodelState.horizontalSpeed = horizontalSpeed;
     this.#viewmodelState.isOnGround = this.state.isRunning && this.player.isOnGround;

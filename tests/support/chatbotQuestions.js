@@ -149,7 +149,12 @@ export const preguntas = [
   { id: 78, texto: '¿qué nivel soy?', categoria: 'niveles', esperado: 'deriva' },
   { id: 79, texto: '¿en qué puesto estoy?', categoria: 'estado', esperado: 'deriva' },
   { id: 80, texto: '¿qué planos hay?', categoria: 'educativo', esperado: 'deriva' },
-  { id: 81, texto: '¿cuál es el próximo bloque del desafío?', categoria: 'educativo', esperado: 'deriva' }
+  { id: 81, texto: '¿cuál es el próximo bloque del desafío?', categoria: 'educativo', esperado: 'deriva' },
+  { id: 82, texto: '¿cómo vuelo?', categoria: 'controles', esperado: 'responde', contiene: 'tecla F' },
+  { id: 83, texto: '¿qué es el modo creativo?', categoria: 'mundo', esperado: 'responde', contiene: 'sin límite' },
+  { id: 84, texto: '¿cómo creo un mundo nuevo?', categoria: 'mundo', esperado: 'responde', contiene: 'semilla' },
+  { id: 85, texto: 'olvidé mi contraseña', categoria: 'cuentas', esperado: 'responde', contiene: 'administrador' },
+  { id: 86, texto: 'no me acuerdo la contraseña, ¿cómo recupero mi cuenta?', categoria: 'cuentas', esperado: 'responde', contiene: 'código' }
 ];
 
 

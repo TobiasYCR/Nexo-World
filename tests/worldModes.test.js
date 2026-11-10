@@ -194,3 +194,12 @@ test('crear mundo desde la interfaz usa nombre, semilla y modo, y lo guarda', as
 test('las reglas de modo salen de la configuración', () => {
   assert.equal(new GameModeRules('creative').breakSeconds, GameConfig.modes.creative.BREAK_SECONDS);
 });
+
+test('si el mundo no se puede crear, el puente devuelve el motivo y no se guarda', async () => {
+  const game = await startGame();
+  new GameUiBridge(game, game.hud, game.hud.intentBus);
+  const request = { name: 'Roto', seed: '1', gameMode: 'hardcore', result: null };
+  game.hud.intentBus.emit(IntentBus.Events.CREATE_WORLD, request);
+  assert.equal(request.result.ok, false);
+  assert.equal(new SaveManager().exists('Roto'), false);
+});

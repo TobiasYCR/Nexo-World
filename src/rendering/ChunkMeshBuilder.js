@@ -38,10 +38,14 @@ export class ChunkMeshBuilder {
   /**
    * @param {import('../world/World.js').World} world para consultar vecinos en otros chunks
    * @param {import('../world/Chunk.js').Chunk} chunk
+   * @param {{greedy?: boolean}} [options] greedy une caras vecinas del mismo tipo
+   *   en rectángulos más grandes (la textura se repite: hay que dibujar con
+   *   textureWrap REPEAT)
    * @returns {{groups: Map<number, {positions:number[], normals:number[], uvs:number[], indices:number[], faceCount:number}>,
    *            visibleBlocks:number, faceCount:number}}
    */
-  build(world, chunk) {
+  build(world, chunk, { greedy = false } = {}) {
+    if (greedy) return this.#buildGreedy(world, chunk);
     const groups = new Map();
     const originX = chunk.chunkX * chunk.sizeX;
     const originZ = chunk.chunkZ * chunk.sizeZ;
@@ -74,6 +78,123 @@ export class ChunkMeshBuilder {
     });
 
     return { groups, visibleBlocks, faceCount };
+  }
+
+  /**
+   * Greedy meshing: por cada dirección y cada capa arma una grilla con las
+   * caras visibles y la cubre con rectángulos lo más grandes posible del mismo
+   * tipo de bloque. Mismo resultado visual con muchas menos caras.
+   */
+  #buildGreedy(world, chunk) {
+    const groups = new Map();
+    const dims = [chunk.sizeX, chunk.height, chunk.sizeZ];
+    const originX = chunk.chunkX * chunk.sizeX;
+    const originZ = chunk.chunkZ * chunk.sizeZ;
+    const registry = this.blockRegistry;
+    const visible = new Uint8Array(chunk.sizeX * chunk.height * chunk.sizeZ);
+    let faceCount = 0;
+
+    const blockAt = (local) => {
+      const [x, y, z] = local;
+      if (y < 0 || y >= chunk.height) return world.getBlockId(originX + x, y, originZ + z);
+      if (x >= 0 && x < chunk.sizeX && z >= 0 && z < chunk.sizeZ) return chunk.getBlock(x, y, z);
+      return world.getBlockId(originX + x, y, originZ + z);
+    };
+
+    for (const face of FACES) {
+      const normal = [face.dx, face.dy, face.dz];
+      const axis = normal.findIndex((value) => value !== 0);
+      const direction = normal[axis];
+      const uAxis = ChunkMeshBuilder.#bitAxis(face.corners[0] ^ face.corners[1]);
+      const vAxis = ChunkMeshBuilder.#bitAxis(face.corners[0] ^ face.corners[2]);
+      const sizeU = dims[uAxis];
+      const sizeV = dims[vAxis];
+      const mask = new Int32Array(sizeU * sizeV);
+      const cell = [0, 0, 0];
+      const neighbor = [0, 0, 0];
+
+      for (let layer = 0; layer < dims[axis]; layer += 1) {
+        // 1. Caras visibles de esta capa.
+        let any = false;
+        for (let v = 0; v < sizeV; v += 1) {
+          for (let u = 0; u < sizeU; u += 1) {
+            cell[axis] = layer;
+            cell[uAxis] = u;
+            cell[vAxis] = v;
+            const id = blockAt(cell);
+            let value = 0;
+            if (id !== 0) {
+              neighbor[0] = cell[0] + face.dx;
+              neighbor[1] = cell[1] + face.dy;
+              neighbor[2] = cell[2] + face.dz;
+              if (!registry.isOpaque(blockAt(neighbor))) {
+                value = id;
+                visible[(cell[1] * chunk.sizeZ + cell[2]) * chunk.sizeX + cell[0]] = 1;
+                any = true;
+              }
+            }
+            mask[v * sizeU + u] = value;
+          }
+        }
+        if (!any) continue;
+
+        // 2. Rectángulos: se extiende en u mientras siga el mismo tipo, y después en v.
+        for (let v = 0; v < sizeV; v += 1) {
+          for (let u = 0; u < sizeU;) {
+            const id = mask[v * sizeU + u];
+            if (id === 0) {
+              u += 1;
+              continue;
+            }
+            let width = 1;
+            while (u + width < sizeU && mask[v * sizeU + u + width] === id) width += 1;
+            let height = 1;
+            grow: while (v + height < sizeV) {
+              for (let k = 0; k < width; k += 1) {
+                if (mask[(v + height) * sizeU + u + k] !== id) break grow;
+              }
+              height += 1;
+            }
+            for (let dv = 0; dv < height; dv += 1) mask.fill(0, (v + dv) * sizeU + u, (v + dv) * sizeU + u + width);
+
+            let group = groups.get(id);
+            if (!group) {
+              group = { positions: [], normals: [], uvs: [], indices: [], faceCount: 0 };
+              groups.set(id, group);
+            }
+            this.#pushQuad(group, face, { axis, direction, layer, uAxis, vAxis, u, v, width, height }, originX, originZ);
+            faceCount += 1;
+            u += width;
+          }
+        }
+      }
+    }
+
+    let visibleBlocks = 0;
+    for (const flag of visible) visibleBlocks += flag;
+    return { groups, visibleBlocks, faceCount };
+  }
+
+  #pushQuad(group, face, quad, originX, originZ) {
+    const size = this.blockSize;
+    const { axis, direction, layer, uAxis, vAxis, u, v, width, height } = quad;
+    const first = group.positions.length / 3;
+    const corner = [0, 0, 0];
+    for (let j = 0; j < 4; j += 1) {
+      corner[axis] = layer + (direction > 0 ? 1 : 0);
+      corner[uAxis] = u + ((j & 1) ? width : 0);
+      corner[vAxis] = v + ((j & 2) ? height : 0);
+      group.positions.push((originX + corner[0]) * size, corner[1] * size, (originZ + corner[2]) * size);
+      group.normals.push(face.dx, face.dy, face.dz);
+      group.uvs.push((j & 1) ? width : 0, (j & 2) ? height : 0);
+    }
+    group.indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
+    group.faceCount += 1;
+  }
+
+  /** Eje (0 = x, 1 = y, 2 = z) del único bit encendido en un índice de octante. */
+  static #bitAxis(bits) {
+    return bits === 1 ? 0 : bits === 2 ? 1 : 2;
   }
 
   #pushFace(group, face, x, y, z) {

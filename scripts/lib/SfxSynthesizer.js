@@ -34,11 +34,30 @@ export class SfxSynthesizer {
     });
   }
 
+  /**
+   * Paso: ruido muy filtrado (sordo) con un golpe grave corto. Dos variantes
+   * con distinto filtro para que caminar no suene a metrónomo.
+   */
+  static step(variant) {
+    const random = SeededRandom.fromString(`step_${variant}`);
+    const smoothing = variant === 1 ? 0.18 : 0.24;
+    let lowPassed = 0;
+    return SfxSynthesizer.#render(0.11, (time) => {
+      lowPassed += (random.signed() - lowPassed) * smoothing;
+      const attack = Math.min(1, time / 0.004);
+      const noise = lowPassed * 1.8 * Math.exp(-time / 0.03);
+      const thump = Math.sin(2 * Math.PI * (variant === 1 ? 90 : 105) * time) * Math.exp(-time / 0.02) * 0.35;
+      return (noise + thump) * attack * 0.55;
+    });
+  }
+
   /** @returns {Map<string, Float32Array>} ruta relativa a assets/audio -> muestras */
   static createAll() {
     return new Map([
       ['sfx/block_place.wav', SfxSynthesizer.blockPlace()],
-      ['sfx/block_break.wav', SfxSynthesizer.blockBreak()]
+      ['sfx/block_break.wav', SfxSynthesizer.blockBreak()],
+      ['sfx/step_1.wav', SfxSynthesizer.step(1)],
+      ['sfx/step_2.wav', SfxSynthesizer.step(2)]
     ]);
   }
 

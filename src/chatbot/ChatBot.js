@@ -44,6 +44,11 @@ export class ChatBot {
     'credencial', 'credenciales', 'hash de mi cuenta'
   ]);
 
+  /** Preguntas sobre recuperar el acceso: no piden una credencial, piden ayuda. */
+  static RECOVERY_TERMS = Object.freeze([
+    'olvide', 'olvido', 'olvidaste', 'recuperar', 'recupero', 'no me acuerdo', 'perdi mi'
+  ]);
+
   static CHEAT_TERMS = Object.freeze([
     'hacer trampa', 'trampa', 'truco para', 'hackear', 'hackeo', 'exploit',
     'ignora tus instrucciones', 'ignora las reglas', 'sin reglas',
@@ -178,6 +183,8 @@ export class ChatBot {
   }
 
   #safety(normalized) {
+    // Olvidarse la contraseña es una consulta válida: se contesta cómo recuperarla.
+    if (TextNormalizer.mentions(normalized, ...ChatBot.RECOVERY_TERMS)) return null;
     const asksCredentials = TextNormalizer.mentions(normalized, ...ChatBot.CREDENTIAL_TERMS);
     const asksCheat = TextNormalizer.mentions(normalized, ...ChatBot.CHEAT_TERMS);
     if (!asksCredentials && !asksCheat) return null;
@@ -195,8 +202,8 @@ export class ChatBot {
 
   #absent(term) {
     return ChatResponse.unknown(
-      `Nexo World no tiene eso (${term}). Es un prototipo: hay bloques, biomas, cuevas, ` +
-        'minerales y supervivencia básica. No te puedo contestar sobre mecánicas de otros juegos, ' +
+      `Nexo World no tiene eso (${term}). Hay bloques, biomas, cuevas, minerales, modos ` +
+        'supervivencia y creativo, y planos para construir. No te puedo contestar sobre mecánicas de otros juegos, ' +
         'y preferí decírtelo antes que inventar una respuesta que suene bien.',
       ChatResponse.Topics.ABSENT,
       'lista de mecánicas ausentes'

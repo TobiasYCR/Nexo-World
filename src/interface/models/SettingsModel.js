@@ -46,13 +46,12 @@ export const SETTINGS_SCHEMA = Object.freeze({
     category: 'general',
     label: 'Distancia de render',
     type: 'number',
-    default: 8,
-    min: 4,
-    max: 16,
+    default: 2,
+    min: 1,
+    max: 8,
     step: 1,
-    formatter: (v) => `${v} chunks`,
-    disabled: true,
-    disabledNote: 'Pendiente Backend 2: hoy es parámetro de construcción del mundo, falta un setter en caliente.'
+    formatter: (v) => `${v} ${v === 1 ? 'chunk' : 'chunks'} (${v * 16} bloques)`,
+    disabled: false
   }),
 
   // Gráficos y Efectos
@@ -105,20 +104,18 @@ export const SETTINGS_SCHEMA = Object.freeze({
   frustumCulling: Object.freeze({
     id: 'frustumCulling',
     category: 'graphics',
-    label: 'Frustum Culling',
+    label: 'Dibujar solo lo que está a la vista (frustum culling)',
     type: 'boolean',
     default: true,
-    disabled: true,
-    disabledNote: 'Gestionado internamente por el motor de renderizado.'
+    disabled: false
   }),
   greedyMeshing: Object.freeze({
     id: 'greedyMeshing',
     category: 'graphics',
-    label: 'Greedy Meshing',
+    label: 'Unir caras iguales (greedy meshing)',
     type: 'boolean',
-    default: false,
-    disabled: true,
-    disabledNote: 'Optimización de geometría pendiente de integración en el motor.'
+    default: true,
+    disabled: false
   }),
 
   // Interfaz y HUD

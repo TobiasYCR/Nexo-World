@@ -21,7 +21,15 @@ export class CameraEffects {
     this.config = config;
   }
 
-  get enabled() { return this.config.ENABLED !== false; }
+  #userEnabled = true;
+
+  get enabled() { return this.#userEnabled && this.config.ENABLED !== false; }
+
+  /** Desde Configuración. */
+  setEnabled(enabled) {
+    this.#userEnabled = Boolean(enabled);
+    if (!this.#userEnabled) this.reset();
+  }
 
   trigger({ amplitude = 0, duration = this.config.DEFAULT_DURATION, rotation = 0 } = {}) {
     if (!this.enabled) return;

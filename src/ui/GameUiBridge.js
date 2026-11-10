@@ -5,6 +5,7 @@ import { SpeechService } from '../audio/SpeechService.js';
 import { BuildChallengeView } from './BuildChallengeView.js';
 import { GameEventTypes } from '../game/GameEvents.js';
 import { ProgressionUiService } from '../progression/ProgressionUiService.js';
+import { SettingsApplier } from './SettingsApplier.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -25,6 +26,9 @@ export class GameUiBridge {
 
     this.#bindIntents();
     this.#bindAccount();
+    // La configuración guardada se aplica al arrancar y cada cambio, al instante.
+    this.settings = new SettingsApplier(game, hud, { speech: SpeechService.getInstance() });
+    this.settings.bind(hud?.settingsModel);
     if (game?.progression && hud?.setProgressionService) {
       hud.setProgressionService(new ProgressionUiService(game.progression, { config: game.config?.progression }));
     }
@@ -138,13 +142,10 @@ export class GameUiBridge {
     // emite después SAVE_GAME con el nombre, así que queda guardado.
     this.intentBus.on(IntentBus.Events.CREATE_WORLD, (payload) => {
       const result = this.game?.newWorld?.({ name: payload?.name, seed: payload?.seed, mode: payload?.gameMode });
+      if (payload && result) payload.result = result;
       if (result && !result.ok) this.toast.error(result.message ?? 'No se pudo crear el mundo.');
     });
 
-    // Configuración modificada
-    this.intentBus.on(IntentBus.Events.SETTINGS_CHANGED, ({ key, value }) => {
-      this.#applySetting(key, value);
-    });
 
     // Modo Educativo: iniciar y cancelar el desafío de construcción (reglas en BuildChallenge).
     this.intentBus.on(IntentBus.Events.START_BUILD_CHALLENGE, (payload) => {
@@ -212,21 +213,5 @@ export class GameUiBridge {
       hotbar.set(index, this.game.blockRegistry.get(material.blockId), Math.max(material.required, 64));
     });
     hotbar.select(0);
-  }
-
-  #applySetting(key, value) {
-    if (key === 'fov' && this.game?.camera?.setFov) {
-      this.game.camera.setFov(value);
-    } else if (key === 'mouseSensitivity' && this.game?.camera?.setSensitivity) {
-      this.game.camera.setSensitivity(value);
-    } else if (key === 'showDebug' && this.hud?.debugOverlay) {
-      this.hud.debugOverlay.setVisible(value);
-    } else if (key === 'crosshairSize' && this.hud?.crosshair) {
-      this.hud.crosshair.setSize(value);
-    } else if (key === 'crosshairOpacity' && this.hud?.crosshair) {
-      this.hud.crosshair.setOpacity(value);
-    } else if (key === 'debugUpdateInterval' && this.hud?.debugOverlay) {
-      this.hud.debugOverlay.setUpdateInterval(value / 1000);
-    }
   }
 }

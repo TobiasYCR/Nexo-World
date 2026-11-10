@@ -45,6 +45,10 @@ export const IntentCatalog = Object.freeze([
     phrases: Object.freeze(['como abro el inventario', 'tecla del inventario', 'donde veo mis bloques'])
   }),
   Object.freeze({
+    id: 'game.controls.fly',
+    phrases: Object.freeze(['como vuelo', 'puedo volar', 'tecla para volar', 'como subo volando', 'que hace la tecla f', 'como dejo de volar'])
+  }),
+  Object.freeze({
     id: 'game.controls.chat',
     phrases: Object.freeze(['como abro el chat', 'como te hablo', 'tecla del chat', 'como cierro el chat'])
   }),
@@ -113,6 +117,18 @@ export const IntentCatalog = Object.freeze([
     phrases: Object.freeze(['hay arboles', 'como se generan los arboles', 'de que altura son los arboles'])
   }),
   Object.freeze({
+    id: 'game.world.create',
+    phrases: Object.freeze(['como creo un mundo', 'crear un mundo nuevo', 'como pongo una semilla', 'como elijo el modo de juego', 'nuevo mundo'])
+  }),
+  Object.freeze({
+    id: 'game.world.modes',
+    phrases: Object.freeze(['que es el modo creativo', 'que es el modo supervivencia', 'diferencia entre creativo y supervivencia', 'modos de juego', 'que modos hay'])
+  }),
+  Object.freeze({
+    id: 'game.status.mode',
+    phrases: Object.freeze(['en que modo estoy', 'que modo de juego tengo', 'estoy en creativo', 'estoy en supervivencia'])
+  }),
+  Object.freeze({
     id: 'game.world.save',
     phrases: Object.freeze(['como se guarda la partida', 'donde se guarda mi mundo', 'se pierde mi partida', 'puedo cargar una partida'])
   }),
@@ -172,6 +188,10 @@ export const IntentCatalog = Object.freeze([
   Object.freeze({
     id: 'game.accounts.session',
     phrases: Object.freeze(['para que sirve iniciar sesion', 'por que deberia crear una cuenta', 'que pasa si no inicio sesion', 'se guardan mis datos sin cuenta'])
+  }),
+  Object.freeze({
+    id: 'game.accounts.recover',
+    phrases: Object.freeze(['olvide mi contrasena', 'como recupero mi cuenta', 'no me acuerdo la contrasena', 'perdi mi clave', 'como cambio la contrasena si la olvide'])
   }),
 
   // ---------------------------------------------------------- modo educativo

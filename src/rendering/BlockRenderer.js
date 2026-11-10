@@ -1,5 +1,6 @@
 import { GameConfig } from '../game/GameConfig.js';
 import { ChunkMeshBuilder } from './ChunkMeshBuilder.js';
+import { ViewFrustum } from './ViewFrustum.js';
 
 /**
  * Dibuja los bloques del mundo. Es la ÚNICA clase que sabe cómo se ve un bloque.
@@ -9,9 +10,14 @@ import { ChunkMeshBuilder } from './ChunkMeshBuilder.js';
  * de video y se reconstruye únicamente cuando el chunk cambia (Chunk.dirty),
  * en lugar de recorrer el mundo y emitir un box() por bloque en cada frame.
  *
+ * Las mallas se arman solo para los chunks dentro de la distancia de render
+ * (unas pocas por frame, las más cercanas primero) y se liberan cuando quedan
+ * lejos. Además de la distancia, se descartan los chunks que quedan fuera del
+ * cono de visión (frustum culling) y las caras vecinas iguales se unen en
+ * rectángulos (greedy meshing). Las dos cosas se pueden apagar desde Configuración.
+ *
  * Contrato con World: recorre world.chunks y consulta vecinos con getBlockId;
- * World no sabe nada de dibujado. La interfaz pública no cambió:
- * render(), renderedBlocks, renderDistance y setRenderDistance().
+ * World no sabe nada de dibujado.
  */
 export class BlockRenderer {
   static MIN_RENDER_DISTANCE = 1;
@@ -22,8 +28,14 @@ export class BlockRenderer {
   #visibleFaces = 0;
   #drawCalls = 0;
   #meshRebuilds = 0;
+  #culledChunks = 0;
   #renderDistance;
   #builder;
+  #frustum = new ViewFrustum();
+  #frustumCulling = true;
+  #greedyMeshing = true;
+  #buildsPerFrame;
+  #releaseMargin;
   /** clave de chunk -> { chunk, meshes: [{blockId, geometry}], visibleBlocks, minX, minZ, maxX, maxZ } */
   #meshes = new Map();
   /** Reutilizado entre frames: blockId -> geometrías visibles de ese tipo. */
@@ -35,7 +47,32 @@ export class BlockRenderer {
     this.textures = textureManager;
     this.blockSize = config.world.BLOCK_SIZE;
     this.#builder = new ChunkMeshBuilder(blockRegistry, this.blockSize);
+    this.#buildsPerFrame = config.rendering.MESH_BUILDS_PER_FRAME ?? 8;
+    this.#releaseMargin = config.rendering.MESH_RELEASE_MARGIN ?? 16;
+    this.#frustumCulling = config.rendering.FRUSTUM_CULLING ?? true;
+    this.#greedyMeshing = config.rendering.GREEDY_MESHING ?? true;
+    this.cameraConfig = config.camera;
     this.setRenderDistance(config.rendering.RENDER_DISTANCE);
+  }
+
+  get frustumCulling() {
+    return this.#frustumCulling;
+  }
+
+  setFrustumCulling(enabled) {
+    this.#frustumCulling = Boolean(enabled);
+  }
+
+  get greedyMeshing() {
+    return this.#greedyMeshing;
+  }
+
+  /** Cambiar el modo rehace todas las mallas en los frames siguientes. */
+  setGreedyMeshing(enabled) {
+    const next = Boolean(enabled);
+    if (next === this.#greedyMeshing) return;
+    this.#greedyMeshing = next;
+    this.dispose();
   }
 
   /** Bloques con al menos una cara visible en los chunks dibujados el último frame. */
@@ -58,9 +95,9 @@ export class BlockRenderer {
     return this.#drawCalls;
   }
 
-  /** Chunks con malla que quedaron fuera de la distancia de render el último frame. */
+  /** Chunks del mundo que no se dibujaron el último frame (lejos o fuera de la vista). */
   get culledChunks() {
-    return this.#meshes.size - this.#drawnChunks;
+    return this.#culledChunks;
   }
 
   /** Mallas de chunk armadas desde que arrancó el juego. */
@@ -93,10 +130,11 @@ export class BlockRenderer {
   /**
    * @param {import('../world/World.js').World} world
    * @param {{x:number,y:number,z:number}} viewerPosition posición en coordenadas de mundo
+   * @param {object|null} [camera] FirstPersonCamera; sin ella no hay frustum culling
    */
-  render(world, viewerPosition) {
-    this.#syncMeshes(world);
-    this.#draw(viewerPosition);
+  render(world, viewerPosition, camera = null) {
+    this.#syncMeshes(world, viewerPosition);
+    this.#draw(world, viewerPosition, camera);
   }
 
   /** Libera las mallas de la placa de video (al descartar el renderer). */
@@ -106,19 +144,46 @@ export class BlockRenderer {
   }
 
   /**
-   * Arma las mallas de los chunks nuevos o modificados y libera las de chunks
-   * que ya no existen (por ejemplo, al cargar otra partida).
+   * Arma las mallas que faltan o están viejas dentro de la distancia de render
+   * (hasta MESH_BUILDS_PER_FRAME por frame, de la más cercana a la más lejana)
+   * y libera las de chunks lejanos o que ya no existen.
    */
-  #syncMeshes(world) {
+  #syncMeshes(world, viewerPosition) {
+    const viewerX = viewerPosition.x / this.blockSize;
+    const viewerZ = viewerPosition.z / this.blockSize;
+    const keep = this.#renderDistance + this.#releaseMargin;
     const alive = new Set();
+    const pending = [];
+
     for (const chunk of world.chunks) {
       alive.add(chunk.key);
+      const distance = BlockRenderer.#distanceToChunk(chunk, viewerX, viewerZ);
       const cached = this.#meshes.get(chunk.key);
-      if (cached && cached.chunk === chunk && !chunk.isDirty) continue;
+      const stale = cached && (cached.chunk !== chunk || chunk.isDirty);
+      if (distance > keep) {
+        // Lejos: se libera; si cambió, queda sucio y se rehace al acercarse.
+        if (cached) {
+          this.#release(cached);
+          this.#meshes.delete(chunk.key);
+        }
+        continue;
+      }
+      if (stale && distance > this.#renderDistance) {
+        this.#release(cached);
+        this.#meshes.delete(chunk.key);
+        continue;
+      }
+      if ((!cached || stale) && distance <= this.#renderDistance) pending.push({ chunk, distance });
+    }
+
+    pending.sort((first, second) => first.distance - second.distance);
+    for (const { chunk } of pending.slice(0, this.#buildsPerFrame)) {
+      const cached = this.#meshes.get(chunk.key);
       if (cached) this.#release(cached);
       this.#meshes.set(chunk.key, this.#buildEntry(world, chunk));
       chunk.markClean();
     }
+
     for (const [key, entry] of this.#meshes) {
       if (alive.has(key)) continue;
       this.#release(entry);
@@ -126,8 +191,17 @@ export class BlockRenderer {
     }
   }
 
+  /** Distancia horizontal, en bloques, del punto al borde más cercano del chunk. */
+  static #distanceToChunk(chunk, viewerX, viewerZ) {
+    const minX = chunk.chunkX * chunk.sizeX;
+    const minZ = chunk.chunkZ * chunk.sizeZ;
+    const dx = Math.max(minX - viewerX, 0, viewerX - (minX + chunk.sizeX));
+    const dz = Math.max(minZ - viewerZ, 0, viewerZ - (minZ + chunk.sizeZ));
+    return Math.hypot(dx, dz);
+  }
+
   #buildEntry(world, chunk) {
-    const { groups, visibleBlocks, faceCount } = this.#builder.build(world, chunk);
+    const { groups, visibleBlocks, faceCount } = this.#builder.build(world, chunk, { greedy: this.#greedyMeshing });
     this.#meshRebuilds += 1;
     const meshes = [];
     for (const [blockId, group] of groups) {
@@ -143,19 +217,23 @@ export class BlockRenderer {
       minX: chunk.chunkX * chunk.sizeX,
       minZ: chunk.chunkZ * chunk.sizeZ,
       maxX: (chunk.chunkX + 1) * chunk.sizeX,
-      maxZ: (chunk.chunkZ + 1) * chunk.sizeZ
+      maxZ: (chunk.chunkZ + 1) * chunk.sizeZ,
+      height: chunk.height
     };
   }
 
   /**
    * Recorte por chunk: se dibuja si el punto más cercano del chunk está dentro
-   * del radio. Después se agrupa por tipo para cambiar de material una sola vez
-   * por tipo en todo el frame.
+   * del radio y, con frustum culling, si su caja toca el cono de visión.
+   * Después se agrupa por tipo para cambiar de material una sola vez por tipo
+   * en todo el frame.
    */
-  #draw(viewerPosition) {
+  #draw(world, viewerPosition, camera) {
     const viewerX = viewerPosition.x / this.blockSize;
     const viewerZ = viewerPosition.z / this.blockSize;
     const maxDistanceSq = this.#renderDistance * this.#renderDistance;
+    const frustum = this.#frustumCulling && camera ? this.#updateFrustum(camera) : null;
+    const size = this.blockSize;
 
     for (const list of this.#byType.values()) list.length = 0;
     let rendered = 0;
@@ -166,6 +244,11 @@ export class BlockRenderer {
       const dx = Math.max(entry.minX - viewerX, 0, viewerX - entry.maxX);
       const dz = Math.max(entry.minZ - viewerZ, 0, viewerZ - entry.maxZ);
       if (dx * dx + dz * dz > maxDistanceSq) continue;
+      if (frustum && !frustum.intersectsBox(
+        entry.minX * size, 0, entry.minZ * size,
+        entry.maxX * size, entry.height * size, entry.maxZ * size,
+        size
+      )) continue;
       for (const { blockId, geometry } of entry.meshes) {
         let list = this.#byType.get(blockId);
         if (!list) {
@@ -183,10 +266,13 @@ export class BlockRenderer {
     this.#drawnChunks = drawn;
     this.#visibleFaces = faces;
     this.#drawCalls = calls;
+    this.#culledChunks = Math.max(0, world.chunkCount - drawn);
 
     const p = this.p;
     p.push();
     p.noStroke();
+    // Las caras unidas usan coordenadas de textura mayores a 1: la textura se repite.
+    if (this.#greedyMeshing && p.REPEAT !== undefined) p.textureWrap?.(p.REPEAT);
     for (const [blockId, geometries] of this.#byType) {
       if (geometries.length === 0) continue;
       p.push();
@@ -218,6 +304,20 @@ export class BlockRenderer {
       geometry.faces.push([indices[index], indices[index + 1], indices[index + 2]]);
     }
     return geometry;
+  }
+
+  #updateFrustum(camera) {
+    const p = this.p;
+    const aspect = p.width > 0 && p.height > 0 ? p.width / p.height : 16 / 9;
+    return this.#frustum.update(
+      camera.position,
+      camera.lookDirection,
+      camera.right,
+      camera.fov ?? this.cameraConfig?.FOV_DEGREES ?? 70,
+      aspect,
+      this.cameraConfig?.NEAR_PLANE ?? 1,
+      this.cameraConfig?.FAR_PLANE ?? 4000
+    );
   }
 
   #release(entry) {

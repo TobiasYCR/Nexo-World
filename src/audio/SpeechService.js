@@ -210,6 +210,11 @@ export class SpeechService {
     return this.#rate;
   }
 
+  /** Volumen de la voz, 0..1 (lo ajusta el volumen maestro de Configuración). */
+  setVolume(volume) {
+    if (Number.isFinite(volume)) this.#volume = Math.min(1, Math.max(0, volume));
+  }
+
   setRate(rate) {
     if (typeof rate === 'number' && rate >= 0.3 && rate <= 2.0) {
       this.#rate = rate;

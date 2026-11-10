@@ -33,7 +33,7 @@ export class Renderer {
     p.background(...this.backgroundColor);
     camera.applyTo(p);
     this.lighting.apply();
-    this.blockRenderer.render(world, camera.position);
+    this.blockRenderer.render(world, camera.position, camera);
     for (const overlay of this.overlays) overlay.draw(p, camera);
   }
 
