@@ -25,7 +25,17 @@ export async function createProgressionServer(config, { repository, accountRepos
 
   const accounts = new AccountService(accountStore, store, { logger });
   const service = new ProgressionService(store, new WorldVerifier(config.worlds), { logger, sessions: accounts });
-  const api = new ApiServer(service, { allowedOrigin: config.allowedOrigin, logger, authRoutes: new AuthRoutes(accounts) });
+  const healthCheck = async () => {
+    if (!database) return { storage: repository ? 'custom' : 'memory' };
+    await database.ping();
+    return { storage: 'mysql', database: config.mysql.database };
+  };
+  const api = new ApiServer(service, {
+    allowedOrigin: config.allowedOrigin,
+    logger,
+    authRoutes: new AuthRoutes(accounts),
+    healthCheck
+  });
   return {
     api,
     service,
