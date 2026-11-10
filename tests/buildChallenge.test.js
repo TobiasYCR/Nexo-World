@@ -379,3 +379,44 @@ test('una etapa inválida se rechaza', () => {
     blocks: [{ x: 0, y: 0, z: 0, blockId: BlockIds.PLANKS, stage: -1 }]
   }, createDefaultBlockRegistry()), /etapa inválida/);
 });
+
+test('la guía ilumina y marca las celdas del bloque que se tiene en la mano', () => {
+  const blockRegistry = createDefaultBlockRegistry();
+  const drawn = [];
+  let current = {};
+  const p = createP5Stub();
+  Object.assign(p, {
+    fill: (...rgba) => { current.alpha = rgba[3]; },
+    emissiveMaterial: (...rgb) => { current.emissive = rgb.some((value) => value > 0); },
+    stroke: () => { current.stroke = true; },
+    noStroke: () => { current.stroke = false; },
+    model: (geometry) => { drawn.push({ gid: geometry.gid, ...current }); current = {}; }
+  });
+  const ghost = new BlueprintGhost({ p, blockRegistry, config: CONFIG.education });
+  const cell = (x, expectedBlockId) => ({ x, y: 0, z: 0, expectedBlockId, status: 'missing' });
+  ghost.update({
+    blueprintId: 'mix',
+    nextBlock: { position: { x: 0, y: 0, z: 0 } },
+    blocks: [cell(0, BlockIds.PLANKS), cell(2, BlockIds.LOG)]
+  });
+  const byType = () => Object.fromEntries(drawn.map((entry) => [entry.gid.split('-').pop(), entry]));
+
+  ghost.draw(p);
+  const idle = byType();
+  assert.equal(idle[BlockIds.PLANKS].alpha, idle[BlockIds.LOG].alpha, 'sin bloque en la mano, todo igual');
+  assert.equal(idle[BlockIds.LOG].stroke, false);
+
+  drawn.length = 0;
+  ghost.setHeldBlock(BlockIds.LOG);
+  ghost.draw(p);
+  const holding = byType();
+  assert.ok(holding[BlockIds.LOG].alpha > holding[BlockIds.PLANKS].alpha * 3, 'lo de la mano resalta y el resto se atenúa');
+  assert.equal(holding[BlockIds.LOG].emissive, true, 'brilla aunque esté a la sombra');
+  assert.equal(holding[BlockIds.LOG].stroke, true, 'con borde');
+  assert.equal(holding[BlockIds.PLANKS].stroke, false);
+
+  drawn.length = 0;
+  ghost.setHeldBlock(BlockIds.GLASS);
+  ghost.draw(p);
+  assert.equal(byType()[BlockIds.LOG].alpha, idle[BlockIds.LOG].alpha, 'un bloque que el plano no usa no cambia nada');
+});

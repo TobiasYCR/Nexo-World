@@ -20,6 +20,7 @@ export class BlueprintGhost {
   #groups = [];
   #elapsed = 0;
   #buildCount = 0;
+  #heldBlockId = null;
 
   constructor({ p = null, blockRegistry, blockSize = GameConfig.world.BLOCK_SIZE, config = GameConfig.education } = {}) {
     this.p = p;
@@ -58,27 +59,79 @@ export class BlueprintGhost {
     return this.#groups.length;
   }
 
+  /**
+   * Bloque que el jugador tiene en la mano. Las celdas del plano que esperan
+   * ese bloque se iluminan y se marcan con borde; las demás se atenúan. Así se
+   * ve de un vistazo dónde va lo que se está por colocar.
+   * @param {number|null} blockId
+   */
+  setHeldBlock(blockId) {
+    this.#heldBlockId = Number.isInteger(blockId) ? blockId : null;
+  }
+
+  get heldBlockId() {
+    return this.#heldBlockId;
+  }
+
   draw(p = this.p, _camera) {
     if (!this.visible || !this.#snapshot || !p?.push) return;
 
-    const nextPosition = this.#snapshot.nextBlock?.position;
+    const config = this.config;
+    const held = this.#heldBlockId;
+    const holdingPlanBlock = held !== null &&
+      this.#groups.some((group) => group.status === 'missing' && group.blockId === held);
+    const pulse = 0.75 + Math.sin(this.#elapsed * config.NEXT_BLOCK_PULSE_SPEED) * 0.25;
+
     p.push();
-    p.noStroke?.();
     for (const group of this.#groups) {
-      const isNext = group.status === 'missing' && nextPosition && group.positionKeys.has(BlueprintGhost.#positionKey(nextPosition));
-      const pulse = isNext
-        ? 0.72 + Math.sin(this.#elapsed * this.config.NEXT_BLOCK_PULSE_SPEED) * 0.2
-        : 1;
-      const color = group.status === 'wrong'
-        ? this.config.WRONG_BLOCK_COLOR
-        : [...this.blockRegistry.get(group.blockId).color, Math.round(this.config.GHOST_OPACITY * 255 * pulse)];
-      const alpha = color[3] ?? 255;
-      p.fill?.(color[0], color[1], color[2], alpha);
-      p.ambientMaterial?.(color[0], color[1], color[2], alpha);
-      if (typeof p.model === 'function') {
-        p.model(group.geometry);
+      if (group.status === 'wrong') {
+        const [r, g, b, a] = config.WRONG_BLOCK_COLOR;
+        this.#paint(p, [r, g, b], a, null);
+        p.stroke?.(r, g, b, 255);
+        p.strokeWeight?.(config.HIGHLIGHT_STROKE_WEIGHT);
+        p.model?.(group.geometry);
+        continue;
       }
+
+      const base = this.blockRegistry.get(group.blockId).color;
+      const matches = holdingPlanBlock && group.blockId === held;
+      if (matches) {
+        // Más claro, con brillo propio (no depende de la luz) y borde por bloque.
+        const light = base.map((channel) => Math.round(channel + (255 - channel) * 0.25));
+        this.#paint(p, light, Math.round(config.HELD_OPACITY * 255 * pulse), light.map((channel) => channel * 0.35));
+        const [sr, sg, sb] = config.HIGHLIGHT_STROKE_COLOR;
+        p.stroke?.(sr, sg, sb, Math.round(255 * pulse));
+        p.strokeWeight?.(config.HIGHLIGHT_STROKE_WEIGHT);
+      } else {
+        const opacity = holdingPlanBlock ? config.DIM_OPACITY : config.GHOST_OPACITY;
+        this.#paint(p, base, Math.round(opacity * 255), null);
+        p.noStroke?.();
+      }
+      p.model?.(group.geometry);
     }
+    this.#drawNextOutline(p, pulse);
+    p.pop();
+  }
+
+  #paint(p, [r, g, b], alpha, emissive) {
+    p.fill?.(r, g, b, alpha);
+    p.ambientMaterial?.(r, g, b, alpha);
+    if (emissive) p.emissiveMaterial?.(...emissive);
+    else p.emissiveMaterial?.(0, 0, 0);
+  }
+
+  /** Marco grueso y titilante alrededor del próximo bloque que pide el plano. */
+  #drawNextOutline(p, pulse) {
+    const position = this.#snapshot.nextBlock?.position;
+    if (!position || typeof p.box !== 'function') return;
+    const size = this.blockSize;
+    const [r, g, b] = this.config.NEXT_BLOCK_OUTLINE_COLOR;
+    p.push();
+    p.translate?.((position.x + 0.5) * size, (position.y + 0.5) * size, (position.z + 0.5) * size);
+    p.noFill?.();
+    p.stroke?.(r, g, b, Math.round(255 * pulse));
+    p.strokeWeight?.(this.config.NEXT_BLOCK_OUTLINE_WEIGHT);
+    p.box(size * 1.04);
     p.pop();
   }
 
@@ -110,7 +163,8 @@ export class BlueprintGhost {
           positions: [],
           normals: [],
           uvs: [],
-          indices: []
+          indices: [],
+          edges: []
         };
         grouped.set(key, group);
       }
@@ -142,6 +196,8 @@ export class BlueprintGhost {
         group.uvs.push(index & 1, (index & 2) / 2);
       }
       group.indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
+      // Contorno del cuadrado, sin la diagonal de los triángulos.
+      group.edges.push([first, first + 1], [first + 1, first + 3], [first + 3, first + 2], [first + 2, first]);
     }
   }
 
@@ -151,12 +207,12 @@ export class BlueprintGhost {
       ? new GeometryClass(1, 1)
       : { vertices: [], vertexNormals: [], uvs: [], faces: [], edges: [], vertexColors: [], _edgesToVertices() {} };
     geometry.gid = `nexo-blueprint-${this.#buildCount}-${group.status}-${group.blockId}`;
+    // Los bordes de p5 copian los vértices: tienen que ser p5.Vector, no objetos sueltos.
+    const vector = typeof this.p?.createVector === 'function'
+      ? (x, y, z) => this.p.createVector(x, y, z)
+      : (x, y, z) => ({ x, y, z });
     for (let index = 0; index < group.positions.length; index += 3) {
-      geometry.vertices.push({
-        x: group.positions[index],
-        y: group.positions[index + 1],
-        z: group.positions[index + 2]
-      });
+      geometry.vertices.push(vector(group.positions[index], group.positions[index + 1], group.positions[index + 2]));
       geometry.vertexNormals.push({
         x: group.normals[index],
         y: group.normals[index + 1],
@@ -167,6 +223,8 @@ export class BlueprintGhost {
     for (let index = 0; index < group.indices.length; index += 3) {
       geometry.faces.push([group.indices[index], group.indices[index + 1], group.indices[index + 2]]);
     }
+    geometry.edges = group.edges.map((edge) => [...edge]);
+    geometry._edgesToVertices?.();
     return geometry;
   }
 

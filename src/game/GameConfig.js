@@ -253,6 +253,16 @@ export const GameConfig = Object.freeze({
     GHOST_OPACITY: 0.42,
     /** Velocidad del pulso visual del próximo bloque sugerido. */
     NEXT_BLOCK_PULSE_SPEED: 5,
+    /** Opacidad de las celdas que esperan el bloque que el jugador tiene en la mano. */
+    HELD_OPACITY: 0.72,
+    /** Opacidad del resto del plano mientras se tiene en la mano uno de sus bloques. */
+    DIM_OPACITY: 0.14,
+    /** Borde de cada celda que espera el bloque de la mano. */
+    HIGHLIGHT_STROKE_COLOR: Object.freeze([255, 236, 120]),
+    HIGHLIGHT_STROKE_WEIGHT: 2,
+    /** Marco del próximo bloque sugerido. */
+    NEXT_BLOCK_OUTLINE_COLOR: Object.freeze([255, 255, 255]),
+    NEXT_BLOCK_OUTLINE_WEIGHT: 4,
     /** Color RGBA de un bloque colocado con un tipo incorrecto. */
     WRONG_BLOCK_COLOR: Object.freeze([235, 64, 64, 220]),
     /** Límite para evitar planos que degraden la guía o la verificación. */
@@ -303,8 +313,16 @@ export const GameConfig = Object.freeze({
     RENDER_DISTANCE: 24,
     /** Mallas de chunk que se arman como máximo por frame (las más cercanas primero). */
     MESH_BUILDS_PER_FRAME: 8,
+    /** Milisegundos por frame dedicados a armar mallas; el resto queda para el próximo. */
+    MESH_BUILD_BUDGET_MS: 4,
     /** Bloques extra, más allá de la distancia de render, antes de liberar una malla. */
     MESH_RELEASE_MARGIN: 16,
+    /**
+     * Píxeles reales por píxel de pantalla. 1 evita dibujar 4 veces más en
+     * pantallas de alta densidad (notebooks y celulares), que era lo que más
+     * pesaba; con un juego de píxeles grandes no se nota la diferencia.
+     */
+    PIXEL_DENSITY: 1,
     /** No dibujar los chunks que quedan fuera del cono de visión. */
     FRUSTUM_CULLING: true,
     /** Unir caras vecinas del mismo tipo en rectángulos (menos geometría). */
