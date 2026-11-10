@@ -106,9 +106,12 @@ test('las texturas cargadas usan filtro NEAREST en ambos sentidos', async () => 
   assert.deepEqual(interpolations, [['/textures/blocks/dirt.png', 'nearest', 'nearest']]);
 });
 
+/** Estas pruebas miran la lógica del renderer: alcanza con un mundo de 2 × 2 chunks. */
+const SMALL = { ...GameConfig, world: { ...GameConfig.world, WORLD_WIDTH: 32, WORLD_DEPTH: 32 } };
+
 function buildTerrain() {
-  const world = new World(createDefaultBlockRegistry(), GameConfig);
-  new WorldGenerator(GameConfig.world).generate(world);
+  const world = new World(createDefaultBlockRegistry(), SMALL);
+  new WorldGenerator(SMALL).generate(world);
   return world;
 }
 

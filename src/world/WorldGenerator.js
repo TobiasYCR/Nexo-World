@@ -3,7 +3,8 @@ import { TreeFeature } from './TreeFeature.js';
 import { BiomeMap } from './BiomeMap.js';
 import { CaveGenerator } from './CaveGenerator.js';
 import { OreGenerator } from './OreGenerator.js';
-import { createDefaultBiomeRegistry } from './BiomeRegistry.js';
+import { createDefaultBiomeRegistry, BiomeIds } from './BiomeRegistry.js';
+import { BuildZone } from './BuildZone.js';
 import { BlockIds } from '../utils/Constants.js';
 import { GameConfig } from '../game/GameConfig.js';
 
@@ -12,7 +13,8 @@ import { GameConfig } from '../game/GameConfig.js';
  * estrategia de generación cambie sin tocar el almacenamiento.
  *
  * Orden de generación (fijo; cambiarlo cambia el mundo y exige subir VERSION):
- *   1. Biomas y alturas    BiomeMap      mapa 2D de bioma y altura por columna
+ *   1. Biomas y alturas    BiomeMap      mapa 2D de bioma y altura por columna;
+ *                          BuildZone     aplana el centro como zona de construcción
  *   2. Terreno base        este archivo  piedra desde y=0 hasta la superficie
  *   3. Cuevas              CaveGenerator excava terreno natural bajo la superficie
  *   4. Minerales           OreGenerator  vetas planificadas, solo sobre roca huésped
@@ -26,7 +28,7 @@ import { GameConfig } from '../game/GameConfig.js';
  */
 export class WorldGenerator {
   /** Subir cuando un cambio de algoritmo altere el mundo para la misma semilla y configuración. */
-  static VERSION = 2;
+  static VERSION = 3;
 
   /**
    * @param {object} [config] GameConfig. Las secciones que falten se toman de
@@ -42,6 +44,8 @@ export class WorldGenerator {
     this.clusterNoise = new NoiseGenerator(NoiseGenerator.deriveSeed(this.seed, 'trees:cluster'));
     this.bedrockNoise = new NoiseGenerator(NoiseGenerator.deriveSeed(this.seed, 'bedrock'));
     this.currentBiomeMap = null;
+    /** Zona llana de construcción del último mundo planificado. */
+    this.buildZone = null;
     /** Métricas de la última generación (tiempos por fase, conteos). */
     this.stats = null;
   }
@@ -67,15 +71,28 @@ export class WorldGenerator {
    * @returns {{biomeIds: Uint8Array, heights: Int16Array}} indexados por z * width + x
    */
   planSurface(world) {
-    const settings = this.#settingsFor(world);
-    const biomeMap = this.createBiomeMap(world);
-    this.currentBiomeMap = biomeMap;
-    return biomeMap.build(world.width, world.depth, settings.minSurface, settings.maxSurface);
+    return this.#planSurface(world, this.#settingsFor(world));
   }
 
   /** API pública para consumidores visuales; no duplica la selección de biomas. */
   getBiomeAt(x, z) {
+    if (this.buildZone?.contains(x, z)) return this.biomeRegistry.get(BiomeIds.PLAINS);
     return this.currentBiomeMap?.biomeAt(x, z) ?? null;
+  }
+
+  /** Biomas y alturas, con la zona de construcción ya aplanada. */
+  #planSurface(world, settings) {
+    const biomeMap = this.createBiomeMap(world);
+    this.currentBiomeMap = biomeMap;
+    const plan = biomeMap.build(world.width, world.depth, settings.minSurface, settings.maxSurface);
+    const plains = this.biomeRegistry.get(BiomeIds.PLAINS);
+    const level = Math.max(
+      settings.minSurface,
+      Math.min(settings.maxSurface, Math.round(plains.terrainHeight * settings.heightScale))
+    );
+    this.buildZone = new BuildZone(this.config.buildZone, world.width, world.depth, level);
+    this.buildZone.apply(plan.heights, plan.biomeIds, world.width, world.depth, plains.id);
+    return plan;
   }
 
   generate(world) {
@@ -84,9 +101,7 @@ export class WorldGenerator {
     const phases = {};
 
     let phaseStart = performance.now();
-    const biomeMap = this.createBiomeMap(world);
-    this.currentBiomeMap = biomeMap;
-    const { biomeIds, heights } = biomeMap.build(world.width, world.depth, settings.minSurface, settings.maxSurface);
+    const { biomeIds, heights } = this.#planSurface(world, settings);
     phases.biomes = performance.now() - phaseStart;
 
     phaseStart = performance.now();
@@ -150,7 +165,7 @@ export class WorldGenerator {
 
         column.fill(BlockIds.AIR);
         column.fill(BlockIds.STONE, 0, surfaceY + 1);
-        carved += caves.carveColumn(column, x, z, surfaceY, settings.carvable);
+        if (!this.buildZone.blocksCaves(x, z)) carved += caves.carveColumn(column, x, z, surfaceY, settings.carvable);
         WorldGenerator.#applyOres(column, oreMap, x, z, width, depth, surfaceY, settings.oreHost);
         const top = this.#applySurfaceLayers(column, biome, surfaceY, this.#slopeAt(heights, x, z, width, depth), settings);
         this.#applyBedrock(column, x, z, settings.bedrockLayers);
@@ -229,7 +244,7 @@ export class WorldGenerator {
       for (let x = 0; x < width; x += 1) {
         const index = z * width + x;
         const biome = settings.biomesById.get(biomeIds[index]);
-        if (biome.treeDensity <= 0) continue;
+        if (biome.treeDensity <= 0 || this.buildZone.blocksTrees(x, z)) continue;
         if (biome.treeClustering > 0 && this.clusterNoise.noise2D(x * clusterScale, z * clusterScale) < biome.treeClustering * 0.55) {
           continue;
         }

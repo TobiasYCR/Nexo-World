@@ -144,14 +144,10 @@ test('noise2D varía con la semilla por defecto (bug del ruido plano)', () => {
 });
 
 test('la generación produce relieve, no una plancha plana', () => {
-  const world = new WorldGenerator(GameConfig.world).generate(buildWorld());
-
-  const heights = new Set();
-  for (let x = 0; x < world.width; x += 1) {
-    for (let z = 0; z < world.depth; z += 1) {
-      heights.add(world.getSurfaceHeight(x, z));
-    }
-  }
+  const generator = new WorldGenerator(GameConfig.world);
+  const world = generator.generate(buildWorld());
+  // Altura del terreno sin árboles: la copa de un árbol en una loma puede tocar el techo.
+  const heights = new Set(generator.planSurface(world).heights);
 
   assert.ok(heights.size > 3, `debería haber varias alturas de superficie (solo: ${[...heights].join(', ')})`);
   assert.ok(Math.max(...heights) < world.height, 'el terreno entra en la altura del mundo');

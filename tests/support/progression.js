@@ -8,7 +8,7 @@ import { BlockIds } from '../../src/utils/Constants.js';
 
 let cached = null;
 
-/** Mundo por defecto (32x24x32) generado una vez, con su foto natural y su clave. */
+/** Mundo por defecto (96x24x96) generado una vez, con su foto natural y su clave. */
 export function defaultWorld() {
   if (!cached) {
     const world = new World(createDefaultBlockRegistry(), GameConfig);

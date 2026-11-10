@@ -9,7 +9,9 @@ Proyecto de la materia P.I.S.W.D. Equipo: Andrea Cubas, Tobias Caballero, Leandr
 ## Qué tiene
 
 - **Mundo:**
-  - Generado por semilla, con cuatro biomas (llanura, bosque, desierto y montañas), cuevas, minerales y árboles.
+  - 96 × 96 bloques, generado por semilla, con cuatro biomas (llanura, bosque, desierto y colinas), cuevas, minerales y árboles.
+  - Terreno chato a propósito, para poder construir en casi cualquier parte.
+  - En el centro, donde aparece el jugador, hay una zona de construcción: una llanura de 25 × 25 totalmente plana, sin árboles ni cuevas.
   - El mismo mundo se repite con la misma semilla.
 - **Modos de juego:**
   - **Supervivencia:** vida, daño por caída y bloques que se juntan al romper.
@@ -24,7 +26,7 @@ Proyecto de la materia P.I.S.W.D. Equipo: Andrea Cubas, Tobias Caballero, Leandr
   - Puntos por explorar, descubrir biomas, minar y construir; niveles.
   - Clasificación por modo, validada por el servidor.
 - **Modo educativo:**
-  - Planos de construcción con guía 3D en el mundo.
+  - Planos de construcción (casa, torre y puente) con guía 3D en el mundo. Se apoyan en el suelo llano más cercano y piden los bloques por etapas: piso, columnas, paredes, ventanas y techo.
   - Nombres de bloques en sílabas y lectura en voz alta (Web Speech API).
 - **Asistente de consultas:** chat que responde sobre el juego y la partida a partir de los datos del juego, sin servicios externos.
 - **Render por mallas de chunk:** solo las caras visibles, caras iguales unidas (greedy meshing), recorte por distancia y por cono de visión.

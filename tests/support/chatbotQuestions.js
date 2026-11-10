@@ -44,7 +44,7 @@ export const preguntas = [
   { id: 17, texto: '¿desde qué altura me hago daño al caer?', categoria: 'supervivencia', esperado: 'responde' },
 
   // --- Mundo: la respuesta está en GameConfig.world y .chunk --------------
-  { id: 18, texto: '¿qué tamaño tiene el mundo?', categoria: 'mundo', esperado: 'responde', contiene: '32' },
+  { id: 18, texto: '¿qué tamaño tiene el mundo?', categoria: 'mundo', esperado: 'responde', contiene: '96' },
   { id: 19, texto: '¿de cuántos bloques es un chunk?', categoria: 'mundo', esperado: 'responde', contiene: '16' },
   { id: 20, texto: '¿cómo se guarda la partida?', categoria: 'mundo', esperado: 'responde' },
 
