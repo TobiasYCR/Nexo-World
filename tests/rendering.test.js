@@ -339,3 +339,18 @@ test('LightingManager tolera un vector de dirección nulo', () => {
   });
   assert.deepEqual(lighting.direction, { x: 0, y: 1, z: 0 });
 });
+
+test('BlockRenderer dibuja el tronco con log_top en las caras horizontales y log_side en las laterales', () => {
+  const world = new World(createDefaultBlockRegistry(), GameConfig);
+  world.setBlockId(4, 4, 4, BlockIds.LOG);
+  const texturesApplied = [];
+  const p = createP5Stub();
+  p.texture = (tex) => { texturesApplied.push(tex.name); };
+  const textures = {
+    get: (name) => ({ name })
+  };
+  const renderer = new BlockRenderer(p, world.blockRegistry, textures, GameConfig);
+  renderer.render(world, { x: 4 * world.blockSize, y: 4 * world.blockSize, z: 4 * world.blockSize });
+  assert.ok(texturesApplied.includes('log_top.png'), 'aplica log_top a la cara superior/inferior');
+  assert.ok(texturesApplied.includes('log_side.png'), 'aplica log_side a las caras laterales');
+});

@@ -101,7 +101,7 @@ test('las mallas se arman de a pocas, las cercanas primero, y se liberan al alej
   const config = {
     ...GameConfig,
     world: { ...GameConfig.world, WORLD_WIDTH: 96, WORLD_DEPTH: 96 },
-    rendering: { ...GameConfig.rendering, MESH_BUILDS_PER_FRAME: 2, MESH_RELEASE_MARGIN: 0 }
+    rendering: { ...GameConfig.rendering, MESH_BUILDS_PER_FRAME: 2, MESH_BUILD_BUDGET_MS: Infinity, MESH_RELEASE_MARGIN: 0 }
   };
   const world = generatedWorld(config);
   const p = createP5Stub();

@@ -1,6 +1,7 @@
 import { GameConfig } from '../game/GameConfig.js';
 import { ChunkMeshBuilder } from './ChunkMeshBuilder.js';
 import { ViewFrustum } from './ViewFrustum.js';
+import { BlockIds } from '../utils/Constants.js';
 
 /**
  * Dibuja los bloques del mundo. Es la ÚNICA clase que sabe cómo se ve un bloque.
@@ -212,9 +213,25 @@ export class BlockRenderer {
     this.#meshRebuilds += 1;
     const meshes = [];
     for (const [blockId, group] of groups) {
-      BlockRenderer.#nextGeometryId += 1;
-      const gid = `nexo-chunk-${chunk.key}-${blockId}-${BlockRenderer.#nextGeometryId}`;
-      meshes.push({ blockId, geometry: this.#toGeometry(group, gid) });
+      const blockType = this.blockRegistry.get(blockId);
+      const isMulti = blockId === BlockIds.LOG && blockType.textures && (
+        blockType.textures.top !== blockType.textures.side ||
+        blockType.textures.bottom !== blockType.textures.side
+      );
+
+      if (!isMulti || group.faceCount === 0) {
+        BlockRenderer.#nextGeometryId += 1;
+        const gid = `nexo-chunk-${chunk.key}-${blockId}-${BlockRenderer.#nextGeometryId}`;
+        meshes.push({ blockId, textureName: blockType.texture, geometry: this.#toGeometry(group, gid) });
+      } else {
+        const subGroups = BlockRenderer.#splitGroupByTexture(group, blockType);
+        for (const [textureName, subGroup] of subGroups) {
+          if (subGroup.positions.length === 0) continue;
+          BlockRenderer.#nextGeometryId += 1;
+          const gid = `nexo-chunk-${chunk.key}-${blockId}-${textureName}-${BlockRenderer.#nextGeometryId}`;
+          meshes.push({ blockId, textureName, geometry: this.#toGeometry(subGroup, gid) });
+        }
+      }
     }
     return {
       chunk,
@@ -227,6 +244,47 @@ export class BlockRenderer {
       maxZ: (chunk.chunkZ + 1) * chunk.sizeZ,
       height: chunk.height
     };
+  }
+
+  static #splitGroupByTexture(group, blockType) {
+    const topTex = blockType.textures?.top ?? blockType.texture;
+    const bottomTex = blockType.textures?.bottom ?? blockType.texture;
+    const sideTex = blockType.textures?.side ?? blockType.texture;
+
+    const subGroups = new Map();
+    const getSubGroup = (tex) => {
+      let sub = subGroups.get(tex);
+      if (!sub) {
+        sub = { positions: [], normals: [], uvs: [], indices: [] };
+        subGroups.set(tex, sub);
+      }
+      return sub;
+    };
+
+    const quadCount = group.faceCount;
+    for (let q = 0; q < quadCount; q += 1) {
+      const ny = group.normals[q * 12 + 1];
+      let texName = sideTex;
+      if (ny > 0) {
+        texName = topTex;
+      } else if (ny < 0) {
+        texName = bottomTex;
+      }
+
+      const sub = getSubGroup(texName);
+      const first = sub.positions.length / 3;
+
+      for (let i = 0; i < 12; i += 1) {
+        sub.positions.push(group.positions[q * 12 + i]);
+        sub.normals.push(group.normals[q * 12 + i]);
+      }
+      for (let i = 0; i < 8; i += 1) {
+        sub.uvs.push(group.uvs[q * 8 + i]);
+      }
+      sub.indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
+    }
+
+    return subGroups;
   }
 
   /**
@@ -256,11 +314,12 @@ export class BlockRenderer {
         entry.maxX * size, entry.height * size, entry.maxZ * size,
         size
       )) continue;
-      for (const { blockId, geometry } of entry.meshes) {
-        let list = this.#byType.get(blockId);
+      for (const { blockId, textureName, geometry } of entry.meshes) {
+        const key = textureName ? `${blockId}:${textureName}` : String(blockId);
+        let list = this.#byType.get(key);
         if (!list) {
           list = [];
-          this.#byType.set(blockId, list);
+          this.#byType.set(key, list);
         }
         list.push(geometry);
       }
@@ -280,10 +339,13 @@ export class BlockRenderer {
     p.noStroke();
     // Las caras unidas usan coordenadas de textura mayores a 1: la textura se repite.
     if (this.#greedyMeshing && p.REPEAT !== undefined) p.textureWrap?.(p.REPEAT);
-    for (const [blockId, geometries] of this.#byType) {
+    for (const [key, geometries] of this.#byType) {
       if (geometries.length === 0) continue;
+      const colon = key.indexOf(':');
+      const blockId = Number(colon >= 0 ? key.slice(0, colon) : key);
+      const textureName = colon >= 0 ? key.slice(colon + 1) : null;
       p.push();
-      this.#applyMaterial(this.blockRegistry.get(blockId));
+      this.#applyMaterial(this.blockRegistry.get(blockId), textureName);
       for (const geometry of geometries) p.model(geometry);
       p.pop();
     }
@@ -331,8 +393,9 @@ export class BlockRenderer {
     for (const { geometry } of entry.meshes) this.p.freeGeometry?.(geometry);
   }
 
-  #applyMaterial(blockType) {
-    const texture = blockType.texture ? this.textures.get(blockType.texture) : null;
+  #applyMaterial(blockType, textureName = null) {
+    const effectiveTextureName = textureName || blockType.texture;
+    const texture = effectiveTextureName ? this.textures.get(effectiveTextureName) : null;
     if (texture) {
       this.p.texture(texture);
     } else {

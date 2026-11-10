@@ -1,6 +1,7 @@
 import { GameConfig } from '../game/GameConfig.js';
 import { MathUtils } from '../utils/MathUtils.js';
 import { HandAnimator } from './HandAnimator.js';
+import { BlockIds } from '../utils/Constants.js';
 
 /** Dibuja la mano en primera persona; HandAnimator calcula sus transformaciones. */
 export class HandRenderer {
@@ -119,6 +120,10 @@ export class HandRenderer {
   }
 
   #drawBlock(p) {
+    if (this.#blockType.id === BlockIds.LOG && typeof p.beginShape === 'function') {
+      this.#drawLogBlock(p);
+      return;
+    }
     const texture = this.#blockType.texture ? this.textures?.get(this.#blockType.texture) : null;
     if (texture) {
       p.texture(texture);
@@ -127,6 +132,70 @@ export class HandRenderer {
       p.ambientMaterial(...this.#blockType.color);
     }
     p.box(this.config.BLOCK_SCALE);
+  }
+
+  #drawLogBlock(p) {
+    const s = this.config.BLOCK_SCALE;
+    const h = s / 2;
+    const topTexName = this.#blockType.textures?.top ?? this.#blockType.texture;
+    const sideTexName = this.#blockType.textures?.side ?? this.#blockType.texture;
+    const topTex = topTexName ? this.textures?.get(topTexName) : null;
+    const sideTex = sideTexName ? this.textures?.get(sideTexName) : null;
+    const mode = p.QUADS ?? 0;
+
+    // Caras superior e inferior (anillos del tronco)
+    p.push();
+    if (topTex) {
+      p.texture(topTex);
+    } else {
+      p.fill(...this.#blockType.color);
+      p.ambientMaterial(...this.#blockType.color);
+    }
+    p.beginShape(mode);
+    // Top (+Y)
+    p.vertex(-h, h, -h, 0, 0);
+    p.vertex(h, h, -h, 1, 0);
+    p.vertex(h, h, h, 1, 1);
+    p.vertex(-h, h, h, 0, 1);
+    // Bottom (-Y)
+    p.vertex(-h, -h, -h, 0, 0);
+    p.vertex(h, -h, -h, 1, 0);
+    p.vertex(h, -h, h, 1, 1);
+    p.vertex(-h, -h, h, 0, 1);
+    p.endShape();
+    p.pop();
+
+    // Caras laterales (corteza vertical)
+    p.push();
+    if (sideTex) {
+      p.texture(sideTex);
+    } else {
+      p.fill(...this.#blockType.color);
+      p.ambientMaterial(...this.#blockType.color);
+    }
+    p.beginShape(mode);
+    // Front (+Z)
+    p.vertex(-h, -h, h, 0, 1);
+    p.vertex(h, -h, h, 1, 1);
+    p.vertex(h, h, h, 1, 0);
+    p.vertex(-h, h, h, 0, 0);
+    // Back (-Z)
+    p.vertex(h, -h, -h, 0, 1);
+    p.vertex(-h, -h, -h, 1, 1);
+    p.vertex(-h, h, -h, 1, 0);
+    p.vertex(h, h, -h, 0, 0);
+    // Left (-X)
+    p.vertex(-h, -h, -h, 0, 1);
+    p.vertex(-h, -h, h, 1, 1);
+    p.vertex(-h, h, h, 1, 0);
+    p.vertex(-h, h, -h, 0, 0);
+    // Right (+X)
+    p.vertex(h, -h, h, 0, 1);
+    p.vertex(h, -h, -h, 1, 1);
+    p.vertex(h, h, -h, 1, 0);
+    p.vertex(h, h, h, 0, 0);
+    p.endShape();
+    p.pop();
   }
 
   #drawArm(p) {
