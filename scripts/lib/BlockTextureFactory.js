@@ -23,7 +23,7 @@ export class BlockTextureFactory {
     leaves: [[36, 88, 34], [47, 110, 41], [62, 135, 49], [82, 158, 61]],
     sand: [[208, 186, 128], [218, 198, 140], [227, 208, 152], [235, 219, 168]],
     glass: [[134, 190, 210], [168, 220, 235], [205, 242, 248]],
-    sandstone: [[188, 156, 98], [202, 170, 110], [214, 184, 122], [226, 198, 138]],
+    sandstone: [[192, 156, 98], [205, 170, 110], [217, 184, 124], [228, 198, 140]],
     bedrock: [[30, 30, 33], [52, 52, 56], [78, 78, 83], [108, 108, 113]],
     /** Minerales: [sombra, color principal, brillo]. */
     coal: [[8, 8, 10], [18, 18, 21], [58, 58, 64]],
@@ -219,20 +219,28 @@ export class BlockTextureFactory {
   }
 
   /** Estratos horizontales: franjas claras arriba y juntas oscuras cada 5 filas. */
+  /**
+   * Arenisca: arena compactada, más clara y fina que la madera. Antes tenía
+   * franjas oscuras de lado a lado y en las cuevas del desierto se confundía
+   * con tablones. Ahora las capas son ondas suaves que no cruzan todo el
+   * bloque, con grano y algún poro oscuro, y un borde superior más claro.
+   */
   static sandstone() {
     const random = SeededRandom.fromString('sandstone');
     const palette = BlockTextureFactory.PALETTES.sandstone;
     const size = BlockTextureFactory.SIZE;
-    const strata = new TilingNoise(random, 4, 1);
+    const grain = new TilingNoise(random, 4);
     const canvas = new PixelCanvas(size, size);
     canvas.forEach((x, y) => {
-      const band = y < 3 ? 1 : 0;
-      const value = strata.sample(x / size, 0) * 0.6 + random.next() * 0.4;
-      const level = Math.min(palette.length - 1, band + Math.floor(value * (palette.length - 1)));
+      const wave = Math.sin((x / size) * Math.PI * 2) * 1.2;
+      const layer = (Math.floor((y + wave) / 4) % 2) * 0.22;
+      const value = grain.sample(x / size, y / size) * 0.45 + random.next() * 0.3 + layer;
+      const top = y < 2 ? 1 : 0;
+      const level = Math.min(palette.length - 1, top + Math.floor(value * (palette.length - 1)));
       canvas.set(x, y, palette[level]);
     });
-    for (let y = 4; y < size; y += 5) {
-      for (let x = 0; x < size; x += 1) canvas.shade(x, y, random.next() < 0.8 ? 0.82 : 0.9);
+    for (let pore = 0; pore < 9; pore += 1) {
+      canvas.shade(random.int(size), 2 + random.int(size - 2), 0.86);
     }
     return canvas;
   }

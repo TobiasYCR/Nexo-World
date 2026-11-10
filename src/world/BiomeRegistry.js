@@ -111,9 +111,9 @@ function defaultBiomeDefinitions(weights) {
       terrainShape: TerrainShapes.RIDGED,
       noiseScale: 0.035,
       treeDensity: 0.006,
-      treeSpacing: 6,
-      stoneAltitude: 32,
-      steepSlope: 3
+      treeSpacing: 6
+      // Sin stoneAltitude ni steepSlope: con el terreno chato la roca expuesta
+      // quedaba como bloques de piedra sueltos sobre el pasto.
     }
   ];
 }
