@@ -1,9 +1,14 @@
 /**
- * Las seis caras de un cubo, en el mismo orden y con los mismos vértices
- * y coordenadas de textura que usa box() de p5: así un bloque se ve igual que
- * antes, pero solo se generan las caras que pueden verse.
+ * Las seis caras de un cubo, en el mismo orden y con los mismos vértices que
+ * usa box() de p5.
  *
  * corners son índices de octante (bit 0 = x, bit 1 = y, bit 2 = z).
+ *
+ * Las coordenadas de textura NO son las de box(): ahí la cara de adelante y la
+ * de la derecha tenían la textura girada 90° (tablones verticales en una pared
+ * y horizontales en la de al lado). Acá en las caras laterales u va siempre en
+ * horizontal y v en vertical con el borde de arriba de la imagen arriba, y en
+ * las de arriba y abajo u va en x y v en z.
  */
 const FACES = Object.freeze([
   { dx: -1, dy: 0, dz: 0, corners: [0, 4, 2, 6] },
@@ -186,10 +191,27 @@ export class ChunkMeshBuilder {
       corner[vAxis] = v + ((j & 2) ? height : 0);
       group.positions.push((originX + corner[0]) * size, corner[1] * size, (originZ + corner[2]) * size);
       group.normals.push(face.dx, face.dy, face.dz);
-      group.uvs.push((j & 1) ? width : 0, (j & 2) ? height : 0);
+      const extent = [0, 0, 0];
+      extent[uAxis] = width;
+      extent[vAxis] = height;
+      const offset = [0, 0, 0];
+      offset[uAxis] = corner[uAxis] - u;
+      offset[vAxis] = corner[vAxis] - v;
+      group.uvs.push(...ChunkMeshBuilder.#textureCoords(face, offset, extent));
     }
     group.indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
     group.faceCount += 1;
+  }
+
+  /**
+   * Coordenadas de textura de un vértice. offset es la posición del vértice
+   * dentro del rectángulo y extent su tamaño, los dos en bloques por eje; en
+   * greedy la textura se repite una vez por bloque.
+   */
+  static #textureCoords(face, offset, extent) {
+    if (face.dy !== 0) return [offset[0], offset[2]];
+    const horizontal = face.dx !== 0 ? 2 : 0;
+    return [offset[horizontal], extent[1] - offset[1]];
   }
 
   /** Eje (0 = x, 1 = y, 2 = z) del único bit encendido en un índice de octante. */
@@ -208,7 +230,7 @@ export class ChunkMeshBuilder {
         (z + ((corner >> 2) & 1)) * size
       );
       group.normals.push(face.dx, face.dy, face.dz);
-      group.uvs.push(j & 1, (j & 2) / 2);
+      group.uvs.push(...ChunkMeshBuilder.#textureCoords(face, [corner & 1, (corner >> 1) & 1, (corner >> 2) & 1], [1, 1, 1]));
     }
     group.indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
     group.faceCount += 1;
