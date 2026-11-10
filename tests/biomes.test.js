@@ -45,7 +45,8 @@ test('el registro por defecto define llanura, bosque, desierto y montañas con s
   assert.ok(forest.treeDensity > plains.treeDensity, 'el bosque tiene más árboles que la llanura');
   assert.ok(mountains.treeDensity < plains.treeDensity, 'las montañas tienen menos árboles');
   assert.ok(mountains.terrainVariation > forest.terrainVariation && forest.terrainVariation > plains.terrainVariation);
-  assert.notEqual(mountains.stoneAltitude, null, 'las montañas exponen piedra');
+  assert.equal(mountains.stoneAltitude, null, 'las colinas no exponen piedra');
+  assert.equal(mountains.steepSlope, null, 'ni en las laderas');
 });
 
 test('BiomeType valida sus datos y el registro rechaza ids repetidos', () => {
@@ -129,7 +130,7 @@ test('el desierto tiene arenisca bajo la arena', () => {
   assert.ok(sandstone > 0);
 });
 
-test('las montañas son el bioma más alto y exponen piedra en la superficie', () => {
+test('las montañas son el bioma más alto y no asoma piedra en la superficie', () => {
   const { world, generator } = targetWorld();
   const { biomeIds, heights } = generator.planSurface(world);
   const peak = new Map();
@@ -143,7 +144,7 @@ test('las montañas son el bioma más alto y exponen piedra en la superficie', (
   const mountainPeak = peak.get(BiomeIds.MOUNTAINS);
   for (const [biomeId, height] of peak) if (biomeId !== BiomeIds.MOUNTAINS) assert.ok(mountainPeak > height, `pico ${mountainPeak} vs ${height}`);
   assert.ok(mountainPeak < world.height, 'los picos respetan la altura del mundo');
-  assert.ok(exposedStone > 0, 'debería haber piedra expuesta en montañas');
+  assert.equal(exposedStone, 0, 'la piedra no queda suelta sobre el pasto');
 });
 
 test('el generador escala las alturas a un mundo más bajo sin salirse de sus límites', () => {
