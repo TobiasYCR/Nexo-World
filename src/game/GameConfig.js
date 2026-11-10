@@ -276,6 +276,14 @@ export const GameConfig = Object.freeze({
   rendering: Object.freeze({
     /** Radio de render en bloques alrededor del jugador. */
     RENDER_DISTANCE: 24,
+    /** Mallas de chunk que se arman como máximo por frame (las más cercanas primero). */
+    MESH_BUILDS_PER_FRAME: 8,
+    /** Bloques extra, más allá de la distancia de render, antes de liberar una malla. */
+    MESH_RELEASE_MARGIN: 16,
+    /** No dibujar los chunks que quedan fuera del cono de visión. */
+    FRUSTUM_CULLING: true,
+    /** Unir caras vecinas del mismo tipo en rectángulos (menos geometría). */
+    GREEDY_MESHING: true,
     BACKGROUND_COLOR: Object.freeze([135, 175, 215]),
     AMBIENT_LIGHT: Object.freeze([120, 120, 130]),
     DIRECTIONAL_LIGHT: Object.freeze([210, 205, 190]),
