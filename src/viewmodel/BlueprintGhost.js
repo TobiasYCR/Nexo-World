@@ -22,9 +22,16 @@ export class BlueprintGhost {
   #buildCount = 0;
   #heldBlockId = null;
 
-  constructor({ p = null, blockRegistry, blockSize = GameConfig.world.BLOCK_SIZE, config = GameConfig.education } = {}) {
+  /**
+   * @param {Object} options
+   * @param {{get(name:string): any}|null} [options.textureManager] texturas de los
+   *   bloques: la guía usa la del bloque esperado, así un tablón y un tronco se
+   *   distinguen a simple vista y no solo por un color parecido
+   */
+  constructor({ p = null, blockRegistry, textureManager = null, blockSize = GameConfig.world.BLOCK_SIZE, config = GameConfig.education } = {}) {
     this.p = p;
     this.blockRegistry = blockRegistry;
+    this.textureManager = textureManager;
     this.blockSize = blockSize;
     this.config = config;
     this.visible = config.SHOW_BLUEPRINT_GHOST;
@@ -86,7 +93,7 @@ export class BlueprintGhost {
     for (const group of this.#groups) {
       if (group.status === 'wrong') {
         const [r, g, b, a] = config.WRONG_BLOCK_COLOR;
-        this.#paint(p, [r, g, b], a, null);
+        this.#paint(p, null, [r, g, b], a, null);
         p.stroke?.(r, g, b, 255);
         p.strokeWeight?.(config.HIGHLIGHT_STROKE_WEIGHT);
         p.model?.(group.geometry);
@@ -98,13 +105,13 @@ export class BlueprintGhost {
       if (matches) {
         // Más claro, con brillo propio (no depende de la luz) y borde por bloque.
         const light = base.map((channel) => Math.round(channel + (255 - channel) * 0.25));
-        this.#paint(p, light, Math.round(config.HELD_OPACITY * 255 * pulse), light.map((channel) => channel * 0.35));
+        this.#paint(p, group.blockId, light, Math.round(config.HELD_OPACITY * 255 * pulse), light.map((channel) => channel * 0.35));
         const [sr, sg, sb] = config.HIGHLIGHT_STROKE_COLOR;
         p.stroke?.(sr, sg, sb, Math.round(255 * pulse));
         p.strokeWeight?.(config.HIGHLIGHT_STROKE_WEIGHT);
       } else {
         const opacity = holdingPlanBlock ? config.DIM_OPACITY : config.GHOST_OPACITY;
-        this.#paint(p, base, Math.round(opacity * 255), null);
+        this.#paint(p, group.blockId, base, Math.round(opacity * 255), null);
         p.noStroke?.();
       }
       p.model?.(group.geometry);
@@ -113,9 +120,18 @@ export class BlueprintGhost {
     p.pop();
   }
 
-  #paint(p, [r, g, b], alpha, emissive) {
-    p.fill?.(r, g, b, alpha);
-    p.ambientMaterial?.(r, g, b, alpha);
+  /** Textura del bloque con transparencia; sin textura, su color. */
+  #paint(p, blockId, [r, g, b], alpha, emissive) {
+    const type = blockId === null ? null : this.blockRegistry.get(blockId);
+    const texture = type?.texture ? this.textureManager?.get?.(type.texture) : null;
+    if (texture && typeof p.texture === 'function') {
+      p.tint?.(255, 255, 255, alpha);
+      p.texture(texture);
+    } else {
+      p.noTint?.();
+      p.fill?.(r, g, b, alpha);
+      p.ambientMaterial?.(r, g, b, alpha);
+    }
     if (emissive) p.emissiveMaterial?.(...emissive);
     else p.emissiveMaterial?.(0, 0, 0);
   }
@@ -193,7 +209,10 @@ export class BlueprintGhost {
           (z + ((corner >> 2) & 1)) * this.blockSize
         );
         group.normals.push(face.dx, face.dy, face.dz);
-        group.uvs.push(index & 1, (index & 2) / 2);
+        // Igual que las mallas del mundo: textura derecha en las cuatro paredes.
+        const bits = [corner & 1, (corner >> 1) & 1, (corner >> 2) & 1];
+        if (face.dy !== 0) group.uvs.push(bits[0], bits[2]);
+        else group.uvs.push(bits[face.dx !== 0 ? 2 : 0], 1 - bits[1]);
       }
       group.indices.push(first, first + 1, first + 2, first + 2, first + 1, first + 3);
       // Contorno del cuadrado, sin la diagonal de los triángulos.

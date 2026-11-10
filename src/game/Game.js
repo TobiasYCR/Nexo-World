@@ -116,6 +116,7 @@ export class Game {
     this.blueprintGhost = new BlueprintGhost({
       p,
       blockRegistry: this.blockRegistry,
+      textureManager: this.textureManager,
       blockSize: config.world.BLOCK_SIZE,
       config: config.education
     });

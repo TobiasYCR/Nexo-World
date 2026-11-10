@@ -420,3 +420,34 @@ test('la guía ilumina y marca las celdas del bloque que se tiene en la mano', (
   ghost.draw(p);
   assert.equal(byType()[BlockIds.LOG].alpha, idle[BlockIds.LOG].alpha, 'un bloque que el plano no usa no cambia nada');
 });
+
+test('la guía usa la textura de cada bloque, así tablón y tronco se distinguen', () => {
+  const blockRegistry = createDefaultBlockRegistry();
+  const used = [];
+  let pending = {};
+  const p = createP5Stub();
+  Object.assign(p, {
+    tint: (...rgba) => { pending.alpha = rgba[3]; },
+    texture: (image) => { pending.texture = image.name; },
+    fill: () => { pending.texture = null; },
+    model: (geometry) => { used.push({ gid: geometry.gid, ...pending }); pending = {}; }
+  });
+  const textureManager = { get: (name) => ({ name }) };
+  const ghost = new BlueprintGhost({ p, blockRegistry, textureManager, config: CONFIG.education });
+  ghost.update({
+    blueprintId: 'mix',
+    nextBlock: null,
+    blocks: [
+      { x: 0, y: 0, z: 0, expectedBlockId: BlockIds.PLANKS, status: 'missing' },
+      { x: 2, y: 0, z: 0, expectedBlockId: BlockIds.LOG, status: 'missing' },
+      { x: 4, y: 0, z: 0, expectedBlockId: BlockIds.LOG, status: 'wrong' }
+    ]
+  });
+  ghost.draw(p);
+  const textures = Object.fromEntries(used.map(({ gid, texture }) => [gid.split('-').slice(-2).join('-'), texture]));
+  assert.equal(textures[`missing-${BlockIds.PLANKS}`], blockRegistry.get(BlockIds.PLANKS).texture);
+  assert.equal(textures[`missing-${BlockIds.LOG}`], blockRegistry.get(BlockIds.LOG).texture);
+  assert.notEqual(textures[`missing-${BlockIds.PLANKS}`], textures[`missing-${BlockIds.LOG}`]);
+  assert.equal(textures[`wrong-${BlockIds.LOG}`], null, 'lo incorrecto sigue en rojo liso');
+  assert.ok(used.find(({ gid }) => gid.endsWith(`missing-${BlockIds.LOG}`)).alpha < 255, 'semitransparente');
+});
