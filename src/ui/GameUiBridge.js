@@ -123,7 +123,9 @@ export class GameUiBridge {
           : this.game.hotbar.selectedIndex;
 
         const stackCount = payload.count ?? this.game.config?.inventory?.STARTER_BLOCK_COUNT ?? 64;
-        const blockType = this.game.blockRegistry?.get?.(payload.blockType.id) ?? payload.blockType;
+        const blockType = payload.blockType.isEducationalMaterial
+          ? payload.blockType
+          : (this.game.blockRegistry?.get?.(payload.blockType.id) ?? payload.blockType);
 
         this.game.hotbar.set(targetIndex, blockType, stackCount);
         const name = blockType.label || blockType.name || `Bloque ${blockType.id}`;

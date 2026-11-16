@@ -1,4 +1,4 @@
-import { resolveBlockSyllables } from '../blocks/BlockType.js';
+import { resolveBlockSyllables, resolveBlockDescription } from '../blocks/BlockType.js';
 
 const DIFFICULTY_BY_BLUEPRINT = Object.freeze({
   'stone-tower': 'Fácil',
@@ -82,10 +82,12 @@ export class BuildChallengeView {
   #material(blockId, extra = {}) {
     const blockType = this.blockRegistry.get(blockId);
     const { syllables, syllableText } = resolveBlockSyllables(blockType);
+    const description = resolveBlockDescription(blockType);
     return {
       blockId,
       name: blockType.name,
       label: blockType.label,
+      description,
       syllables,
       syllableText,
       texture: blockType.textures?.top || blockType.texture || null,

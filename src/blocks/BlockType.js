@@ -44,7 +44,108 @@ export const FALLBACK_SYLLABLES_DICTIONARY = Object.freeze({
   pane: Object.freeze(['PA', 'NEL']),
   panel: Object.freeze(['PA', 'NEL']),
   water: Object.freeze(['A', 'GUA']),
-  agua: Object.freeze(['A', 'GUA'])
+  agua: Object.freeze(['A', 'GUA']),
+  'roca (adoquin)': Object.freeze(['RO', 'CA', 'A', 'DO', 'QUIN']),
+  granito: Object.freeze(['GRA', 'NI', 'TO']),
+  diorita: Object.freeze(['DIO', 'RI', 'TA']),
+  andesita: Object.freeze(['AN', 'DE', 'SI', 'TA']),
+  basalto: Object.freeze(['BA', 'SAL', 'TO']),
+  obsidiana: Object.freeze(['OB', 'SI', 'DIA', 'NA']),
+  caliza: Object.freeze(['CA', 'LI', 'ZA']),
+  marmol: Object.freeze(['MAR', 'MOL']),
+  pizarra: Object.freeze(['PI', 'ZA', 'RRA']),
+  toba: Object.freeze(['TO', 'BA']),
+  'piedra musgosa': Object.freeze(['PIE', 'DRA', 'MUS', 'GO', 'SA']),
+  'lecho de roca': Object.freeze(['LE', 'CHO', 'DE', 'RO', 'CA']),
+  roble: Object.freeze(['RO', 'BLE']),
+  abedul: Object.freeze(['A', 'BE', 'DUL']),
+  pino: Object.freeze(['PI', 'NO']),
+  abeto: Object.freeze(['A', 'BE', 'TO']),
+  ebano: Object.freeze(['E', 'BA', 'NO']),
+  caoba: Object.freeze(['CA', 'O', 'BA']),
+  acacia: Object.freeze(['A', 'CA', 'CIA']),
+  cerezo: Object.freeze(['CE', 'RE', 'ZO']),
+  sauce: Object.freeze(['SAU', 'CE']),
+  manglar: Object.freeze(['MAN', 'GLAR']),
+  bambu: Object.freeze(['BAM', 'BU']),
+  palmera: Object.freeze(['PAL', 'ME', 'RA']),
+  olivo: Object.freeze(['O', 'LI', 'VO']),
+  'madera podrida': Object.freeze(['MA', 'DE', 'RA', 'PO', 'DRI', 'DA'])
+});
+
+/**
+ * Diccionario de respaldo de descripciones breves para materiales conocidos.
+ */
+export const FALLBACK_DESCRIPTIONS_DICTIONARY = Object.freeze({
+  air: 'Espacio vacío invisible que nos rodea y permite respirar.',
+  aire: 'Espacio vacío invisible que nos rodea y permite respirar.',
+  grass: 'Bloque de tierra cubierto de pasto verde donde crecen plantas y árboles.',
+  cesped: 'Bloque de tierra cubierto de pasto verde donde crecen plantas y árboles.',
+  pasto: 'Bloque de tierra cubierto de pasto verde donde crecen plantas y árboles.',
+  dirt: 'Suelo blando y marrón que forma la superficie natural del mundo.',
+  tierra: 'Suelo blando y marrón que forma la superficie natural del mundo.',
+  stone: 'Roca gris común que forma la mayor parte del subsuelo; básica para construir y fabricar herramientas.',
+  piedra: 'Roca gris común que forma la mayor parte del subsuelo; básica para construir y fabricar herramientas.',
+  log: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  tronco: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  wood: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  madera: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  leaves: 'Follaje verde de las copas de los árboles que deja pasar un poco de luz.',
+  hojas: 'Follaje verde de las copas de los árboles que deja pasar un poco de luz.',
+  planks: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  tablones: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  sand: 'Granos finos de color claro que cubren las playas y los desiertos.',
+  arena: 'Granos finos de color claro que cubren las playas y los desiertos.',
+  cobblestone: 'Piedra fragmentada que se obtiene al picar piedra; resistente y fácil de conseguir.',
+  'piedra partida': 'Piedra fragmentada que se obtiene al picar piedra; resistente y fácil de conseguir.',
+  'roca (adoquin)': 'Piedra fragmentada que se obtiene al picar piedra; resistente y fácil de conseguir.',
+  adoquin: 'Piedra fragmentada que se obtiene al picar piedra; resistente y fácil de conseguir.',
+  glass: 'Material transparente fabricado con arena que sirve para hacer ventanas luminosas.',
+  vidrio: 'Material transparente fabricado con arena que sirve para hacer ventanas luminosas.',
+  cristal: 'Material transparente fabricado con arena que sirve para hacer ventanas luminosas.',
+  sandstone: 'Roca sedimentaria formada por arena compactada; típica de desiertos y playas.',
+  arenisca: 'Roca sedimentaria formada por arena compactada; típica de desiertos y playas.',
+  bedrock: 'Capa más profunda del mundo; indestructible.',
+  'roca madre': 'Capa más profunda del mundo; indestructible.',
+  'lecho de roca': 'Capa más profunda del mundo; indestructible.',
+  granito: 'Roca ígnea rosada o moteada, muy dura y decorativa.',
+  diorita: 'Roca ígnea blanca con motas negras, usada como bloque decorativo.',
+  andesita: 'Roca volcánica gris de grano fino, común en zonas montañosas.',
+  basalto: 'Roca volcánica oscura y columnar que se forma al enfriarse la lava.',
+  obsidiana: 'Vidrio volcánico negro, extremadamente duro; resiste explosiones.',
+  caliza: 'Roca sedimentaria clara y blanda, ideal para construcciones antiguas.',
+  marmol: 'Roca metamórfica blanca y pulida, de aspecto elegante.',
+  pizarra: 'Roca oscura que se separa en láminas; aparece en capas profundas.',
+  toba: 'Roca volcánica porosa y ligera, de tono verdoso o grisáceo.',
+  'piedra musgosa': 'Piedra cubierta de musgo, común en ruinas y zonas húmedas.',
+  roble: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  abedul: 'Madera muy clara con corteza blanca y manchas negras.',
+  pino: 'Madera marrón oscura de árboles altos en zonas frías.',
+  abeto: 'Conífera de montañas nevadas; madera rojiza y resistente.',
+  ebano: 'Madera negra, densa y muy valiosa; crece en zonas tropicales.',
+  caoba: 'Madera rojiza y elegante de selvas, apreciada para muebles.',
+  acacia: 'Madera anaranjada de sabanas, con tronco grisáceo.',
+  cerezo: 'Madera rosada de árboles con flores, muy decorativa.',
+  sauce: 'Madera suave y flexible de árboles junto a ríos y pantanos.',
+  manglar: 'Madera rojiza de árboles con raíces aéreas en zonas inundadas.',
+  bambu: 'Tallo hueco de crecimiento rápido; ligero y versátil.',
+  palmera: 'Madera fibrosa de árboles costeros y tropicales.',
+  olivo: 'Madera retorcida y veteada de climas secos y cálidos.',
+  'madera podrida': 'Madera vieja y frágil hallada en ruinas o pantanos; poco resistente.',
+  coalore: 'Roca con vetas negras de carbón que sirve como combustible para dar calor y luz.',
+  'mineral de carbon': 'Roca con vetas negras de carbón que sirve como combustible para dar calor y luz.',
+  ironore: 'Roca con vetas de metal resistente usado para fabricar herramientas fuertes.',
+  'mineral de hierro': 'Roca con vetas de metal resistente usado para fabricar herramientas fuertes.',
+  goldore: 'Roca profunda con vetas de metal amarillo brillante y muy valioso.',
+  'mineral de oro': 'Roca profunda con vetas de metal amarillo brillante y muy valioso.',
+  diamondore: 'Roca de gran profundidad que guarda cristales celestes de enorme dureza.',
+  'mineral de diamante': 'Roca de gran profundidad que guarda cristales celestes de enorme dureza.',
+  brick: 'Pieza de arcilla cocida muy firme para levantar paredes y chimeneas.',
+  ladrillo: 'Pieza de arcilla cocida muy firme para levantar paredes y chimeneas.',
+  pane: 'Lámina delgada que permite dividir espacios o dejar pasar la luz.',
+  panel: 'Lámina delgada que permite dividir espacios o dejar pasar la luz.',
+  water: 'Líquido vital transparente que forma ríos, lagos y mares.',
+  agua: 'Líquido vital transparente que forma ríos, lagos y mares.'
 });
 
 /**
@@ -209,6 +310,33 @@ export function resolveBlockSyllables({ label, name, syllables, syllableText } =
 }
 
 /**
+ * Resuelve la descripción educativa breve de un bloque o material.
+ * @param {Object} params
+ * @param {string} [params.label]
+ * @param {string} [params.name]
+ * @param {string} [params.description]
+ * @returns {string}
+ */
+export function resolveBlockDescription({ label, name, description } = {}) {
+  if (typeof description === 'string' && description.trim().length > 0) {
+    return description.trim();
+  }
+
+  const labelKey = normalizeKey(label);
+  const nameKey = normalizeKey(name);
+
+  if (labelKey && FALLBACK_DESCRIPTIONS_DICTIONARY[labelKey]) {
+    return FALLBACK_DESCRIPTIONS_DICTIONARY[labelKey];
+  }
+  if (nameKey && FALLBACK_DESCRIPTIONS_DICTIONARY[nameKey]) {
+    return FALLBACK_DESCRIPTIONS_DICTIONARY[nameKey];
+  }
+
+  const display = String(label || name || 'material').trim().toLowerCase();
+  return `Bloque de ${display} utilizado para explorar y construir en el mundo.`;
+}
+
+/**
  * Agrupa las sílabas de un bloque en líneas (1 palabra arriba y otra abajo cuando
  * el nombre tiene varias palabras) para evitar cortes de sílabas a mitad de palabra en la UI.
  * @param {Object} block
@@ -276,6 +404,7 @@ export class BlockType {
     id,
     name,
     label = name,
+    description = undefined,
     syllables = undefined,
     syllableText = undefined,
     solid = true,
@@ -310,6 +439,7 @@ export class BlockType {
     this.id = id;
     this.name = name;
     this.label = label;
+    this.description = resolveBlockDescription({ label, name, description });
 
     const resolvedSyllables = resolveBlockSyllables({ label, name, syllables, syllableText });
     this.syllables = resolvedSyllables.syllables;

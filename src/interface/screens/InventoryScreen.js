@@ -6,6 +6,7 @@ import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { InventoryView } from '../../ui/InventoryView.js';
 import { createDefaultBlockRegistry } from '../../blocks/BlockRegistry.js';
+import { createEducationalMaterials } from '../../blocks/EducationalMaterials.js';
 
 /**
  * Pantalla de Inventario Creativo Avanzado.
@@ -21,6 +22,7 @@ export class InventoryScreen extends Screen {
   constructor(blockRegistry = null, screenManager = null, intentBus = null) {
     super(ScreenType.INVENTORY, screenManager, intentBus);
     this.blockRegistry = blockRegistry || createDefaultBlockRegistry();
+    this.materials = blockRegistry ? null : createEducationalMaterials();
     this.#buildDOM();
   }
 
@@ -28,13 +30,14 @@ export class InventoryScreen extends Screen {
     this.element.className = 'screen screen-inventory nx-modal-backdrop';
 
     this.modal = new Modal({
-      title: 'Inventario Creativo',
+      title: 'Inventario de Materiales (Piedras y Maderas)',
       className: 'nx-inventory-dialog',
       onClose: () => this.handleBack()
     });
 
     this.inventoryView = new InventoryView({
       blockRegistry: this.blockRegistry,
+      materials: this.materials,
       onSelect: (_block) => {},
       onEquip: (block, slotIndex) => this.#onBlockEquipped(block, slotIndex)
     });
