@@ -295,7 +295,8 @@ export const GameConfig = Object.freeze({
     MUSIC_VOLUME: 0.6,
     AMBIENT_VOLUME: 0.8,
     /** Bloques caminados entre un paso y el siguiente (corriendo se recorre más rápido). */
-    STEP_DISTANCE_BLOCKS: 1.7,
+    // PLAYER_SPEED·2π / (WALK_BOB_FREQUENCY·BLOCK_SIZE): un paso por ciclo del balanceo de cámara al caminar.
+    STEP_DISTANCE_BLOCKS: 4.2,
     STEP_VOLUME: 0.45
   }),
 
