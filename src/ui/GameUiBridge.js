@@ -97,7 +97,8 @@ export class GameUiBridge {
       const slot = payload?.slot || 'default';
       const result = this.game?.saveGame?.(slot);
       if (result?.ok) {
-        this.toast.success(`Partida guardada correctamente en "${slot}".`);
+        // Al crear un mundo se guarda solo; ahí alcanza con el aviso de "creado".
+        if (!payload?.silent) this.toast.success(`Partida guardada correctamente en "${slot}".`);
       } else {
         this.toast.error(result?.message || 'Error al guardar la partida.');
       }
@@ -133,19 +134,19 @@ export class GameUiBridge {
       }
     });
 
-    // Mostrar Toast desde cualquier componente
-    this.intentBus.on(IntentBus.Events.SHOW_TOAST, (payload) => {
-      if (payload?.message) {
-        this.toast.show(payload.message, payload.type || 'info', payload.duration || 3000);
-      }
-    });
+    // SHOW_TOAST lo atiende HUD: escucharlo también acá mostraba cada aviso dos veces.
 
     // Crear un mundo nuevo con nombre, semilla y modo. WorldCreationScreen
     // emite después SAVE_GAME con el nombre, así que queda guardado.
     this.intentBus.on(IntentBus.Events.CREATE_WORLD, (payload) => {
       const result = this.game?.newWorld?.({ name: payload?.name, seed: payload?.seed, mode: payload?.gameMode });
       if (payload && result) payload.result = result;
-      if (result && !result.ok) this.toast.error(result.message ?? 'No se pudo crear el mundo.');
+      if (result && !result.ok) {
+        this.toast.error(result.message ?? 'No se pudo crear el mundo.');
+        return;
+      }
+      // Cada mundo nuevo arranca con el tutorial (se puede saltar).
+      this.intentBus.emit(IntentBus.Events.START_TUTORIAL);
     });
 
 

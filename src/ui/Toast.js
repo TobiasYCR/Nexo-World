@@ -54,10 +54,15 @@ export class Toast {
    */
   show(message, type = 'info', duration = 3000) {
     if (!message) return;
+    // El mismo aviso no se apila: si ya se está mostrando, se reemplaza.
+    for (const item of [...(this.element.children ?? [])]) {
+      if (item.dataset?.message === `${type}|${message}`) item.parentNode?.removeChild?.(item);
+    }
 
     const toastItem = document.createElement('div');
     toastItem.className = `nx-toast-item nx-toast-${type}`;
     toastItem.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toastItem.dataset.message = `${type}|${message}`;
 
     const icon = document.createElement('span');
     icon.className = 'nx-toast-icon';
