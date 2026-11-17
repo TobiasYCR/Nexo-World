@@ -1,86 +1,79 @@
--- Esquema de progresión de Nexo World (MySQL 8 / MariaDB 10.5+).
+-- Esquema de Nexo World (PostgreSQL 13+). Se aplica solo al iniciar el
+-- servidor: todo es IF NOT EXISTS, así se puede correr las veces que haga falta.
 -- Los tiempos se guardan como milisegundos epoch (BIGINT) para que el
 -- desempate por "quién llegó primero" sea exacto e independiente de la zona horaria.
 
 CREATE TABLE IF NOT EXISTS players (
-  id CHAR(36) NOT NULL,
+  id VARCHAR(36) PRIMARY KEY,
   display_name VARCHAR(32) NOT NULL,
   token_hash CHAR(64) NOT NULL,
   -- Cuenta dueña de este jugador (accounts.id), o NULL si es un invitado.
   account_id VARCHAR(64) NULL,
-  created_at BIGINT UNSIGNED NOT NULL,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_players_token (token_hash),
-  UNIQUE KEY uq_players_account (account_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  created_at BIGINT NOT NULL CHECK (created_at >= 0),
+  CONSTRAINT uq_players_token UNIQUE (token_hash),
+  CONSTRAINT uq_players_account UNIQUE (account_id)
+);
 
 -- Progreso de un jugador en un mundo y modo. Una sola fila por combinación.
 CREATE TABLE IF NOT EXISTS progress (
-  player_id CHAR(36) NOT NULL,
+  player_id VARCHAR(36) NOT NULL REFERENCES players (id) ON DELETE CASCADE,
   mode VARCHAR(16) NOT NULL,
   world_key VARCHAR(48) NOT NULL,
-  revision INT UNSIGNED NOT NULL,
-  score INT UNSIGNED NOT NULL,
-  stats JSON NOT NULL,
-  state JSON NOT NULL,
-  updated_at BIGINT UNSIGNED NOT NULL,
-  PRIMARY KEY (player_id, mode, world_key),
-  CONSTRAINT fk_progress_player FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  revision INTEGER NOT NULL CHECK (revision >= 0),
+  score INTEGER NOT NULL CHECK (score >= 0),
+  stats JSONB NOT NULL,
+  state JSONB NOT NULL,
+  updated_at BIGINT NOT NULL CHECK (updated_at >= 0),
+  PRIMARY KEY (player_id, mode, world_key)
+);
 
 -- Mejor marca de cada jugador por modo (como KeepBest de Steam): una fila por jugador.
 CREATE TABLE IF NOT EXISTS leaderboard (
   mode VARCHAR(16) NOT NULL,
-  player_id CHAR(36) NOT NULL,
-  best_score INT UNSIGNED NOT NULL,
-  achieved_at BIGINT UNSIGNED NOT NULL,
+  player_id VARCHAR(36) NOT NULL REFERENCES players (id) ON DELETE CASCADE,
+  best_score INTEGER NOT NULL CHECK (best_score >= 0),
+  achieved_at BIGINT NOT NULL CHECK (achieved_at >= 0),
   world_key VARCHAR(48) NOT NULL,
-  PRIMARY KEY (mode, player_id),
-  KEY idx_leaderboard_rank (mode, best_score DESC, achieved_at, player_id),
-  CONSTRAINT fk_leaderboard_player FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  PRIMARY KEY (mode, player_id)
+);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_rank ON leaderboard (mode, best_score DESC, achieved_at, player_id);
 
 -- Cuentas de usuario. username_key y email_key son el nombre y el correo en
 -- minúsculas: evitan que "Leandro" y "leandro" sean dos cuentas distintas.
--- credential guarda el resultado de PasswordHasher (PBKDF2-SHA-256 con sal).
+-- credential guarda el resultado de PasswordHasher (PBKDF2-SHA-256 con sal);
 -- la contraseña nunca se guarda.
 CREATE TABLE IF NOT EXISTS accounts (
-  id CHAR(36) NOT NULL,
+  id VARCHAR(36) PRIMARY KEY,
   username VARCHAR(20) NOT NULL,
   username_key VARCHAR(20) NOT NULL,
   email VARCHAR(254) NOT NULL,
   email_key VARCHAR(254) NOT NULL,
-  credential JSON NOT NULL,
-  created_at BIGINT UNSIGNED NOT NULL,
-  updated_at BIGINT UNSIGNED NOT NULL,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_accounts_username (username_key),
-  UNIQUE KEY uq_accounts_email (email_key)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  credential JSONB NOT NULL,
+  created_at BIGINT NOT NULL CHECK (created_at >= 0),
+  updated_at BIGINT NOT NULL CHECK (updated_at >= 0),
+  CONSTRAINT uq_accounts_username UNIQUE (username_key),
+  CONSTRAINT uq_accounts_email UNIQUE (email_key)
+);
 
 -- Sesiones abiertas. Como con los jugadores, se guarda el hash SHA-256 del
 -- token y no el token: una filtración de la tabla no permite entrar a cuentas.
 CREATE TABLE IF NOT EXISTS sessions (
-  token_hash CHAR(64) NOT NULL,
-  account_id CHAR(36) NOT NULL,
-  created_at BIGINT UNSIGNED NOT NULL,
-  expires_at BIGINT UNSIGNED NOT NULL,
-  PRIMARY KEY (token_hash),
-  KEY idx_sessions_account (account_id),
-  KEY idx_sessions_expiry (expires_at),
-  CONSTRAINT fk_sessions_account FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  token_hash CHAR(64) PRIMARY KEY,
+  account_id VARCHAR(36) NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+  created_at BIGINT NOT NULL CHECK (created_at >= 0),
+  expires_at BIGINT NOT NULL CHECK (expires_at >= 0)
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_account ON sessions (account_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions (expires_at);
 
 -- Códigos de recuperación de contraseña. Los genera un administrador con
 -- npm run admin (no hay servidor de correo). Se guarda el hash del código, que
 -- vence pronto y sirve una sola vez.
 CREATE TABLE IF NOT EXISTS password_resets (
-  token_hash CHAR(64) NOT NULL,
-  account_id CHAR(36) NOT NULL,
-  created_at BIGINT UNSIGNED NOT NULL,
-  expires_at BIGINT UNSIGNED NOT NULL,
-  used_at BIGINT UNSIGNED NULL,
-  PRIMARY KEY (token_hash),
-  KEY idx_password_resets_account (account_id),
-  CONSTRAINT fk_password_resets_account FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  token_hash CHAR(64) PRIMARY KEY,
+  account_id VARCHAR(36) NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+  created_at BIGINT NOT NULL CHECK (created_at >= 0),
+  expires_at BIGINT NOT NULL CHECK (expires_at >= 0),
+  used_at BIGINT NULL CHECK (used_at >= 0)
+);
+CREATE INDEX IF NOT EXISTS idx_password_resets_account ON password_resets (account_id);

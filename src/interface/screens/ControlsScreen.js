@@ -115,6 +115,8 @@ export class ControlsScreen extends Screen {
         category: 'Interfaz',
         items: [
           { label: 'Inventario', key: 'E' },
+          { label: 'Escuchar el bloque en la mano', key: 'V' },
+          { label: 'Chat del asistente', key: 'T' },
           { label: 'Configuración', key: 'O' },
           { label: 'Controles / ayuda', key: 'F1' },
           { label: 'Panel de debug', key: keyFor(InputActions.TOGGLE_DEBUG, 'F3') },

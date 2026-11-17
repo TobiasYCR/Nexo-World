@@ -74,9 +74,8 @@ test('todos los materiales incluyen una descripción breve y se puede reproducir
     assert.ok(block.description.length > 10, `${block.name} debe tener una descripción breve`);
   }
 
-  // Respaldo del diccionario para Mármol y respaldo genérico para bloques no listados
-  const marmolDesc = resolveBlockDescription({ label: 'Mármol', name: 'Marble' });
-  assert.equal(marmolDesc, 'Roca metamórfica blanca y pulida, de aspecto elegante.');
+  // El mármol es un bloque propio con su descripción; los no listados usan el respaldo genérico.
+  assert.equal(registry.get(BlockIds.MARBLE).description, 'Roca metamórfica blanca con vetas grises, de aspecto elegante.');
   const customDesc = resolveBlockDescription({ label: 'Cuarzo', name: 'Quartz' });
   assert.ok(customDesc.includes('cuarzo'));
 
@@ -119,21 +118,23 @@ test('todos los materiales incluyen una descripción breve y se puede reproducir
   firstMatSpeakDescBtn.dispatch('click', { stopPropagation: () => {} });
   assert.equal(env.spoken.at(-1)?.text, firstMatDesc.textContent);
 
-  // 3. Catálogo de 28 materiales (14 Piedras + 14 Maderas) en InventoryScreen con descripción y audio
+  // 3. Catálogo: 14 piedras y 16 maderas (tronco, tablones y 14 especies), cada una un bloque real
   const materials = createEducationalMaterials();
-  assert.equal(materials.length, 28, 'Deben existir las 14 piedras y las 14 maderas');
+  assert.equal(materials.length, 30);
   assert.equal(materials.filter((m) => m.category === 'stones').length, 14);
-  assert.equal(materials.filter((m) => m.category === 'woods').length, 14);
+  assert.equal(materials.filter((m) => m.category === 'woods').length, 16);
 
+  // El inventario muestra todos los bloques: el catálogo y también vidrio, arena, hojas, minerales…
   const invScreen = new InventoryScreen(null, null, null);
   const matCards = invScreen.element.querySelectorAll('.nx-block-card');
-  assert.equal(matCards.length, 28);
+  assert.equal(matCards.length, registry.values().length - 1);
+  assert.ok(matCards.some((card) => card.getAttribute('aria-label') === 'Vidrio'));
 
   const cardDesc = matCards[0].querySelector('.nx-block-desc');
   const cardDescBtn = matCards[0].querySelector('.nx-btn-speak-card-desc');
   assert.ok(cardDesc !== null);
   assert.ok(cardDescBtn !== null);
-  assert.ok(cardDesc.textContent.includes('Roca gris común'));
+  assert.equal(cardDesc.textContent, registry.get(BlockIds.GRASS).description, 'la primera tarjeta es el césped');
 
   speech.cancel();
 });

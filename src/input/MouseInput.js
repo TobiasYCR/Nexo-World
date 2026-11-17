@@ -37,11 +37,23 @@ export class MouseInput {
     event.preventDefault();
   };
 
+  #lockListeners = new Set();
+
   #handlePointerLockChange = () => {
     this.#pointerLocked = document.pointerLockElement === this.#element;
     this.#deltaX = 0;
     this.#deltaY = 0;
+    for (const listener of this.#lockListeners) listener(this.#pointerLocked);
   };
+
+  /**
+   * @param {(locked: boolean) => void} listener cada vez que se captura o se libera el mouse
+   * @returns {() => boolean} para desuscribirse
+   */
+  onLockChange(listener) {
+    this.#lockListeners.add(listener);
+    return () => this.#lockListeners.delete(listener);
+  }
 
   attach(element) {
     this.detach();
@@ -72,7 +84,14 @@ export class MouseInput {
 
   /** El navegador exige que Pointer Lock se dispare desde un gesto del usuario. */
   requestPointerLock() {
-    this.#element?.requestPointerLock?.();
+    try {
+      // Sin un gesto reciente (por ejemplo, al volver con Esc) el navegador lo
+      // rechaza: no es un error, se espera el próximo clic.
+      const request = this.#element?.requestPointerLock?.();
+      request?.catch?.(() => {});
+    } catch {
+      // Navegadores viejos lanzan en vez de rechazar.
+    }
   }
 
   exitPointerLock() {

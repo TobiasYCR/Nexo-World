@@ -1,3 +1,4 @@
+import { SpeechService } from '../audio/SpeechService.js';
 import { ScreenType } from './ScreenType.js';
 
 /**
@@ -41,6 +42,23 @@ export class SettingsApplier {
       case 'masterVolume':
         game?.audio?.setMasterVolume?.(value / 100);
         this.speech?.setVolume?.(value / 100);
+        return true;
+      case 'showTutorial':
+        // Activarlo lo reinicia desde el primer paso; apagarlo lo cierra.
+        if (value && hud?.tutorial && !hud.tutorial.isActive) hud.tutorial.start();
+        if (!value && hud?.tutorial?.isActive) hud.tutorial.skipAll();
+        return true;
+      case 'musicEnabled':
+        game?.music?.setEnabled?.(value);
+        return true;
+      case 'musicVolume':
+        game?.audio?.setCategoryVolume?.('music', value / 100);
+        return true;
+      case 'clouds':
+        game?.clouds?.setEnabled?.(value);
+        return true;
+      case 'speechSpeed':
+        this.speech?.setRate?.(SpeechService.BASE_RATE * value);
         return true;
       case 'renderDistance':
         game?.blockRenderer?.setRenderDistance?.(value * (game.world?.chunkSizeX ?? 16));

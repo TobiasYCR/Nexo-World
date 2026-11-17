@@ -59,7 +59,7 @@ export class WorldCreationScreen extends Screen {
       this.intentBus.emit(IntentBus.Events.CREATE_WORLD, request);
       // GameUiBridge deja el resultado en request.result; si falló, ya mostró el motivo.
       if (request.result && !request.result.ok) return;
-      this.intentBus.emit(IntentBus.Events.SAVE_GAME, { slot: worldData.name });
+      this.intentBus.emit(IntentBus.Events.SAVE_GAME, { slot: worldData.name, silent: true });
       this.intentBus.emit(IntentBus.Events.SHOW_TOAST, {
         message: `Mundo "${worldData.name}" creado con éxito.`,
         type: 'success'

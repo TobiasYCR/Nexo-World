@@ -295,6 +295,25 @@ html, body {
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
+.hud-hotbar-speak-btn {
+  gap: 5px;
+}
+
+/* Tecla que reproduce el sonido, como una tecla de teclado */
+.hud-hotbar-speak-key {
+  display: inline-block;
+  min-width: 14px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 15px;
+  text-align: center;
+  color: #0f172a;
+  background: #ecfdf5;
+  border-radius: 3px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
 .hud-hotbar-speak-btn:hover {
   background: rgba(16, 185, 129, 0.5);
   transform: scale(1.08);
@@ -963,4 +982,112 @@ html, body {
   font-weight: 800;
   text-align: center;
   font-size: 0.88rem;
+}
+
+/* ==========================================================================
+   HUD In-Game: Tutorial (arriba a la izquierda)
+   ========================================================================== */
+
+.hud-tutorial {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: min(330px, calc(100vw - 28px));
+  box-sizing: border-box;
+  padding: 12px 14px;
+  background: rgba(10, 16, 30, 0.9);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  color: #f8fafc;
+  pointer-events: auto;
+  z-index: 140;
+}
+
+.hud-tutorial[hidden] {
+  display: none !important;
+}
+
+.hud-tutorial-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.hud-tutorial-progress {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6ee7b7;
+}
+
+.hud-tutorial-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.hud-tutorial-text {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.hud-tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.hud-tutorial-btn {
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ecfdf5;
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.hud-tutorial-btn:hover {
+  background: rgba(16, 185, 129, 0.45);
+}
+
+.hud-tutorial-btn[hidden] {
+  display: none;
+}
+
+.hud-tutorial-skip-all {
+  padding: 3px 8px;
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.85);
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+/* Aviso para capturar el mouse al jugar sin él */
+.hud-click-to-play {
+  position: absolute;
+  top: calc(50% + 28px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fafc;
+  background: rgba(10, 16, 30, 0.75);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 130;
+}
+
+.hud-click-to-play[hidden] {
+  display: none !important;
 }

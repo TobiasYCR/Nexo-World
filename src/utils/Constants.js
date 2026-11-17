@@ -20,7 +20,33 @@ export const BlockIds = Object.freeze({
   COAL_ORE: 12,
   IRON_ORE: 13,
   GOLD_ORE: 14,
-  DIAMOND_ORE: 15
+  DIAMOND_ORE: 15,
+  // Piedras del catálogo educativo
+  GRANITE: 16,
+  DIORITE: 17,
+  ANDESITE: 18,
+  BASALT: 19,
+  OBSIDIAN: 20,
+  LIMESTONE: 21,
+  MARBLE: 22,
+  SLATE: 23,
+  TUFF: 24,
+  MOSSY_COBBLESTONE: 25,
+  // Maderas del catálogo educativo
+  OAK: 26,
+  BIRCH: 27,
+  PINE: 28,
+  FIR: 29,
+  EBONY: 30,
+  MAHOGANY: 31,
+  ACACIA: 32,
+  CHERRY: 33,
+  WILLOW: 34,
+  MANGROVE: 35,
+  BAMBOO: 36,
+  PALM: 37,
+  OLIVE: 38,
+  ROTTEN_WOOD: 39
 });
 
 /** Acciones lógicas del juego. El input se expresa en acciones, nunca en teclas. */

@@ -8,6 +8,7 @@ import {
   splitSpanishWordIntoSyllables
 } from './BlockType.js';
 import { BlockIds } from '../utils/Constants.js';
+import { MATERIAL_BLOCK_DEFINITIONS, BASE_BLOCK_CATEGORIES } from './MaterialBlockDefinitions.js';
 
 export {
   resolveBlockSyllables,
@@ -76,9 +77,14 @@ export class BlockRegistry {
     return [...this.#byId.values()];
   }
 
-  /** Tipos colocables por el jugador (todo lo que no sea aire). */
+  /** Tipos colocables por el jugador (todo lo que no sea aire ni indestructible). */
   placeableTypes() {
-    return this.values().filter((type) => type.id !== BlockIds.AIR);
+    return this.values().filter((type) => type.id !== BlockIds.AIR && type.placeable);
+  }
+
+  /** Tipos de una categoría del catálogo educativo ('stones' o 'woods'). */
+  typesInCategory(category) {
+    return this.values().filter((type) => type.category === category);
   }
 
   /** Tipos que se entregan en la hotbar al iniciar la partida. */
@@ -161,7 +167,7 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.STONE,
     name: 'Stone',
     label: 'Piedra',
-    description: 'Roca gris común que forma la mayor parte del subsuelo; básica para construir y fabricar herramientas.',
+    description: 'Roca gris común que forma la mayor parte del subsuelo; al picarla se obtiene piedra partida.',
     syllables: ['PIE', 'DRA'],
     syllableText: 'PIE - DRA',
     solid: true,
@@ -177,7 +183,7 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.LOG,
     name: 'Log',
     label: 'Tronco',
-    description: 'Madera marrón clara, resistente y la más común en bosques templados.',
+    description: 'Parte principal del árbol, con corteza por fuera y anillos por dentro; de ahí salen los tablones.',
     syllables: ['TRON', 'CO'],
     syllableText: 'TRON - CO',
     solid: true,
@@ -204,7 +210,7 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.PLANKS,
     name: 'Planks',
     label: 'Tablones',
-    description: 'Madera marrón clara, resistente y la más común en bosques templados.',
+    description: 'Tablas planas que se cortan del tronco; la madera básica para construir.',
     syllables: ['TA', 'BLO', 'NES'],
     syllableText: 'TA - BLO - NES',
     solid: true,
@@ -270,7 +276,7 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     id: BlockIds.BEDROCK,
     name: 'Bedrock',
     label: 'Roca madre',
-    description: 'Capa más profunda del mundo; indestructible.',
+    description: 'También llamada lecho de roca: la capa más profunda del mundo. Es indestructible, por eso no se puede colocar.',
     syllables: ['RO', 'CA', 'MA', 'DRE'],
     syllableText: 'RO - CA - MA - DRE',
     texture: 'bedrock.png',
@@ -278,6 +284,7 @@ const DEFAULT_BLOCK_DEFINITIONS = [
     hardness: Infinity,
     isOpaque: true,
     isBreakable: false,
+    placeable: false,
     drops: []
   },
   {
@@ -344,6 +351,10 @@ const DEFAULT_BLOCK_DEFINITIONS = [
 
 export function createDefaultBlockRegistry() {
   const registry = new BlockRegistry();
-  registry.registerAll(DEFAULT_BLOCK_DEFINITIONS);
+  registry.registerAll(DEFAULT_BLOCK_DEFINITIONS.map((definition) => ({
+    ...definition,
+    category: BASE_BLOCK_CATEGORIES[definition.id] ?? null
+  })));
+  registry.registerAll(MATERIAL_BLOCK_DEFINITIONS);
   return registry;
 }

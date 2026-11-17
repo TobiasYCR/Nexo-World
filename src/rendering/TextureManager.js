@@ -62,14 +62,18 @@ export class TextureManager {
    * @param {string} name
    * @returns {Promise<import('p5').Image|null>}
    */
-  load(name) {
+  /**
+   * @param {string} name clave de la textura (nombre de archivo de bloque)
+   * @param {string} [url] ruta explícita, para lo que no es un bloque (las nubes)
+   */
+  load(name, url = this.catalog.textureUrl(name)) {
     if (!this.#requests.has(name)) {
-      this.#requests.set(name, this.#request(name));
+      this.#requests.set(name, this.#request(name, url));
     }
     return this.#requests.get(name);
   }
 
-  #request(name) {
+  #request(name, url) {
     return new Promise((resolve) => {
       const onLoad = (image) => {
         this.#applyPixelArtFiltering(image);
@@ -83,7 +87,7 @@ export class TextureManager {
       };
 
       try {
-        this.p.loadImage(this.catalog.textureUrl(name), onLoad, onError);
+        this.p.loadImage(url, onLoad, onError);
       } catch {
         onError();
       }

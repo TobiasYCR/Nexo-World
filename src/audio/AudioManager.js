@@ -198,6 +198,20 @@ export class AudioManager {
     }
   }
 
+  /** AudioContext activo, o null antes del primer gesto del usuario. */
+  get context() {
+    return this.#context;
+  }
+
+  /**
+   * Nodo de salida de una categoría, para sonido generado en vivo (la música
+   * de ambiente): así respeta el volumen de su categoría y el maestro.
+   * @returns {GainNode|null}
+   */
+  output(category) {
+    return this.isReady ? this.#categoryGains.get(category) ?? null : null;
+  }
+
   // ------------------------------------------------------------ volumen
 
   get masterVolume() {

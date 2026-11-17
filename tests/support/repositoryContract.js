@@ -4,7 +4,7 @@ import { PlayerTokens } from '../../server/security/PlayerTokens.js';
 
 /**
  * Pruebas de contrato de ProgressionRepository. Se ejecutan igual sobre la
- * implementación en memoria y sobre MySQL: así la consulta SQL de la
+ * implementación en memoria y sobre PostgreSQL: así la consulta SQL de la
  * clasificación se valida contra el mismo criterio que Leaderboard.
  * @param {string} label
  * @param {() => Promise<object>} createRepository repositorio vacío e inicializado

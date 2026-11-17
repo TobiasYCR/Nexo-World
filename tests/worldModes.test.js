@@ -218,3 +218,27 @@ test('un plano terminado no se retoma al cargar la partida', async () => {
   assert.equal(game.buildChallenge.restoreState(state).reason, 'alreadyCompleted');
   assert.equal(game.buildChallenge.isActive, false);
 });
+
+test('crear un mundo muestra un solo aviso y arranca el tutorial', async () => {
+  const { Toast } = await import('../src/ui/Toast.js');
+  const { WorldCreationScreen } = await import('../src/interface/screens/WorldCreationScreen.js');
+  const game = await startGame();
+  new GameUiBridge(game, game.hud, game.hud.intentBus);
+  game.hud.tutorial.skipAll();
+  const toasts = Toast.getInstance().element;
+  toasts.children.length = 0;
+
+  const screen = new WorldCreationScreen(game.hud.screenManager, game.hud.intentBus);
+  // El mismo camino que el botón "CREAR MUNDO Y JUGAR", con el nombre por defecto.
+  const submitted = screen.worldCreationView.submit();
+  assert.equal(submitted.name, 'Nuevo Mundo');
+  const messages = toasts.children.map((item) => item.dataset.message);
+  assert.deepEqual(messages, ['success|Mundo "Nuevo Mundo" creado con éxito.'], 'un solo aviso, sin el de "guardada"');
+  assert.equal(game.hud.tutorial.isActive, true, 'el tutorial arranca en cada mundo nuevo');
+  assert.equal(game.hud.tutorial.stepIndex, 0);
+
+  // Un mismo aviso repetido no se apila.
+  Toast.getInstance().success('Hola');
+  Toast.getInstance().success('Hola');
+  assert.equal(toasts.children.filter((item) => item.dataset.message === 'success|Hola').length, 1);
+});

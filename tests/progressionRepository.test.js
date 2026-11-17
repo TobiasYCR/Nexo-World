@@ -1,30 +1,30 @@
 import { InMemoryProgressionRepository } from '../server/persistence/InMemoryProgressionRepository.js';
-import { MySqlProgressionRepository } from '../server/persistence/MySqlProgressionRepository.js';
+import { PostgresDatabase } from '../server/persistence/PostgresDatabase.js';
+import { PostgresProgressionRepository } from '../server/persistence/PostgresProgressionRepository.js';
 import { defineRepositoryContract } from './support/repositoryContract.js';
 
 defineRepositoryContract('memoria', async () => new InMemoryProgressionRepository());
 
 /**
- * Contra MySQL real solo si se configura una base de pruebas, por ejemplo:
- *   NEXO_TEST_MYSQL=1 MYSQL_USER=root MYSQL_PASSWORD=... MYSQL_DATABASE=nexo_world_test npm test
- * La base se vacía antes de cada prueba: no usar la base de desarrollo.
+ * Contra PostgreSQL real solo si se configura una base de pruebas, por ejemplo:
+ *   NEXO_TEST_POSTGRES=1 PGUSER=postgres PGPASSWORD=... npm test
+ * Usa la base nexo_world_test (la crea si no existe) y la vacía antes de cada
+ * prueba: no usar la base de desarrollo.
  */
-const mysqlOptions = {
-  host: process.env.MYSQL_HOST ?? '127.0.0.1',
-  port: Number(process.env.MYSQL_PORT ?? 3306),
-  user: process.env.MYSQL_USER ?? 'root',
-  password: process.env.MYSQL_PASSWORD ?? '',
-  database: process.env.MYSQL_DATABASE ?? 'nexo_world_test'
+const postgresOptions = {
+  host: process.env.PGHOST ?? '127.0.0.1',
+  port: Number(process.env.PGPORT ?? 5432),
+  user: process.env.PGUSER ?? 'postgres',
+  password: process.env.PGPASSWORD ?? '',
+  database: process.env.PGDATABASE_TEST ?? 'nexo_world_test'
 };
 
-defineRepositoryContract('mysql', async () => {
-  const repository = new MySqlProgressionRepository(mysqlOptions);
+defineRepositoryContract('postgres', async () => {
+  const database = new PostgresDatabase(postgresOptions);
+  const repository = new PostgresProgressionRepository(database);
   await repository.init();
-  const mysql = (await import('mysql2/promise')).default;
-  const connection = await mysql.createConnection(mysqlOptions);
-  await connection.query('DELETE FROM leaderboard');
-  await connection.query('DELETE FROM progress');
-  await connection.query('DELETE FROM players');
-  await connection.end();
+  await database.query('TRUNCATE leaderboard, progress, players CASCADE');
+  // El contrato cierra el repositorio; la conexión compartida se cierra con él.
+  repository.close = () => database.close();
   return repository;
-}, { skip: process.env.NEXO_TEST_MYSQL ? false : 'definir NEXO_TEST_MYSQL y una base de pruebas para correr contra MySQL' });
+}, { skip: process.env.NEXO_TEST_POSTGRES ? false : 'definir NEXO_TEST_POSTGRES y una base de pruebas para correr contra PostgreSQL' });

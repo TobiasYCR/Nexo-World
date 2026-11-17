@@ -1,0 +1,26 @@
+# Despliegue en Render (Blueprint): un servicio web que publica el juego y la
+# API, y una base PostgreSQL. En Render: New → Blueprint → elegir este repositorio.
+services:
+  - type: web
+    name: nexo-world
+    runtime: node
+    plan: free
+    region: oregon
+    # Vite está en devDependencies: se instala para compilar el juego.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nexo-world-db
+          property: connectionString
+
+databases:
+  - name: nexo-world-db
+    plan: free
+    region: oregon
+    databaseName: nexo_world
+    user: nexo_world

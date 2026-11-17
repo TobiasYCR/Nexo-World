@@ -1,6 +1,6 @@
 /**
  * Contrato de almacenamiento de cuentas y sesiones. AccountService solo habla
- * con esta interfaz; las implementaciones (MySQL, memoria) son intercambiables.
+ * con esta interfaz; las implementaciones (PostgreSQL, memoria) son intercambiables.
  *
  * Tipos:
  *   Account { id, username, usernameKey, email, emailKey, credential, createdAt, updatedAt }

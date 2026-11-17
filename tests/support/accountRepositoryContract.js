@@ -4,7 +4,7 @@ import { PlayerTokens } from '../../server/security/PlayerTokens.js';
 
 /**
  * Pruebas de contrato de AccountRepository y de la parte de cuentas de
- * ProgressionRepository. Se ejecutan igual en memoria y sobre MySQL.
+ * ProgressionRepository. Se ejecutan igual en memoria y sobre PostgreSQL.
  * @param {string} label
  * @param {() => Promise<{accounts:object, players:object, close:()=>Promise<void>}>} createStores repositorios vacíos
  * @param {{skip?: string|false}} [options]

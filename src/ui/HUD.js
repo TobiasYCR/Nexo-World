@@ -1,4 +1,6 @@
 import { Crosshair } from './Crosshair.js';
+import { TutorialPanel } from './TutorialPanel.js';
+import { KeyNames } from '../chatbot/KeyNames.js';
 import { DebugOverlay } from './DebugOverlay.js';
 import { HotbarView } from './HotbarView.js';
 import { HealthBar } from './HealthBar.js';
@@ -79,13 +81,28 @@ export class HUD {
     this.chatHintElement.textContent = 'Presiona T para abrir chatbot';
     this.chatHintElement.hidden = true;
 
+    // Jugando sin el mouse capturado (al empezar, o al volver con Esc, que el
+    // navegador no deja usar para capturarlo): un clic lo captura.
+    this.clickToPlayElement = document.createElement('div');
+    this.clickToPlayElement.className = 'hud-click-to-play';
+    this.clickToPlayElement.textContent = 'Hacé clic para jugar';
+    this.clickToPlayElement.hidden = true;
+
+    // Tutorial para quien nunca jugó. Al terminarlo o saltarlo no vuelve a
+    // aparecer, salvo que se active de nuevo en Configuración → Interfaz.
+    this.tutorial = new TutorialPanel({
+      chatKeyLabel: KeyNames.of(GameConfig.chatbot.TOGGLE_KEY),
+      onFinish: () => this.settingsModel.set('showTutorial', false)
+    });
+    if (this.settingsModel.get('showTutorial')) this.tutorial.start();
+
     this.#registerScreens();
     this.#setupIntentListeners();
     this.#setupKeyboardShortcuts();
   }
 
   /**
-   * Cuentas en el servidor (MySQL) o en el navegador, según GameConfig.users.AUTH_SOURCE.
+   * Cuentas en el servidor (PostgreSQL) o en el navegador, según GameConfig.users.AUTH_SOURCE.
    * Con servidor se envía el token del invitado de este navegador, para que la
    * cuenta nueva se quede con su progreso.
    */
@@ -103,7 +120,7 @@ export class HUD {
 
     this.settingsScreen = new SettingsScreen(this.settingsModel, this.screenManager, this.intentBus);
     this.controlsScreen = new ControlsScreen(this.screenManager, this.intentBus);
-    this.inventoryScreen = new InventoryScreen(null, this.screenManager, this.intentBus);
+    this.inventoryScreen = new InventoryScreen(null, this.screenManager, this.intentBus, { settingsModel: this.settingsModel });
     this.presetsScreen = new PresetsScreen(this.screenManager, this.intentBus);
 
     this.loginScreen = new LoginScreen(this.authService, this.screenManager, this.intentBus);
@@ -154,6 +171,12 @@ export class HUD {
       this.screenManager.open(ScreenType.MENU);
     });
 
+    this.intentBus.on(IntentBus.Events.START_TUTORIAL, () => {
+      this.tutorial.start();
+      // Si estaba apagado queda encendido, como si se activara en Configuración.
+      this.settingsModel.set('showTutorial', true);
+    });
+
     this.intentBus.on(IntentBus.Events.OPEN_SCREEN, (payload) => {
       if (payload?.screen) {
         this.screenManager.open(payload.screen, payload.params);
@@ -195,6 +218,11 @@ export class HUD {
       this.hotbarView.setVisible(isPlaying);
       this.buildChallengeHud.setVisible(isPlaying);
       this.chatHintElement.hidden = !isPlaying;
+      // También en pausa: con el mouse capturado no se pueden tocar sus botones.
+      this.tutorial.setVisible(isPlaying || current === ScreenType.PAUSE);
+      if (current === ScreenType.PAUSE) this.tutorial.notify(TutorialPanel.Signals.PAUSE_OPENED);
+      if (current === ScreenType.INVENTORY) this.tutorial.notify(TutorialPanel.Signals.INVENTORY_OPENED);
+      if (current === ScreenType.PRESETS) this.tutorial.notify(TutorialPanel.Signals.PRESETS_OPENED);
       if (!isPlaying) this.chatPanel.close();
       this.healthBar.setVisible(isPlaying && this.settingsModel.get('showHealthBar'));
     });
@@ -244,6 +272,10 @@ export class HUD {
         } else if (e.code === 'F3') {
           e.preventDefault?.();
           this.toggleDebug();
+        } else if (e.code === 'Enter' && this.tutorial.isActive) {
+          // Con el mouse capturado los botones no se pueden tocar: Enter pasa de paso.
+          e.preventDefault?.();
+          this.tutorial.next();
         }
       } else if (this.screenManager.currentScreenType === ScreenType.INVENTORY) {
         if (e.code === 'KeyE') {
@@ -277,6 +309,8 @@ export class HUD {
     if (!this.chatHintElement.parentNode) {
       this.container.appendChild(this.chatHintElement);
     }
+    this.tutorial.mount(this.container);
+    if (!this.clickToPlayElement.parentNode) this.container.appendChild(this.clickToPlayElement);
     this.toast.mount(this.container);
 
     // Inicializar con el Menú Principal
@@ -288,11 +322,18 @@ export class HUD {
     this.healthBar.setVisible(false);
     this.buildChallengeHud.setVisible(false);
     this.chatHintElement.hidden = true;
+    this.tutorial.setVisible(false);
   }
 
   /** Abre o cierra el chat del asistente. */
+  /** Muestra u oculta el aviso de hacer clic para capturar el mouse. */
+  setClickToPlay(visible) {
+    this.clickToPlayElement.hidden = !visible;
+  }
+
   toggleChat() {
     this.chatPanel.toggle();
+    if (this.chatPanel.isOpen) this.tutorial.notify(TutorialPanel.Signals.CHAT_OPENED);
   }
 
   toggleDebug() {
@@ -308,6 +349,7 @@ export class HUD {
   update(deltaTime, stats, hotbar, activeChallenge = undefined) {
     this.debugOverlay.update(deltaTime, stats);
     this.hotbarView.update(hotbar);
+    this.tutorial.update(stats, hotbar, GameConfig.world.BLOCK_SIZE);
     if (activeChallenge !== undefined) {
       this.buildChallengeHud.update(activeChallenge);
     }

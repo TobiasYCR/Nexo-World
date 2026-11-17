@@ -124,6 +124,40 @@ export class SettingsScreen extends Screen {
     });
     generalPanel.appendChild(this.#controls.masterVolume.element);
 
+    // Música de ambiente: encendida o apagada, y su volumen
+    this.#controls.musicEnabled = new Toggle({
+      label: schema.musicEnabled.label,
+      checked: this.model.get('musicEnabled'),
+      disabled: schema.musicEnabled.disabled,
+      onChange: (checked) => this.#onSettingChange('musicEnabled', checked)
+    });
+    generalPanel.appendChild(this.#controls.musicEnabled.element);
+
+    this.#controls.musicVolume = new Slider({
+      label: schema.musicVolume.label,
+      min: schema.musicVolume.min,
+      max: schema.musicVolume.max,
+      step: schema.musicVolume.step,
+      value: this.model.get('musicVolume'),
+      formatter: schema.musicVolume.formatter,
+      disabled: schema.musicVolume.disabled,
+      onChange: (val) => this.#onSettingChange('musicVolume', val)
+    });
+    generalPanel.appendChild(this.#controls.musicVolume.element);
+
+    // Velocidad de la lectura en voz alta (sílabas, palabras y descripciones)
+    this.#controls.speechSpeed = new Slider({
+      label: schema.speechSpeed.label,
+      min: schema.speechSpeed.min,
+      max: schema.speechSpeed.max,
+      step: schema.speechSpeed.step,
+      value: this.model.get('speechSpeed'),
+      formatter: schema.speechSpeed.formatter,
+      disabled: schema.speechSpeed.disabled,
+      onChange: (val) => this.#onSettingChange('speechSpeed', val)
+    });
+    generalPanel.appendChild(this.#controls.speechSpeed.element);
+
     // Distancia de render
     this.#controls.renderDistance = new Slider({
       label: schema.renderDistance.label,
@@ -213,6 +247,15 @@ export class SettingsScreen extends Screen {
     });
     graphicsPanel.appendChild(this.#controls.damageEffects.element);
 
+    // Nubes
+    this.#controls.clouds = new Toggle({
+      label: schema.clouds.label,
+      checked: this.model.get('clouds'),
+      disabled: schema.clouds.disabled,
+      onChange: (checked) => this.#onSettingChange('clouds', checked)
+    });
+    graphicsPanel.appendChild(this.#controls.clouds.element);
+
     // Frustum Culling (Disabled)
     this.#controls.frustumCulling = new Toggle({
       label: schema.frustumCulling.label,
@@ -276,6 +319,15 @@ export class SettingsScreen extends Screen {
       onChange: (val) => this.#onSettingChange('crosshairOpacity', val)
     });
     uiPanel.appendChild(this.#controls.crosshairOpacity.element);
+
+    // Tutorial: al activarlo vuelve a empezar desde el primer paso
+    this.#controls.showTutorial = new Toggle({
+      label: schema.showTutorial.label,
+      checked: this.model.get('showTutorial'),
+      disabled: schema.showTutorial.disabled,
+      onChange: (checked) => this.#onSettingChange('showTutorial', checked)
+    });
+    uiPanel.appendChild(this.#controls.showTutorial.element);
 
     // Mostrar barra de vida
     this.#controls.showHealthBar = new Toggle({

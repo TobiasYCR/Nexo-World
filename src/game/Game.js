@@ -20,6 +20,8 @@ import { CollisionSystem } from '../physics/CollisionSystem.js';
 import { Raycast } from '../physics/Raycast.js';
 import { InputManager } from '../input/InputManager.js';
 import { TextureManager } from '../rendering/TextureManager.js';
+import { CloudLayer } from '../rendering/CloudLayer.js';
+import { AmbientMusic } from '../audio/AmbientMusic.js';
 import { BlockRenderer } from '../rendering/BlockRenderer.js';
 import { Renderer } from '../rendering/Renderer.js';
 import { Hotbar } from '../inventory/Hotbar.js';
@@ -50,6 +52,9 @@ import { ChallengeCompleteEffect } from '../viewmodel/ChallengeCompleteEffect.js
  * física ni dibujado. Cada sistema es reemplazable de forma aislada.
  */
 export class Game {
+  /** Se reanudó desde la interfaz: el Escape de este frame ya lo usó el menú de pausa. */
+  #resumedThisFrame = false;
+
   #viewmodelState = { isBreaking: false, horizontalSpeed: 0, isOnGround: false };
   /** Nombre (si se guardó), semilla y modo de la partida en curso. */
   #session = { name: null, seed: 0, mode: 'survival' };
@@ -105,7 +110,11 @@ export class Game {
 
     this.textureManager = new TextureManager(p, config.assets);
     this.blockRenderer = new BlockRenderer(p, this.blockRegistry, this.textureManager, config);
-    this.renderer = new Renderer(p, this.blockRenderer, config.rendering);
+    this.clouds = new CloudLayer(p, config.rendering.CLOUDS, {
+      blockSize: config.world.BLOCK_SIZE,
+      worldHeight: config.world.WORLD_HEIGHT
+    });
+    this.renderer = new Renderer(p, this.blockRenderer, config.rendering, this.clouds);
 
     this.hotbar = new Hotbar(config.inventory.HOTBAR_SIZE);
     this.blockInteraction = new BlockInteraction(this.world, this.player, this.hotbar, this.raycast, config, this.events);
@@ -170,9 +179,12 @@ export class Game {
     this.renderer.addOverlay(this.challengeCompleteEffect);
     this.renderer.addOverlay(this.visualEffectsManager);
     this.audio = new AudioManager(config.assets);
+    /** Arranca con el primer clic en el juego (el navegador no deja sonar antes). */
+    this.music = new AmbientMusic(this.audio);
     this.footsteps = new FootstepPlayer(config.audio, config.world.BLOCK_SIZE);
-    this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
-    this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
+    const blockVolume = config.audio.BLOCK_SOUND_VOLUME ?? 1;
+    this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK, { volume: blockVolume }));
+    this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE, { volume: blockVolume }));
     // El asistente lee el estado vivo de la partida. Se pasa un proveedor y no
     // los objetos porque el estado cambia en cada frame y el HUD se arma una
     // sola vez; además así el chat no guarda referencias que impidan liberar
@@ -217,6 +229,7 @@ export class Game {
 
     // Deliberadamente sin await: el mundo se dibuja con colores hasta que lleguen.
     this.textureManager.loadAll(this.blockRegistry.textureNames());
+    this.clouds.load(this.textureManager, this.config.assets.CLOUD_TEXTURE).catch(() => {});
     this.audio.preload().catch(() => {});
   }
 
@@ -247,6 +260,7 @@ export class Game {
     }
 
     this.#updateViewmodel(deltaTime);
+    this.clouds.update(deltaTime);
     this.hud.update(deltaTime, this.#buildDebugStats(), {
       selectedIndex: this.hotbar.selectedIndex,
       slots: this.hotbar.slots.map(({ blockType, count }) => ({ blockType, count }))
@@ -265,7 +279,16 @@ export class Game {
 
   #handleGlobalActions() {
     if (this.input.wasActionJustPressed(InputActions.TOGGLE_DEBUG)) this.hud.toggleDebug();
-    if (this.input.wasActionJustPressed(InputActions.PAUSE)) this.togglePause();
+    // Escape solo pausa. Con la partida en pausa, Escape lo maneja el menú de
+    // pausa (que la reanuda): si acá también se alternaba, la misma tecla
+    // reanudaba y volvía a pausar, y el menú no se cerraba nunca.
+    const pausePressed = this.input.wasActionJustPressed(InputActions.PAUSE);
+    if (this.#resumedThisFrame) {
+      // El menú de pausa se cierra con el mismo Escape que el juego lee en este frame.
+      this.#resumedThisFrame = false;
+      return;
+    }
+    if (pausePressed && this.state.isRunning) this.pause();
   }
 
   togglePause() {
@@ -280,6 +303,7 @@ export class Game {
 
   resume() {
     this.state.set(GameStates.RUNNING);
+    this.#resumedThisFrame = true;
   }
 
   get isPaused() {
@@ -510,7 +534,7 @@ export class Game {
   #bindPointerLock(canvasElement) {
     canvasElement.addEventListener('click', () => {
       if (!this.input.isPointerLocked) this.input.mouse.requestPointerLock();
-      this.audio.unlock().catch(() => {});
+      this.audio.unlock().then((ready) => ready && this.music.start()).catch(() => {});
     });
   }
 

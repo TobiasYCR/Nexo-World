@@ -1,5 +1,6 @@
 import { resolveBlockSyllables, resolveBlockSyllableLines, resolveBlockDescription } from '../blocks/BlockType.js';
-import { createEducationalMaterials } from '../blocks/EducationalMaterials.js';
+import { createDefaultBlockRegistry } from '../blocks/BlockRegistry.js';
+import { BlockIds } from '../utils/Constants.js';
 import { SpeechService } from '../audio/SpeechService.js';
 import { Icons, setIconLabel } from './Icons.js';
 
@@ -70,7 +71,8 @@ export function classifyBlockCategory(block) {
  */
 export class InventoryView {
   #blockRegistry;
-  #materials;
+  #settingsModel;
+  #speed = 1;
   #onSelect;
   #onEquip;
   #speechService;
@@ -89,14 +91,19 @@ export class InventoryView {
   /**
    * @param {Object} options
    * @param {import('../blocks/BlockRegistry.js').BlockRegistry} [options.blockRegistry]
-   * @param {ReadonlyArray<Object>} [options.materials]
+   *   todos sus bloques (menos el aire) se muestran; las piedras y maderas del
+   *   catálogo educativo tienen sus propias pestañas
    * @param {Function} [options.onSelect]
    * @param {Function} [options.onEquip]
    * @param {SpeechService} [options.speechService]
    */
-  constructor({ blockRegistry = null, materials = null, onSelect = null, onEquip = null, speechService = null } = {}) {
-    this.#blockRegistry = blockRegistry;
-    this.#materials = materials ?? (blockRegistry ? null : createEducationalMaterials());
+  constructor({ blockRegistry = null, onSelect = null, onEquip = null, speechService = null, settingsModel = null } = {}) {
+    this.#blockRegistry = blockRegistry ?? createDefaultBlockRegistry();
+    /** Si está, la velocidad de lectura se guarda y queda igual que en Configuración. */
+    this.#settingsModel = settingsModel;
+    this.#settingsModel?.subscribe?.((key, value) => {
+      if (key === 'speechSpeed') this.#syncSpeedControl(value);
+    });
     this.#onSelect = onSelect;
     this.#onEquip = onEquip;
     this.#speechService = speechService ?? SpeechService.getInstance();
@@ -107,9 +114,10 @@ export class InventoryView {
     this.refresh();
   }
 
+  /** Cada bloque tiene su id propio: es la clave de tarjetas, selección y audio. */
   static #blockKey(block) {
     if (!block) return '';
-    return String(block.materialId ?? block.id ?? block.name ?? '');
+    return String(block.id ?? block.name ?? '');
   }
 
   get selectedBlock() {
@@ -147,9 +155,7 @@ export class InventoryView {
     categoriesWrap.className = 'nx-inventory-categories';
     categoriesWrap.setAttribute('role', 'tablist');
 
-    const activeCategories = this.#materials
-      ? INVENTORY_CATEGORIES.filter((cat) => ['all', 'stones', 'woods'].includes(cat.id))
-      : INVENTORY_CATEGORIES.filter((cat) => !['stones', 'woods'].includes(cat.id));
+    const activeCategories = INVENTORY_CATEGORIES;
 
     this.categoryButtons = {};
     activeCategories.forEach((cat) => {
@@ -331,9 +337,8 @@ export class InventoryView {
    * Refresca la lista de bloques según filtros y actualiza la vista.
    */
   refresh() {
-    const allPlaceable = this.#materials
-      ? [...this.#materials]
-      : (this.#blockRegistry?.placeableTypes ? this.#blockRegistry.placeableTypes() : []);
+    // Todo menos el aire: la roca madre se muestra para conocerla aunque no se pueda colocar.
+    const allPlaceable = this.#blockRegistry.values().filter((type) => type.id !== BlockIds.AIR);
 
     this.#filteredBlocks = allPlaceable.filter((block) => {
       // Filtro de categoría
@@ -617,7 +622,7 @@ export class InventoryView {
         const wasOpenForThis =
           this.isSlotPopupOpen && InventoryView.#blockKey(this.#popupBlock) === bKey;
         this.selectBlock(block);
-        if (wasOpenForThis) {
+        if (wasOpenForThis || block.placeable === false) {
           this.hideSlotPopup();
         } else {
           this.#showSlotPopup(card, block);
@@ -639,7 +644,7 @@ export class InventoryView {
     const targetKey = InventoryView.#blockKey(block);
 
     this.#cardElements.forEach((card) => {
-      const isCur = card.dataset.blockKey === targetKey || card.dataset.blockId === String(block.id);
+      const isCur = card.dataset.blockKey === targetKey;
       card.classList.toggle('is-selected', isCur);
       card.tabIndex = isCur ? 0 : -1;
       if (isCur) card.focus();
@@ -654,10 +659,60 @@ export class InventoryView {
 
   equipBlock(block = null, slotIndex = null) {
     const targetBlock = block ?? this.#selectedBlock;
-    if (!targetBlock) return;
+    if (!targetBlock || targetBlock.placeable === false) return;
     if (this.#onEquip) {
       this.#onEquip(targetBlock, slotIndex);
     }
+  }
+
+  /** Velocidad actual de la lectura en voz alta (×1 a ×2,5). */
+  get speechSpeed() {
+    return this.#settingsModel?.get?.('speechSpeed') ?? this.#speed;
+  }
+
+  /**
+   * Barra de velocidad debajo del deletreo: de ×1 (pausada) a ×2,5. Comparte
+   * el valor con Configuración → General.
+   */
+  setSpeechSpeed(value) {
+    const speed = Math.min(2.5, Math.max(1, Math.round(Number(value) * 10) / 10));
+    this.#speed = speed;
+    if (this.#settingsModel?.set) this.#settingsModel.set('speechSpeed', speed);
+    else this.#speechService?.setRate?.(SpeechService.BASE_RATE * speed);
+    this.#syncSpeedControl(speed);
+  }
+
+  #createSpeedControl() {
+    const row = document.createElement('div');
+    row.className = 'nx-details-speed-row';
+    const label = document.createElement('label');
+    label.className = 'nx-details-speed-label';
+    label.textContent = 'Velocidad de lectura';
+    this.speedInput = document.createElement('input');
+    this.speedInput.type = 'range';
+    this.speedInput.className = 'nx-details-speed';
+    this.speedInput.min = '1';
+    this.speedInput.max = '2.5';
+    this.speedInput.step = '0.1';
+    this.speedInput.value = String(this.speechSpeed);
+    this.speedInput.setAttribute('aria-label', 'Velocidad de lectura en voz alta');
+    this.speedInput.addEventListener('input', (event) => {
+      event?.stopPropagation?.();
+      this.setSpeechSpeed(event?.target?.value ?? this.speedInput.value);
+    });
+    this.speedInput.addEventListener('click', (event) => event?.stopPropagation?.());
+    this.speedValue = document.createElement('span');
+    this.speedValue.className = 'nx-details-speed-value';
+    this.speedValue.textContent = `×${Number(this.speechSpeed).toFixed(1)}`;
+    row.appendChild(label);
+    row.appendChild(this.speedInput);
+    row.appendChild(this.speedValue);
+    return row;
+  }
+
+  #syncSpeedControl(value) {
+    if (this.speedInput) this.speedInput.value = String(value);
+    if (this.speedValue) this.speedValue.textContent = `×${Number(value).toFixed(1)}`;
   }
 
   #renderDetails() {
@@ -715,6 +770,8 @@ export class InventoryView {
     eduRow.appendChild(syllablesDisplay);
     eduRow.appendChild(actionsWrap);
 
+    const speedRow = this.#createSpeedControl();
+
     // Fila de descripción breve del material + botón para escuchar la descripción con audio
     const descRow = document.createElement('div');
     descRow.className = 'nx-details-description-row';
@@ -745,8 +802,9 @@ export class InventoryView {
       `ID de bloque: ${block.id}`,
       `Nombre técnico: ${block.name}`,
       `Sílabas: ${block.syllableText || resolveBlockSyllables(block).syllableText}`,
-      `Dureza: ${block.hardness ?? 1}`,
+      `Dureza: ${Number.isFinite(block.hardness ?? 1) ? (block.hardness ?? 1) : 'indestructible'}`,
       `Rompible: ${block.breakable !== false ? 'Sí' : 'No'}`,
+      `Se puede colocar: ${block.placeable === false ? 'No' : 'Sí'}`,
       `Sólido: ${block.solid !== false ? 'Sí' : 'No'}`,
       `Transparente: ${block.transparent ? 'Sí' : 'No'}`
     ];
@@ -760,6 +818,7 @@ export class InventoryView {
 
     this.detailsPanel.appendChild(header);
     this.detailsPanel.appendChild(eduRow);
+    this.detailsPanel.appendChild(speedRow);
     this.detailsPanel.appendChild(descRow);
     this.detailsPanel.appendChild(specs);
     this.#syncSyllableHighlight();

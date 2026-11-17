@@ -123,6 +123,9 @@ export function formatSyllableForSpeech(syllable) {
  * - Cancela automáticamente cualquier locución previa (speechSynthesis.cancel()) ante clics rápidos.
  */
 export class SpeechService {
+  /** Velocidad pausada de lectura (×1). El ajuste de velocidad la multiplica hasta ×2,5. */
+  static BASE_RATE = 0.75;
+
   static #instance = null;
 
   /**
@@ -177,7 +180,7 @@ export class SpeechService {
       ?? (typeof globalThis !== 'undefined' ? globalThis.SpeechSynthesisUtterance : null)
       ?? null;
     this.#lang = options.lang ?? 'es-ES';
-    this.#rate = options.rate ?? 0.75;
+    this.#rate = options.rate ?? SpeechService.BASE_RATE;
     this.#pitch = options.pitch ?? 1.0;
     this.#volume = options.volume ?? 1.0;
     this.#syllablePauseMs = options.syllablePauseMs ?? 260;

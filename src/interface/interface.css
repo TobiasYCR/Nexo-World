@@ -488,7 +488,18 @@
   font-style: italic;
 }
 
+.nx-toggle-container {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Toggle.js usa nx-toggle-switch / nx-toggle-knob: sin estos selectores el
+   interruptor se veía como una barra blanca de lado a lado. */
+.nx-toggle-switch,
 .nx-toggle-btn {
+  flex-shrink: 0;
+  padding: 0;
   width: 44px;
   height: 24px;
   background: #334155;
@@ -499,10 +510,17 @@
   transition: background 0.2s ease;
 }
 
+.nx-toggle-switch.is-checked,
 .nx-toggle-btn.is-checked {
   background: var(--nx-emerald-base);
 }
 
+.nx-toggle-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nx-toggle-knob,
 .nx-toggle-thumb {
   width: 18px;
   height: 18px;
@@ -514,6 +532,7 @@
   transition: transform 0.2s ease;
 }
 
+.nx-toggle-switch.is-checked .nx-toggle-knob,
 .nx-toggle-btn.is-checked .nx-toggle-thumb {
   transform: translateX(20px);
 }
@@ -604,7 +623,7 @@
 
 .nx-inventory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
   grid-auto-rows: minmax(215px, auto);
   align-items: stretch;
   gap: 10px;
@@ -625,7 +644,8 @@
   gap: 6px;
   padding: 10px 8px;
   min-height: 184px;
-  height: 100%;
+  /* Sin height: 100%: con alto fijo, los botones de audio se salían de la tarjeta. */
+  overflow: hidden;
   background: var(--nx-bg-card);
   border: 2px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--nx-radius-md);
@@ -761,10 +781,21 @@
 
 .nx-block-card-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
+  margin-top: auto;
+}
+
+/* Uno al lado del otro: cada botón ocupa la mitad de la tarjeta. */
+.nx-block-card-actions .nx-btn-speak-block {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  padding: 4px 5px;
+  gap: 4px;
+  font-size: 0.66rem;
 }
 
 .nx-btn-speak-card-desc {
@@ -786,6 +817,40 @@
   border: 1px solid rgba(253, 224, 71, 0.25);
   padding: 8px 12px;
   border-radius: var(--nx-radius-sm);
+}
+
+/* Velocidad de lectura, debajo del deletreo */
+.nx-details-speed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--nx-radius-sm);
+}
+
+.nx-details-speed-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--nx-text-secondary);
+  white-space: nowrap;
+}
+
+.nx-details-speed {
+  flex: 1;
+  min-width: 80px;
+  accent-color: #10b981;
+  cursor: pointer;
+}
+
+.nx-details-speed-value {
+  min-width: 3.2em;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fde047;
+  text-align: right;
 }
 
 .nx-details-syllables {
@@ -1644,3 +1709,4 @@
     transition-duration: 0.01ms !important;
   }
 }
+

@@ -6,6 +6,7 @@ import { BuildChallengeView } from './BuildChallengeView.js';
 import { GameEventTypes } from '../game/GameEvents.js';
 import { ProgressionUiService } from '../progression/ProgressionUiService.js';
 import { SettingsApplier } from './SettingsApplier.js';
+import { TutorialPanel } from './TutorialPanel.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -96,7 +97,8 @@ export class GameUiBridge {
       const slot = payload?.slot || 'default';
       const result = this.game?.saveGame?.(slot);
       if (result?.ok) {
-        this.toast.success(`Partida guardada correctamente en "${slot}".`);
+        // Al crear un mundo se guarda solo; ahí alcanza con el aviso de "creado".
+        if (!payload?.silent) this.toast.success(`Partida guardada correctamente en "${slot}".`);
       } else {
         this.toast.error(result?.message || 'Error al guardar la partida.');
       }
@@ -123,9 +125,8 @@ export class GameUiBridge {
           : this.game.hotbar.selectedIndex;
 
         const stackCount = payload.count ?? this.game.config?.inventory?.STARTER_BLOCK_COUNT ?? 64;
-        const blockType = payload.blockType.isEducationalMaterial
-          ? payload.blockType
-          : (this.game.blockRegistry?.get?.(payload.blockType.id) ?? payload.blockType);
+        const blockType = this.game.blockRegistry?.get?.(payload.blockType.id) ?? payload.blockType;
+        if (blockType.placeable === false) return;
 
         this.game.hotbar.set(targetIndex, blockType, stackCount);
         const name = blockType.label || blockType.name || `Bloque ${blockType.id}`;
@@ -133,19 +134,19 @@ export class GameUiBridge {
       }
     });
 
-    // Mostrar Toast desde cualquier componente
-    this.intentBus.on(IntentBus.Events.SHOW_TOAST, (payload) => {
-      if (payload?.message) {
-        this.toast.show(payload.message, payload.type || 'info', payload.duration || 3000);
-      }
-    });
+    // SHOW_TOAST lo atiende HUD: escucharlo también acá mostraba cada aviso dos veces.
 
     // Crear un mundo nuevo con nombre, semilla y modo. WorldCreationScreen
     // emite después SAVE_GAME con el nombre, así que queda guardado.
     this.intentBus.on(IntentBus.Events.CREATE_WORLD, (payload) => {
       const result = this.game?.newWorld?.({ name: payload?.name, seed: payload?.seed, mode: payload?.gameMode });
       if (payload && result) payload.result = result;
-      if (result && !result.ok) this.toast.error(result.message ?? 'No se pudo crear el mundo.');
+      if (result && !result.ok) {
+        this.toast.error(result.message ?? 'No se pudo crear el mundo.');
+        return;
+      }
+      // Cada mundo nuevo arranca con el tutorial (se puede saltar).
+      this.intentBus.emit(IntentBus.Events.START_TUTORIAL);
     });
 
 
@@ -168,6 +169,8 @@ export class GameUiBridge {
     });
 
     this.#bindBuildChallenge();
+    this.#bindTutorial();
+    this.#bindPointerLock();
   }
 
   /**
@@ -192,6 +195,47 @@ export class GameUiBridge {
       this.toast.success(`¡Completaste el plano "${snapshot.name}"!`, 4500);
       SpeechService.getInstance().speakWord(`¡Felicitaciones! Construiste ${snapshot.name}`);
     });
+  }
+
+  /**
+   * El mouse solo se libera en los menús y en el chat. Si se suelta jugando
+   * (Esc del navegador, cambiar de ventana) se abre la pausa, y al volver al
+   * juego se captura de nuevo. Cuando el navegador no lo deja capturar sin un
+   * clic (por ejemplo, al volver con Esc), se muestra "Hacé clic para jugar".
+   */
+  #bindPointerLock() {
+    const mouse = this.game?.input?.mouse;
+    const hud = this.hud;
+    const screens = hud?.screenManager;
+    if (!mouse?.onLockChange || !screens) return;
+
+    const isPlaying = () => screens.currentScreenType === ScreenType.PLAYING;
+    const chatOpen = () => Boolean(hud.chatPanel?.isOpen);
+    const sync = () => hud.setClickToPlay?.(isPlaying() && !chatOpen() && !mouse.isPointerLocked);
+
+    mouse.onLockChange((locked) => {
+      if (!locked && isPlaying() && !chatOpen()) this.intentBus.emit(IntentBus.Events.PAUSE_GAME);
+      sync();
+    });
+    const recapture = () => {
+      if (isPlaying() && !chatOpen() && !mouse.isPointerLocked) mouse.requestPointerLock();
+      sync();
+    };
+    screens.onChange(recapture);
+    hud.chatPanel?.onClose?.(recapture);
+    sync();
+  }
+
+  /** Lo que el jugador hace en el mundo avanza el tutorial. */
+  #bindTutorial() {
+    const events = this.game?.events;
+    const tutorial = this.hud?.tutorial;
+    if (!events || !tutorial) return;
+    const { Signals } = TutorialPanel;
+    events.on(GameEventTypes.BLOCK_BROKEN, () => tutorial.notify(Signals.BLOCK_BROKEN));
+    events.on(GameEventTypes.BLOCK_PLACED, () => tutorial.notify(Signals.BLOCK_PLACED));
+    events.on(GameEventTypes.BUILD_CHALLENGE_STARTED, () => tutorial.notify(Signals.CHALLENGE_STARTED));
+    events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, () => tutorial.notify(Signals.CHALLENGE_COMPLETED));
   }
 
   #startChallenge(blueprintId) {

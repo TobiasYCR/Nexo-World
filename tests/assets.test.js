@@ -27,6 +27,20 @@ function decodePng(buffer) {
   return { width, height, pixels };
 }
 
+/** Texturas del catálogo de piedras y maderas. */
+const MATERIAL_TEXTURES = new Set(createDefaultBlockRegistry().values()
+  .filter((type) => type.category && !['Stone', 'Cobblestone', 'Sandstone', 'Bedrock', 'Log', 'Planks'].includes(type.name))
+  .map((type) => type.texture));
+
+/** Diferencia media por píxel: dos texturas con el mismo color medio pero distinto dibujo se separan. */
+function pixelDifference(first, second) {
+  let total = 0;
+  for (let index = 0; index < first.length; index += 1) {
+    total += Math.hypot(first[index][0] - second[index][0], first[index][1] - second[index][1], first[index][2] - second[index][2]);
+  }
+  return total / first.length;
+}
+
 function averageColor(pixels) {
   const sum = pixels.reduce((acc, [r, g, b]) => [acc[0] + r, acc[1] + g, acc[2] + b], [0, 0, 0]);
   return sum.map((channel) => channel / pixels.length);
@@ -40,7 +54,8 @@ test('las texturas generadas son deterministas', () => {
 
 test('se generan las texturas de bloques en PNG de 16x16', () => {
   const textures = generateBlockTextures();
-  assert.deepEqual([...textures.keys()].sort(), [
+  assert.deepEqual([...textures.keys()].sort(), [...createDefaultBlockRegistry().textureNames()].sort());
+  assert.deepEqual([...textures.keys()].filter((name) => !MATERIAL_TEXTURES.has(name)).sort(), [
     'bedrock.png',
     'coal_ore.png',
     'cobblestone.png',
@@ -101,7 +116,12 @@ test('las texturas se distinguen entre sí por color medio y no son planas', () 
       const a = averageColor(decoded[i][1]);
       const b = averageColor(decoded[j][1]);
       const distance = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-      assert.ok(distance > 25, `${decoded[i][0]} y ${decoded[j][0]} se parecen demasiado (${distance.toFixed(1)})`);
+      // Entre tantas piedras y maderas el color medio puede coincidir; ahí tiene que cambiar el dibujo.
+      const pattern = pixelDifference(decoded[i][1], decoded[j][1]);
+      assert.ok(
+        distance > 25 || pattern > 30,
+        `${decoded[i][0]} y ${decoded[j][0]} se parecen demasiado (color ${distance.toFixed(1)}, dibujo ${pattern.toFixed(1)})`
+      );
     }
   }
 });
