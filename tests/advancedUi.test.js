@@ -376,3 +376,26 @@ test('UiStateManager coordina pantallas activas y almacenamiento de estado tempo
   uiState.clearTempState('lastWorldName');
   assert.equal(uiState.getTempState('lastWorldName'), undefined);
 });
+
+test('el inventario tiene la barra de velocidad de lectura de ×1 a ×2,5, compartida con Configuración', async () => {
+  const { SettingsModel } = await import('../src/interface/models/SettingsModel.js');
+  const model = new SettingsModel();
+  model.set('speechSpeed', 1);
+  const invView = new InventoryView({ blockRegistry: createDefaultBlockRegistry(), settingsModel: model });
+  invView.selectBlock(createDefaultBlockRegistry().get(BlockIds.STONE));
+  const slider = invView.detailsPanel.querySelector('.nx-details-speed');
+  assert.ok(slider, 'la barra está en el panel del bloque');
+  assert.equal(slider.min, '1');
+  assert.equal(slider.max, '2.5');
+
+  slider.value = '2';
+  slider.dispatch('input', { target: slider, stopPropagation: () => {} });
+  assert.equal(model.get('speechSpeed'), 2, 'se guarda en la configuración');
+  assert.equal(invView.detailsPanel.querySelector('.nx-details-speed-value').textContent, '×2.0');
+
+  model.set('speechSpeed', 1.5);
+  assert.equal(slider.value, '1.5', 'si se cambia en Configuración, la barra se actualiza');
+  invView.setSpeechSpeed(9);
+  assert.equal(model.get('speechSpeed'), 2.5, 'no pasa de ×2,5');
+  model.set('speechSpeed', 1);
+});

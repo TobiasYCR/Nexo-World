@@ -51,8 +51,9 @@ test('cada ajuste cambia el sistema que corresponde, al instante', async () => {
   assert.equal(game.camera.sensitivityMultiplier, 1.5);
   model.set('masterVolume', 30);
   assert.ok(Math.abs(game.audio.masterVolume - 0.3) < 1e-9);
-  model.set('speechRate', 1.2);
-  assert.equal(SpeechService.getInstance().rate, 1.2, 'la lectura en voz alta usa la velocidad elegida');
+  model.set('speechSpeed', 2);
+  assert.equal(SpeechService.getInstance().rate, SpeechService.BASE_RATE * 2, 'la lectura en voz alta usa la velocidad elegida');
+  model.set('speechSpeed', 1);
   model.set('showTutorial', false);
   assert.equal(game.hud.tutorial.isActive, false);
   model.set('showTutorial', true);
@@ -89,4 +90,49 @@ test('lo guardado se aplica al arrancar', async () => {
   new GameUiBridge(second, second.hud, second.hud.intentBus);
   assert.equal(second.camera.fov, 90);
   assert.equal(second.blockRenderer.renderDistance, second.world.chunkSizeX);
+});
+
+test('el mouse solo se libera en los menús y en el chat; soltarlo jugando abre la pausa', async () => {
+  const { ScreenType } = await import('../src/ui/ScreenType.js');
+  const game = await startWithBridge();
+  const hud = game.hud;
+  hud.screenManager.open(ScreenType.PLAYING);
+  assert.equal(game.input.isPointerLocked, true, 'al entrar al juego se captura');
+  assert.equal(hud.clickToPlayElement.hidden, true);
+
+  // Soltarlo jugando (Esc del navegador, cambiar de ventana) abre la pausa.
+  globalThis.document.exitPointerLock();
+  assert.equal(hud.screenManager.currentScreenType, ScreenType.PAUSE);
+  assert.equal(game.state.isPaused, true);
+
+  // Reanudar lo vuelve a capturar.
+  hud.pauseScreen.resumeBtn.dispatch('click', {});
+  assert.equal(hud.screenManager.currentScreenType, ScreenType.PLAYING);
+  assert.equal(game.input.isPointerLocked, true);
+
+  // El chat lo libera sin pausar, y al cerrarlo se captura otra vez.
+  const opening = hud.chatPanel.open();
+  assert.equal(game.input.isPointerLocked, false);
+  assert.equal(hud.screenManager.currentScreenType, ScreenType.PLAYING, 'el chat no pausa');
+  await opening;
+  hud.chatPanel.close();
+  assert.equal(game.input.isPointerLocked, true);
+
+  // Un menú también lo libera, sin abrir la pausa encima.
+  hud.screenManager.open(ScreenType.INVENTORY);
+  assert.equal(game.input.isPointerLocked, false);
+  assert.equal(hud.screenManager.currentScreenType, ScreenType.INVENTORY);
+});
+
+test('el menú de pausa tiene un botón que vuelve a empezar el tutorial', async () => {
+  const { ScreenType } = await import('../src/ui/ScreenType.js');
+  const game = await startWithBridge();
+  const hud = game.hud;
+  hud.tutorial.skipAll();
+  hud.screenManager.open(ScreenType.PAUSE);
+  hud.pauseScreen.tutorialBtn.dispatch('click', {});
+  assert.equal(hud.tutorial.isActive, true);
+  assert.equal(hud.tutorial.stepIndex, 0);
+  assert.equal(hud.settingsModel.get('showTutorial'), true);
+  assert.equal(hud.screenManager.currentScreenType, ScreenType.PLAYING, 'vuelve al juego para verlo');
 });

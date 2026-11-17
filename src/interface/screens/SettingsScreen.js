@@ -146,17 +146,17 @@ export class SettingsScreen extends Screen {
     generalPanel.appendChild(this.#controls.musicVolume.element);
 
     // Velocidad de la lectura en voz alta (sílabas, palabras y descripciones)
-    this.#controls.speechRate = new Slider({
-      label: schema.speechRate.label,
-      min: schema.speechRate.min,
-      max: schema.speechRate.max,
-      step: schema.speechRate.step,
-      value: this.model.get('speechRate'),
-      formatter: schema.speechRate.formatter,
-      disabled: schema.speechRate.disabled,
-      onChange: (val) => this.#onSettingChange('speechRate', val)
+    this.#controls.speechSpeed = new Slider({
+      label: schema.speechSpeed.label,
+      min: schema.speechSpeed.min,
+      max: schema.speechSpeed.max,
+      step: schema.speechSpeed.step,
+      value: this.model.get('speechSpeed'),
+      formatter: schema.speechSpeed.formatter,
+      disabled: schema.speechSpeed.disabled,
+      onChange: (val) => this.#onSettingChange('speechSpeed', val)
     });
-    generalPanel.appendChild(this.#controls.speechRate.element);
+    generalPanel.appendChild(this.#controls.speechSpeed.element);
 
     // Distancia de render
     this.#controls.renderDistance = new Slider({

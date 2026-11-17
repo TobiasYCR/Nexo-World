@@ -49,16 +49,17 @@ export const SETTINGS_SCHEMA = Object.freeze({
     formatter: (v) => `${Math.round(v)}%`,
     disabled: false
   }),
-  speechRate: Object.freeze({
-    id: 'speechRate',
+  speechSpeed: Object.freeze({
+    id: 'speechSpeed',
     category: 'general',
     label: 'Velocidad de lectura en voz alta',
     type: 'number',
-    default: 0.75,
-    min: 0.4,
-    max: 1.5,
-    step: 0.05,
-    formatter: (v) => `${Number(v).toFixed(2)}×`,
+    // Multiplicador sobre la velocidad pausada de lectura (SpeechService.BASE_RATE).
+    default: 1,
+    min: 1,
+    max: 2.5,
+    step: 0.1,
+    formatter: (v) => `×${Number(v).toFixed(1)}`,
     disabled: false
   }),
   masterVolume: Object.freeze({

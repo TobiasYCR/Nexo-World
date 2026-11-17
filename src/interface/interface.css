@@ -800,6 +800,40 @@
   border-radius: var(--nx-radius-sm);
 }
 
+/* Velocidad de lectura, debajo del deletreo */
+.nx-details-speed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--nx-radius-sm);
+}
+
+.nx-details-speed-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--nx-text-secondary);
+  white-space: nowrap;
+}
+
+.nx-details-speed {
+  flex: 1;
+  min-width: 80px;
+  accent-color: #10b981;
+  cursor: pointer;
+}
+
+.nx-details-speed-value {
+  min-width: 3.2em;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fde047;
+  text-align: right;
+}
+
 .nx-details-syllables {
   display: flex;
   flex-wrap: wrap;
