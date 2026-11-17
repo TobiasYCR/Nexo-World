@@ -1710,17 +1710,3 @@
   }
 }
 
-/* Voz de lectura: lista de voces y botón para probarla */
-.nx-voice-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 60%;
-}
-
-.nx-voice-select {
-  min-width: 0;
-  max-width: 100%;
-  padding: 6px 8px;
-  font-size: 0.78rem;
-}

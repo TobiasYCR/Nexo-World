@@ -57,9 +57,6 @@ export class SettingsApplier {
       case 'clouds':
         game?.clouds?.setEnabled?.(value);
         return true;
-      case 'speechVoice':
-        this.speech?.setPreferredVoice?.(value);
-        return true;
       case 'speechSpeed':
         this.speech?.setRate?.(SpeechService.BASE_RATE * value);
         return true;
