@@ -124,6 +124,19 @@ export class SettingsScreen extends Screen {
     });
     generalPanel.appendChild(this.#controls.masterVolume.element);
 
+    // Velocidad de la lectura en voz alta (sílabas, palabras y descripciones)
+    this.#controls.speechRate = new Slider({
+      label: schema.speechRate.label,
+      min: schema.speechRate.min,
+      max: schema.speechRate.max,
+      step: schema.speechRate.step,
+      value: this.model.get('speechRate'),
+      formatter: schema.speechRate.formatter,
+      disabled: schema.speechRate.disabled,
+      onChange: (val) => this.#onSettingChange('speechRate', val)
+    });
+    generalPanel.appendChild(this.#controls.speechRate.element);
+
     // Distancia de render
     this.#controls.renderDistance = new Slider({
       label: schema.renderDistance.label,
@@ -276,6 +289,15 @@ export class SettingsScreen extends Screen {
       onChange: (val) => this.#onSettingChange('crosshairOpacity', val)
     });
     uiPanel.appendChild(this.#controls.crosshairOpacity.element);
+
+    // Tutorial: al activarlo vuelve a empezar desde el primer paso
+    this.#controls.showTutorial = new Toggle({
+      label: schema.showTutorial.label,
+      checked: this.model.get('showTutorial'),
+      disabled: schema.showTutorial.disabled,
+      onChange: (checked) => this.#onSettingChange('showTutorial', checked)
+    });
+    uiPanel.appendChild(this.#controls.showTutorial.element);
 
     // Mostrar barra de vida
     this.#controls.showHealthBar = new Toggle({

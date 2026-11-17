@@ -6,6 +6,7 @@ import { BuildChallengeView } from './BuildChallengeView.js';
 import { GameEventTypes } from '../game/GameEvents.js';
 import { ProgressionUiService } from '../progression/ProgressionUiService.js';
 import { SettingsApplier } from './SettingsApplier.js';
+import { TutorialPanel } from './TutorialPanel.js';
 
 /**
  * Puente desacoplado entre el motor del juego (Game) y la interfaz de usuario (HUD/IntentBus).
@@ -123,9 +124,8 @@ export class GameUiBridge {
           : this.game.hotbar.selectedIndex;
 
         const stackCount = payload.count ?? this.game.config?.inventory?.STARTER_BLOCK_COUNT ?? 64;
-        const blockType = payload.blockType.isEducationalMaterial
-          ? payload.blockType
-          : (this.game.blockRegistry?.get?.(payload.blockType.id) ?? payload.blockType);
+        const blockType = this.game.blockRegistry?.get?.(payload.blockType.id) ?? payload.blockType;
+        if (blockType.placeable === false) return;
 
         this.game.hotbar.set(targetIndex, blockType, stackCount);
         const name = blockType.label || blockType.name || `Bloque ${blockType.id}`;
@@ -168,6 +168,7 @@ export class GameUiBridge {
     });
 
     this.#bindBuildChallenge();
+    this.#bindTutorial();
   }
 
   /**
@@ -192,6 +193,18 @@ export class GameUiBridge {
       this.toast.success(`¡Completaste el plano "${snapshot.name}"!`, 4500);
       SpeechService.getInstance().speakWord(`¡Felicitaciones! Construiste ${snapshot.name}`);
     });
+  }
+
+  /** Lo que el jugador hace en el mundo avanza el tutorial. */
+  #bindTutorial() {
+    const events = this.game?.events;
+    const tutorial = this.hud?.tutorial;
+    if (!events || !tutorial) return;
+    const { Signals } = TutorialPanel;
+    events.on(GameEventTypes.BLOCK_BROKEN, () => tutorial.notify(Signals.BLOCK_BROKEN));
+    events.on(GameEventTypes.BLOCK_PLACED, () => tutorial.notify(Signals.BLOCK_PLACED));
+    events.on(GameEventTypes.BUILD_CHALLENGE_STARTED, () => tutorial.notify(Signals.CHALLENGE_STARTED));
+    events.on(GameEventTypes.BUILD_CHALLENGE_COMPLETED, () => tutorial.notify(Signals.CHALLENGE_COMPLETED));
   }
 
   #startChallenge(blueprintId) {

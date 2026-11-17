@@ -1,3 +1,4 @@
+import { SpeechService } from '../src/audio/SpeechService.js';
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDomStub, uninstallDomStub, createP5Stub } from './support/domStub.js';
@@ -50,6 +51,15 @@ test('cada ajuste cambia el sistema que corresponde, al instante', async () => {
   assert.equal(game.camera.sensitivityMultiplier, 1.5);
   model.set('masterVolume', 30);
   assert.ok(Math.abs(game.audio.masterVolume - 0.3) < 1e-9);
+  model.set('speechRate', 1.2);
+  assert.equal(SpeechService.getInstance().rate, 1.2, 'la lectura en voz alta usa la velocidad elegida');
+  model.set('showTutorial', false);
+  assert.equal(game.hud.tutorial.isActive, false);
+  model.set('showTutorial', true);
+  assert.equal(game.hud.tutorial.isActive, true, 'activarlo de nuevo lo reinicia');
+  assert.equal(game.hud.tutorial.stepIndex, 0);
+  game.hud.tutorial.skipAll();
+  assert.equal(model.get('showTutorial'), false, 'saltarlo lo apaga para la próxima vez');
   model.set('renderDistance', 3);
   assert.equal(game.blockRenderer.renderDistance, 3 * game.world.chunkSizeX);
   model.set('frustumCulling', false);

@@ -42,6 +42,14 @@ export class SettingsApplier {
         game?.audio?.setMasterVolume?.(value / 100);
         this.speech?.setVolume?.(value / 100);
         return true;
+      case 'showTutorial':
+        // Activarlo lo reinicia desde el primer paso; apagarlo lo cierra.
+        if (value && hud?.tutorial && !hud.tutorial.isActive) hud.tutorial.start();
+        if (!value && hud?.tutorial?.isActive) hud.tutorial.skipAll();
+        return true;
+      case 'speechRate':
+        this.speech?.setRate?.(value);
+        return true;
       case 'renderDistance':
         game?.blockRenderer?.setRenderDistance?.(value * (game.world?.chunkSizeX ?? 16));
         return true;

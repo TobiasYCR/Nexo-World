@@ -1,4 +1,6 @@
 import { Crosshair } from './Crosshair.js';
+import { TutorialPanel } from './TutorialPanel.js';
+import { KeyNames } from '../chatbot/KeyNames.js';
 import { DebugOverlay } from './DebugOverlay.js';
 import { HotbarView } from './HotbarView.js';
 import { HealthBar } from './HealthBar.js';
@@ -78,6 +80,14 @@ export class HUD {
     this.chatHintElement.className = 'hud-chat-hint';
     this.chatHintElement.textContent = 'Presiona T para abrir chatbot';
     this.chatHintElement.hidden = true;
+
+    // Tutorial para quien nunca jugó. Al terminarlo o saltarlo no vuelve a
+    // aparecer, salvo que se active de nuevo en Configuración → Interfaz.
+    this.tutorial = new TutorialPanel({
+      chatKeyLabel: KeyNames.of(GameConfig.chatbot.TOGGLE_KEY),
+      onFinish: () => this.settingsModel.set('showTutorial', false)
+    });
+    if (this.settingsModel.get('showTutorial')) this.tutorial.start();
 
     this.#registerScreens();
     this.#setupIntentListeners();
@@ -195,6 +205,11 @@ export class HUD {
       this.hotbarView.setVisible(isPlaying);
       this.buildChallengeHud.setVisible(isPlaying);
       this.chatHintElement.hidden = !isPlaying;
+      // También en pausa: con el mouse capturado no se pueden tocar sus botones.
+      this.tutorial.setVisible(isPlaying || current === ScreenType.PAUSE);
+      if (current === ScreenType.PAUSE) this.tutorial.notify(TutorialPanel.Signals.PAUSE_OPENED);
+      if (current === ScreenType.INVENTORY) this.tutorial.notify(TutorialPanel.Signals.INVENTORY_OPENED);
+      if (current === ScreenType.PRESETS) this.tutorial.notify(TutorialPanel.Signals.PRESETS_OPENED);
       if (!isPlaying) this.chatPanel.close();
       this.healthBar.setVisible(isPlaying && this.settingsModel.get('showHealthBar'));
     });
@@ -244,6 +259,10 @@ export class HUD {
         } else if (e.code === 'F3') {
           e.preventDefault?.();
           this.toggleDebug();
+        } else if (e.code === 'Enter' && this.tutorial.isActive) {
+          // Con el mouse capturado los botones no se pueden tocar: Enter pasa de paso.
+          e.preventDefault?.();
+          this.tutorial.next();
         }
       } else if (this.screenManager.currentScreenType === ScreenType.INVENTORY) {
         if (e.code === 'KeyE') {
@@ -277,6 +296,7 @@ export class HUD {
     if (!this.chatHintElement.parentNode) {
       this.container.appendChild(this.chatHintElement);
     }
+    this.tutorial.mount(this.container);
     this.toast.mount(this.container);
 
     // Inicializar con el Menú Principal
@@ -288,11 +308,13 @@ export class HUD {
     this.healthBar.setVisible(false);
     this.buildChallengeHud.setVisible(false);
     this.chatHintElement.hidden = true;
+    this.tutorial.setVisible(false);
   }
 
   /** Abre o cierra el chat del asistente. */
   toggleChat() {
     this.chatPanel.toggle();
+    if (this.chatPanel.isOpen) this.tutorial.notify(TutorialPanel.Signals.CHAT_OPENED);
   }
 
   toggleDebug() {
@@ -308,6 +330,7 @@ export class HUD {
   update(deltaTime, stats, hotbar, activeChallenge = undefined) {
     this.debugOverlay.update(deltaTime, stats);
     this.hotbarView.update(hotbar);
+    this.tutorial.update(stats, hotbar, GameConfig.world.BLOCK_SIZE);
     if (activeChallenge !== undefined) {
       this.buildChallengeHud.update(activeChallenge);
     }
