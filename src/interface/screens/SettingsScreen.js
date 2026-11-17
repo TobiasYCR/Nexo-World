@@ -6,6 +6,7 @@ import { Slider } from '../components/Slider.js';
 import { Toggle } from '../components/Toggle.js';
 import { Button } from '../components/Button.js';
 import { SettingsModel } from '../models/SettingsModel.js';
+import { SpeechService } from '../../audio/SpeechService.js';
 
 /**
  * Pantalla de Configuración Avanzada.
@@ -144,6 +145,9 @@ export class SettingsScreen extends Screen {
       onChange: (val) => this.#onSettingChange('musicVolume', val)
     });
     generalPanel.appendChild(this.#controls.musicVolume.element);
+
+    // Voz de lectura: automática (la más natural) o una de las del navegador
+    generalPanel.appendChild(this.#createVoiceSelector(schema.speechVoice.label));
 
     // Velocidad de la lectura en voz alta (sílabas, palabras y descripciones)
     this.#controls.speechSpeed = new Slider({
@@ -414,6 +418,58 @@ export class SettingsScreen extends Screen {
     });
   }
 
+  /**
+   * Lista de voces en español del navegador, de la más natural a la más
+   * robótica, con un botón para probarla. Las voces dependen del navegador:
+   * Edge trae voces neuronales y Chrome las de Google.
+   */
+  #createVoiceSelector(labelText) {
+    const speech = SpeechService.getInstance();
+    const row = document.createElement('div');
+    row.className = 'nx-preset-row nx-voice-row';
+    const label = document.createElement('label');
+    label.className = 'nx-slider-label';
+    label.textContent = labelText;
+
+    const controls = document.createElement('div');
+    controls.className = 'nx-voice-controls';
+    const select = document.createElement('select');
+    select.className = 'nx-input nx-voice-select';
+    select.setAttribute('aria-label', labelText);
+    select.addEventListener('change', (event) => this.#onSettingChange('speechVoice', event?.target?.value ?? select.value));
+
+    const test = document.createElement('button');
+    test.type = 'button';
+    test.className = 'nx-btn nx-btn-secondary nx-btn-small';
+    test.textContent = 'Probar';
+    test.addEventListener('click', () => speech.speakWord('Hola, soy la voz de Nexo World.'));
+
+    const fill = () => {
+      const current = this.model.get('speechVoice');
+      select.innerHTML = '';
+      const auto = document.createElement('option');
+      auto.value = '';
+      auto.textContent = 'Automática (la más natural)';
+      select.appendChild(auto);
+      for (const voice of speech.spanishVoices()) {
+        const option = document.createElement('option');
+        option.value = voice.name;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        select.appendChild(option);
+      }
+      select.value = current;
+    };
+    fill();
+    speech.onVoicesChanged?.(fill);
+    this.#controls.speechVoice = { element: row, select, refresh: fill };
+
+    controls.appendChild(select);
+    controls.appendChild(test);
+    row.appendChild(label);
+    row.appendChild(controls);
+    return row;
+  }
+
   #onSettingChange(key, value) {
     this.model.set(key, value);
     this.#updatePresetButtons();
@@ -438,6 +494,8 @@ export class SettingsScreen extends Screen {
       control.setValue(value);
     } else if (control instanceof Toggle) {
       control.setChecked(value);
+    } else if (control?.select) {
+      control.select.value = value;
     }
   }
 

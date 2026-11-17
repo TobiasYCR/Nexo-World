@@ -488,7 +488,18 @@
   font-style: italic;
 }
 
+.nx-toggle-container {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Toggle.js usa nx-toggle-switch / nx-toggle-knob: sin estos selectores el
+   interruptor se veía como una barra blanca de lado a lado. */
+.nx-toggle-switch,
 .nx-toggle-btn {
+  flex-shrink: 0;
+  padding: 0;
   width: 44px;
   height: 24px;
   background: #334155;
@@ -499,10 +510,17 @@
   transition: background 0.2s ease;
 }
 
+.nx-toggle-switch.is-checked,
 .nx-toggle-btn.is-checked {
   background: var(--nx-emerald-base);
 }
 
+.nx-toggle-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nx-toggle-knob,
 .nx-toggle-thumb {
   width: 18px;
   height: 18px;
@@ -514,6 +532,7 @@
   transition: transform 0.2s ease;
 }
 
+.nx-toggle-switch.is-checked .nx-toggle-knob,
 .nx-toggle-btn.is-checked .nx-toggle-thumb {
   transform: translateX(20px);
 }
@@ -1689,4 +1708,19 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Voz de lectura: lista de voces y botón para probarla */
+.nx-voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 60%;
+}
+
+.nx-voice-select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 8px;
+  font-size: 0.78rem;
 }

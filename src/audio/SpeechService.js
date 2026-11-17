@@ -161,6 +161,8 @@ export class SpeechService {
   #timers = new Set();
   #activeCleanup = null;
   #cachedSpanishVoice = null;
+  #preferredVoiceName = '';
+  #voiceListeners = new Set();
 
   /**
    * @param {Object} [options]
@@ -196,6 +198,7 @@ export class SpeechService {
 
     const onVoicesChanged = () => {
       this.#cachedSpanishVoice = this.#findBestSpanishVoice();
+      for (const listener of this.#voiceListeners) listener();
     };
 
     if (typeof this.#synth.addEventListener === 'function') {
@@ -248,8 +251,28 @@ export class SpeechService {
   }
 
   /**
-   * Selecciona la mejor voz en español disponible en el sistema/navegador
-   * (priorizando voces naturales en es-AR, es-419, es-MX, es-ES o cualquier variante en español).
+   * Voz elegida por el jugador (nombre exacto) o '' para elegir sola la más
+   * natural. Si la elegida no existe en este navegador, se usa la automática.
+   * @param {string} name
+   */
+  setPreferredVoice(name) {
+    this.#preferredVoiceName = typeof name === 'string' ? name : '';
+    this.#cachedSpanishVoice = this.#findBestSpanishVoice();
+  }
+
+  get preferredVoice() {
+    return this.#preferredVoiceName;
+  }
+
+  /** Avisa cuando el navegador termina de cargar sus voces (llegan tarde en Chrome). */
+  onVoicesChanged(listener) {
+    this.#voiceListeners.add(listener);
+    return () => this.#voiceListeners.delete(listener);
+  }
+
+  /**
+   * Selecciona la voz en español a usar: la elegida en Configuración o, si no
+   * hay, la más natural disponible.
    * @returns {SpeechSynthesisVoice|null}
    */
   selectSpanishVoice() {
@@ -260,49 +283,58 @@ export class SpeechService {
     return this.#cachedSpanishVoice;
   }
 
-  #findBestSpanishVoice() {
-    if (!this.#synth || typeof this.#synth.getVoices !== 'function') return null;
+  /**
+   * Voces en español del navegador, de la más natural a la más robótica.
+   * @returns {SpeechSynthesisVoice[]}
+   */
+  spanishVoices() {
+    if (!this.#synth || typeof this.#synth.getVoices !== 'function') return [];
     let voices = [];
     try {
       voices = this.#synth.getVoices() || [];
     } catch {
-      return null;
+      return [];
     }
-    if (voices.length === 0) return null;
-
-    // Filtrar todas las voces que sean de idioma español por código BCP-47 o por nombre
-    const spanishVoices = voices.filter((v) => {
+    const spanish = voices.filter((v) => {
       const lang = String(v.lang || '').toLowerCase().replace('_', '-');
       const name = String(v.name || '').toLowerCase();
       return lang.startsWith('es') || name.includes('spanish') || name.includes('español') || name.includes('espanol');
     });
+    return [...spanish].sort((a, b) => SpeechService.voiceScore(b) - SpeechService.voiceScore(a));
+  }
 
-    if (spanishVoices.length === 0) return null;
+  /**
+   * Puntaje de una voz: primero la calidad (las voces neuronales de Edge, las
+   * de Google en Chrome y las mejoradas de macOS suenan humanas; las
+   * "Desktop" de Windows y eSpeak, robóticas) y recién después el acento.
+   * @param {{name?:string, lang?:string}} voice
+   */
+  static voiceScore(voice) {
+    const lang = String(voice?.lang || '').toLowerCase().replace('_', '-');
+    const name = String(voice?.name || '').toLowerCase();
+    let score = 0;
 
-    // Puntuar voces para elegir la más clara y natural en español
-    const scoreVoice = (v) => {
-      const lang = String(v.lang || '').toLowerCase().replace('_', '-');
-      const name = String(v.name || '').toLowerCase();
-      let score = 0;
+    if (name.includes('natural') || name.includes('neural')) score += 100;
+    else if (name.includes('online')) score += 90;
+    else if (name.includes('google')) score += 80;
+    else if (name.includes('premium') || name.includes('enhanced') || name.includes('mejorad') || name.includes('siri')) score += 70;
+    if (name.includes('desktop') || name.includes('espeak') || name.includes('compact')) score -= 50;
 
-      if (lang === 'es-ar') score += 50;
-      else if (lang === 'es-419' || lang === 'es-mx' || lang === 'es-uy' || lang === 'es-cl' || lang === 'es-co') score += 45;
-      else if (lang === 'es-es') score += 40;
-      else if (lang.startsWith('es-')) score += 35;
-      else if (lang === 'es') score += 30;
+    if (lang === 'es-ar') score += 10;
+    else if (['es-419', 'es-us', 'es-mx', 'es-uy', 'es-cl', 'es-co'].includes(lang)) score += 8;
+    else if (lang === 'es-es') score += 6;
+    else if (lang.startsWith('es')) score += 4;
+    return score;
+  }
 
-      // Preferir voces neuronales / naturales / Google / Microsoft en español
-      if (name.includes('natural') || name.includes('neural')) score += 25;
-      if (name.includes('google') && (name.includes('español') || lang.startsWith('es'))) score += 20;
-      if (name.includes('sabina') || name.includes('helena') || name.includes('elena') || name.includes('dalia') || name.includes('paloma') || name.includes('laura') || name.includes('pablo') || name.includes('raul') || name.includes('tomas')) {
-        score += 15;
-      }
-      if (v.localService) score += 5;
-
-      return score;
-    };
-
-    return [...spanishVoices].sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] ?? spanishVoices[0];
+  #findBestSpanishVoice() {
+    const voices = this.spanishVoices();
+    if (voices.length === 0) return null;
+    if (this.#preferredVoiceName) {
+      const preferred = voices.find((voice) => voice.name === this.#preferredVoiceName);
+      if (preferred) return preferred;
+    }
+    return voices[0];
   }
 
   /**

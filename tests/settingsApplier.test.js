@@ -136,3 +136,11 @@ test('el menú de pausa tiene un botón que vuelve a empezar el tutorial', async
   assert.equal(hud.settingsModel.get('showTutorial'), true);
   assert.equal(hud.screenManager.currentScreenType, ScreenType.PLAYING, 'vuelve al juego para verlo');
 });
+
+test('la voz elegida en Configuración se usa para leer', async () => {
+  const game = await startWithBridge();
+  game.hud.settingsModel.set('speechVoice', 'Google español');
+  assert.equal(SpeechService.getInstance().preferredVoice, 'Google español');
+  game.hud.settingsModel.set('speechVoice', '');
+  assert.equal(SpeechService.getInstance().preferredVoice, '');
+});

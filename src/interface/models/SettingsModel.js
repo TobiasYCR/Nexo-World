@@ -49,6 +49,15 @@ export const SETTINGS_SCHEMA = Object.freeze({
     formatter: (v) => `${Math.round(v)}%`,
     disabled: false
   }),
+  speechVoice: Object.freeze({
+    id: 'speechVoice',
+    category: 'general',
+    label: 'Voz de lectura',
+    type: 'string',
+    // '' = la más natural que tenga el navegador.
+    default: '',
+    disabled: false
+  }),
   speechSpeed: Object.freeze({
     id: 'speechSpeed',
     category: 'general',
