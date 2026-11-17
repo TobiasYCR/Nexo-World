@@ -4,15 +4,30 @@ import { IntentBus } from '../../ui/IntentBus.js';
 import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { WorldCreationView } from '../../ui/WorldCreationView.js';
+import { SaveManager } from '../../persistence/SaveManager.js';
 
 /**
  * Pantalla de Creación de Mundos.
  * Permite configurar un mundo nuevo con validación de nombre, semilla y modo de juego.
+ * El nombre no puede repetir el de un mundo guardado.
+ *
+ * Con show({ mode: 'saveAs' }) solo pide el nombre: sirve para guardar por
+ * primera vez un mundo que se empezó sin nombre.
  */
 export class WorldCreationScreen extends Screen {
-  constructor(screenManager = null, intentBus = null) {
+  static Modes = Object.freeze({ CREATE: 'create', SAVE_AS: 'saveAs' });
+
+  #saveManager;
+  #mode = WorldCreationScreen.Modes.CREATE;
+
+  constructor(screenManager = null, intentBus = null, saveManager = null) {
     super(ScreenType.WORLD_CREATION, screenManager, intentBus);
+    this.#saveManager = saveManager || new SaveManager();
     this.#buildDOM();
+  }
+
+  get mode() {
+    return this.#mode;
   }
 
   #buildDOM() {
@@ -25,8 +40,9 @@ export class WorldCreationScreen extends Screen {
     });
 
     this.worldCreationView = new WorldCreationView({
-      onSubmit: (data) => this.#handleCreateWorld(data),
-      onCancel: () => this.handleCancel()
+      onSubmit: (data) => this.#handleSubmit(data),
+      onCancel: () => this.handleCancel(),
+      isNameTaken: (name) => this.#saveManager.findSlot(name) !== null
     });
 
     this.modal.addBodyItem(this.worldCreationView.element);
@@ -49,6 +65,17 @@ export class WorldCreationScreen extends Screen {
     this.modal.addFooterItem(this.cancelBtn);
 
     this.element.appendChild(this.modal.element);
+  }
+
+  #handleSubmit(data) {
+    if (this.#mode === WorldCreationScreen.Modes.SAVE_AS) this.#handleSaveAs(data);
+    else this.#handleCreateWorld(data);
+  }
+
+  #handleSaveAs(data) {
+    if (!data) return;
+    this.intentBus?.emit(IntentBus.Events.SAVE_GAME, { slot: data.name });
+    this.screenManager?.back();
   }
 
   #handleCreateWorld(worldData) {
@@ -80,6 +107,13 @@ export class WorldCreationScreen extends Screen {
 
   show(params = {}) {
     super.show(params);
+    const saveAs = params?.mode === WorldCreationScreen.Modes.SAVE_AS;
+    this.#mode = saveAs ? WorldCreationScreen.Modes.SAVE_AS : WorldCreationScreen.Modes.CREATE;
+    this.modal.setTitle(saveAs ? 'Guardar mundo' : 'Crear Nuevo Mundo');
+    this.createBtn.element.textContent = saveAs ? 'GUARDAR MUNDO' : 'CREAR MUNDO Y JUGAR';
+    this.worldCreationView.setNameOnly(saveAs);
+    // Si el nombre propuesto ya está guardado, el aviso aparece de entrada.
+    this.worldCreationView.validate();
     setTimeout(() => {
       this.worldCreationView.focus();
     }, 50);

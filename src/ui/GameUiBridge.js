@@ -92,13 +92,18 @@ export class GameUiBridge {
       this.hud?.screenManager?.open(ScreenType.PLAYING);
     });
 
-    // Guardar partida en un slot
+    // Guardar partida: con la ranura que venga o, si no, con el nombre del
+    // mundo. Un mundo sin nombre pide uno (que no repita uno guardado).
     this.intentBus.on(IntentBus.Events.SAVE_GAME, (payload) => {
-      const slot = payload?.slot || 'default';
+      const slot = payload?.slot || this.game?.worldName;
+      if (!slot) {
+        this.hud?.screenManager?.open(ScreenType.WORLD_CREATION, { mode: 'saveAs' });
+        return;
+      }
       const result = this.game?.saveGame?.(slot);
       if (result?.ok) {
         // Al crear un mundo se guarda solo; ahí alcanza con el aviso de "creado".
-        if (!payload?.silent) this.toast.success(`Partida guardada correctamente en "${slot}".`);
+        if (!payload?.silent) this.toast.success(`Mundo "${slot}" guardado.`);
       } else {
         this.toast.error(result?.message || 'Error al guardar la partida.');
       }

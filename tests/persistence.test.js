@@ -4,6 +4,7 @@ import { SaveManager } from '../src/persistence/SaveManager.js';
 import { WorldSerializer } from '../src/persistence/WorldSerializer.js';
 import { SaveResult } from '../src/persistence/SaveResult.js';
 import { Base64Codec } from '../src/utils/Base64Codec.js';
+import { RunLengthCodec } from '../src/utils/RunLengthCodec.js';
 import { World } from '../src/world/World.js';
 import { WorldGenerator } from '../src/world/WorldGenerator.js';
 import { Player } from '../src/player/Player.js';
@@ -154,19 +155,19 @@ test('un mundo de otras dimensiones devuelve world-mismatch', () => {
 
 test('un chunk corrupto al final no deja el mundo a medio pisar', () => {
   assertRejectedIntact(Reasons.CORRUPT_CHUNK, (storage) => tamper(storage, (save) => {
-    save.world.chunks.at(-1).data = save.world.chunks.at(-1).data.slice(0, 40);
+    save.world.chunks.at(-1).rle = save.world.chunks.at(-1).rle.slice(0, 40);
   }));
 });
 
 test('un chunk con base64 inválido devuelve corrupt-chunk', () => {
-  assertRejectedIntact(Reasons.CORRUPT_CHUNK, (storage) => tamper(storage, (save) => { save.world.chunks[0].data = '%%%%'; }));
+  assertRejectedIntact(Reasons.CORRUPT_CHUNK, (storage) => tamper(storage, (save) => { save.world.chunks[0].rle = '%%%%'; }));
 });
 
 test('un chunk con ids de bloque desconocidos devuelve corrupt-chunk', () => {
   assertRejectedIntact(Reasons.CORRUPT_CHUNK, (storage) => tamper(storage, (save) => {
-    const bytes = Base64Codec.decode(save.world.chunks[0].data);
-    bytes[0] = 200;
-    save.world.chunks[0].data = Base64Codec.encode(bytes);
+    const bytes = Base64Codec.decode(save.world.chunks[0].rle);
+    bytes[1] = 200; // [largo, id]: el segundo byte es el id del primer tramo
+    save.world.chunks[0].rle = Base64Codec.encode(bytes);
   }));
 });
 
@@ -246,4 +247,62 @@ test('una ranura sin nombre se rechaza', () => {
   const { manager, world } = setup();
   assert.equal(manager.save('', world).reason, Reasons.INVALID_SLOT);
   assert.equal(manager.load(undefined, world).reason, Reasons.INVALID_SLOT);
+});
+
+test('RunLengthCodec: ida y vuelta, tramos de más de 255 y datos inválidos', () => {
+  const bytes = new Uint8Array(1000);
+  bytes.fill(3, 0, 600);
+  bytes[700] = 9;
+  const encoded = RunLengthCodec.encode(bytes);
+  assert.ok(encoded.length < 20, `${encoded.length} bytes`);
+  assert.deepEqual(RunLengthCodec.decode(encoded, bytes.length), bytes);
+  assert.equal(RunLengthCodec.decode(encoded, bytes.length + 1), null, 'faltan bloques');
+  assert.equal(RunLengthCodec.decode(encoded, bytes.length - 1), null, 'sobran bloques');
+  assert.equal(RunLengthCodec.decode(Uint8Array.of(0, 1), 0), null, 'tramo de largo 0');
+  assert.equal(RunLengthCodec.decode(Uint8Array.of(1), 1), null, 'largo impar');
+});
+
+test('el guardado comprimido ocupa mucho menos que el formato v2', () => {
+  const world = buildWorld();
+  const serializer = new WorldSerializer();
+  const compressed = JSON.stringify(serializer.serialize(world)).length;
+  const v2 = JSON.stringify([...world.chunks].map((chunk) => Base64Codec.encode(chunk.blocks))).length;
+  assert.ok(compressed < v2 / 3, `${compressed} vs ${v2}`);
+});
+
+test('los guardados v2 (sin comprimir) se siguen cargando', () => {
+  const world = buildWorld();
+  const saved = snapshot(world);
+  const v2 = {
+    version: 2,
+    dimensions: { width: world.width, height: world.height, depth: world.depth },
+    chunkSize: { x: world.chunkSizeX, z: world.chunkSizeZ },
+    chunks: [...world.chunks].map((chunk) => ({ x: chunk.chunkX, z: chunk.chunkZ, data: Base64Codec.encode(chunk.blocks) }))
+  };
+  world.setBlockId(10, 20, 10, BlockIds.STONE);
+  assert.equal(new WorldSerializer().deserialize(world, v2).ok, true);
+  assert.equal(snapshot(world), saved);
+});
+
+/** MemoryStorage con length/key, como localStorage. */
+class ListableStorage extends MemoryStorage {
+  #keys = new Set();
+  get length() { return this.#keys.size; }
+  key(index) { return [...this.#keys][index] ?? null; }
+  setItem(key, value) { this.#keys.add(key); super.setItem(key, value); }
+  removeItem(key) { this.#keys.delete(key); super.removeItem(key); }
+}
+
+test('SaveManager lista los mundos y los encuentra sin importar mayúsculas ni espacios', () => {
+  const storage = new ListableStorage();
+  storage.setItem('otra-app:clave', 'x');
+  const manager = new SaveManager(storage);
+  const world = buildWorld();
+  manager.save('Nuevo Mundo', world);
+  manager.save('default', world);
+  assert.deepEqual(manager.listSlots().sort(), ['Nuevo Mundo', 'default']);
+  assert.equal(manager.findSlot('  nuevo MUNDO '), 'Nuevo Mundo');
+  assert.equal(manager.findSlot('Mundo 2'), null);
+  assert.equal(manager.findSlot(''), null);
+  assert.deepEqual(new SaveManager(new MemoryStorage()).listSlots(), [], 'sin length/key no lista');
 });

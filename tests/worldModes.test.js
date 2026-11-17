@@ -242,3 +242,65 @@ test('crear un mundo muestra un solo aviso y arranca el tutorial', async () => {
   Toast.getInstance().success('Hola');
   assert.equal(toasts.children.filter((item) => item.dataset.message === 'success|Hola').length, 1);
 });
+
+test('guardar desde la pausa usa el nombre del mundo, no "default"', async () => {
+  const game = await startGame();
+  new GameUiBridge(game, game.hud, game.hud.intentBus);
+  game.newWorld({ name: 'Mi isla', seed: '7', mode: 'creative' });
+  game.hud.pauseScreen.handleSave();
+  const manager = new SaveManager();
+  assert.equal(manager.exists('Mi isla'), true);
+  assert.equal(manager.exists('default'), false);
+});
+
+test('un mundo sin nombre pide uno al guardar y no deja repetir uno guardado', async () => {
+  const game = await startGame();
+  new GameUiBridge(game, game.hud, game.hud.intentBus);
+  const manager = new SaveManager();
+  assert.equal(manager.save('Nuevo Mundo', game.world, game.player).ok, true);
+  assert.equal(game.worldName, null);
+
+  game.hud.pauseScreen.handleSave();
+  const screens = game.hud.screenManager;
+  assert.equal(screens.currentScreenType, 'world-creation');
+  const screen = game.hud.worldCreationScreen;
+  assert.equal(screen.mode, 'saveAs');
+  assert.equal(screen.worldCreationView.seedGroup.hidden, true, 'solo pide el nombre');
+
+  // El nombre propuesto ya existe: aparece el aviso y no se guarda.
+  const view = screen.worldCreationView;
+  assert.equal(view.nameError.hidden, false);
+  assert.match(view.nameError.textContent, /Ya existe un mundo llamado "Nuevo Mundo"/);
+  assert.equal(view.submit(), null);
+
+  view.nameInput.value = ' nuevo mundo ';
+  view.nameInput.dispatch('input', { target: view.nameInput });
+  assert.equal(view.submit(), null, 'mayúsculas y espacios no lo hacen distinto');
+
+  view.nameInput.value = 'Mi granja';
+  view.nameInput.dispatch('input', { target: view.nameInput });
+  assert.equal(view.submit().name, 'Mi granja');
+  assert.equal(manager.exists('Mi granja'), true);
+  assert.equal(game.worldName, 'Mi granja');
+  assert.notEqual(screens.currentScreenType, 'world-creation');
+
+  // Desde ahora la pausa guarda directo en "Mi granja".
+  game.hud.pauseScreen.handleSave();
+  assert.equal(manager.listSlots().length, 2);
+});
+
+test('crear un mundo con un nombre ya guardado muestra el aviso y no lo pisa', async () => {
+  const game = await startGame();
+  new GameUiBridge(game, game.hud, game.hud.intentBus);
+  const manager = new SaveManager();
+  manager.save('Nuevo Mundo', game.world, game.player);
+  const before = globalThis.localStorage.getItem(`${SaveManager.STORAGE_PREFIX}Nuevo Mundo`);
+
+  game.hud.screenManager.open('world-creation');
+  const screen = game.hud.worldCreationScreen;
+  assert.equal(screen.mode, 'create');
+  assert.equal(screen.worldCreationView.seedGroup.hidden, false);
+  assert.equal(screen.worldCreationView.nameError.hidden, false, 'el aviso aparece al abrir');
+  assert.equal(screen.worldCreationView.submit(), null);
+  assert.equal(globalThis.localStorage.getItem(`${SaveManager.STORAGE_PREFIX}Nuevo Mundo`), before);
+});

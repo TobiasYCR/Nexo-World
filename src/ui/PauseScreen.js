@@ -5,7 +5,7 @@ import { Icons } from './Icons.js';
 
 /**
  * Overlay del Menú de Pausa Mejorado.
- * Permite reanudar la partida, guardar en slot actual, cargar/seleccionar mundos,
+ * Permite reanudar la partida, guardar el mundo con su nombre, cargar/seleccionar mundos,
  * acceder a configuración/controles y volver al menú principal.
  */
 export class PauseScreen extends Screen {
@@ -163,7 +163,8 @@ export class PauseScreen extends Screen {
 
   handleSave() {
     if (this.intentBus) {
-      this.intentBus.emit(IntentBus.Events.SAVE_GAME, { slot: 'default' });
+      // Sin ranura: se guarda con el nombre del mundo (GameUiBridge lo resuelve).
+      this.intentBus.emit(IntentBus.Events.SAVE_GAME, {});
     }
   }
 
