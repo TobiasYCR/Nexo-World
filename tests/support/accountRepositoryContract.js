@@ -143,4 +143,26 @@ export function defineAccountRepositoryContract(label, createStores, { skip = fa
     assert.equal((await accounts.findPasswordReset(second.tokenHash)).usedAt, 2000);
     assert.equal(await accounts.findPasswordReset(PlayerTokens.hash('inexistente')), null);
   }));
+
+  test(`[${label}] borra cuentas por dominio de correo, con su jugador y su puntaje`, { skip }, () => withStores(async ({ accounts, players }) => {
+    const real = account('Tobias', 'tobias@live.com.ar');
+    const demo = account('lucia_mc', 'lucia_mc@nexo-world.test');
+    const lookalike = account('falso', 'falso@nexo-world_test');
+    for (const item of [real, demo, lookalike]) await accounts.createAccount(item);
+    const player = guest('lucia_mc');
+    await players.createPlayer({ ...player, accountId: demo.id });
+    await players.saveProgress({
+      playerId: player.id, mode: 'survival', worldKey: 's1-v3-96x24x96', revision: 1, score: 50,
+      stats: {}, state: {}, updatedAt: 1000
+    }, 0);
+
+    const removed = await accounts.deleteAccountsByEmailSuffix('@nexo-world.test');
+    assert.deepEqual(removed, [demo.id], 'el _ del LIKE no se toma como comodín');
+    await players.deletePlayersOfAccounts(removed);
+    await players.deletePlayersOfAccounts([]);
+    assert.equal(await accounts.findAccountById(demo.id), null);
+    assert.equal(await players.findPlayerById(player.id), null);
+    assert.deepEqual(await players.topScores('survival', 10), []);
+    assert.ok(await accounts.findAccountById(real.id));
+  }));
 }

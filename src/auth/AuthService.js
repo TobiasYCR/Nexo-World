@@ -1,3 +1,4 @@
+import { UserValidator } from '../users/UserValidator.js';
 import { AuthSession } from './AuthSession.js';
 import { SessionManager } from './SessionManager.js';
 import { BackendAuthClient } from './BackendAuthClient.js';
@@ -331,11 +332,18 @@ export class AuthService {
     if (!val) {
       return { ok: false, code: 'INVALID_USERNAME', message: 'El nombre de usuario es obligatorio.' };
     }
-    if (val.length < 3 || val.length > 20) {
-      return { ok: false, code: 'INVALID_USERNAME', message: 'El usuario debe tener entre 3 y 20 caracteres.' };
+    // Mismas reglas que el servidor (UserValidator), para no aceptar en pantalla
+    // algo que después el registro rechaza.
+    const { USERNAME_MIN_LENGTH: min, USERNAME_MAX_LENGTH: max } = GameConfig.users;
+    if (val.length < min || val.length > max) {
+      return { ok: false, code: 'INVALID_USERNAME', message: `El usuario debe tener entre ${min} y ${max} caracteres.` };
     }
-    if (!/^[a-zA-Z0-9_]+$/.test(val)) {
-      return { ok: false, code: 'INVALID_USERNAME', message: 'El usuario solo puede contener letras, números y guión bajo.' };
+    if (new UserValidator().checkUsername(val)) {
+      return {
+        ok: false,
+        code: 'INVALID_USERNAME',
+        message: 'El usuario solo puede tener letras sin acentos, números, guion y guion bajo, y debe empezar con letra o número.'
+      };
     }
     return { ok: true };
   }
@@ -345,7 +353,7 @@ export class AuthService {
     if (!val) {
       return { ok: false, code: 'INVALID_EMAIL', message: 'El correo electrónico es obligatorio.' };
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+    if (new UserValidator().checkEmail(val)) {
       return { ok: false, code: 'INVALID_EMAIL', message: 'El correo electrónico no es válido.' };
     }
     return { ok: true };

@@ -67,5 +67,12 @@ export class AccountRepository {
    */
   async markPasswordResetUsed(tokenHash, usedAt) { throw new Error('no implementado'); }
 
+  /**
+   * Borra las cuentas cuyo correo termina en `suffix` (con sus sesiones y
+   * códigos). Lo usa el comando de administración que quita los jugadores de ejemplo.
+   * @returns {Promise<string[]>} ids de las cuentas borradas
+   */
+  async deleteAccountsByEmailSuffix(suffix) { throw new Error('no implementado'); }
+
   async close() {}
 }

@@ -93,7 +93,7 @@ El repositorio trae `render.yaml`: un servicio web (juego + API en el mismo domi
 
 Cada push a `main` vuelve a desplegar. En el plan gratuito el servicio se duerme a los 15 minutos sin visitas (la primera visita después tarda en responder) y la base vence a los 30 días de creada.
 
-**Recuperar una contraseña en Render:** el plan gratuito no tiene consola, así que el comando se corre desde una PC. En Render, en la base `nexo-world-db` → **Connect**, copiar la **External Database URL** y ponerla en `.env` como `DATABASE_URL=...`. Después: `npm run admin -- reset-password <usuario o correo>`.
+**Comandos de administrador sobre Render:** el plan gratuito no tiene consola, así que se corren desde una PC. En Render, en la base `nexo-world-db` → **Connect**, copiar la **External Database URL** y ponerla en `.env` como `DATABASE_URL=...` (con `STORAGE=postgres`). Después, cualquier `npm run admin -- ...` de la tabla de abajo trabaja sobre la base de Render.
 
 | Comando | Qué hace |
 |---|---|
@@ -102,6 +102,9 @@ Cada push a `main` vuelve a desplegar. En el plan gratuito el servicio se duerme
 | `npm run preview` | Sirve el build |
 | `npm run server` | API de cuentas y puntuaciones (y el juego compilado, si existe `dist/`) |
 | `npm run admin -- reset-password <usuario o correo>` | Código de recuperación de contraseña (vence en 30 min, un solo uso) |
+| `npm run admin -- usuario <usuario o correo>` | Muestra la cuenta, su jugador y sus puntajes, y avisa si algo está mal |
+| `npm run admin -- seed [cantidad]` | Crea hasta 12 jugadores de ejemplo con puntaje (correo `@nexo-world.test`); no duplica |
+| `npm run admin -- unseed` | Borra los jugadores de ejemplo, sin tocar las cuentas reales |
 | `npm test` | Pruebas |
 | `NEXO_TEST_POSTGRES=1 PGPASSWORD=... npm test` | Pruebas también contra PostgreSQL real (bases `nexo_world_test` y `nexo_world_test_cuentas`) |
 

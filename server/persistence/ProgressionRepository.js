@@ -56,5 +56,8 @@ export class ProgressionRepository {
   /** Actualiza el nombre que muestra la clasificación cuando la cuenta cambia de usuario. */
   async renameAccountPlayer(accountId, name) { throw new Error('no implementado'); }
 
+  /** Borra los jugadores de esas cuentas, con su progreso y su lugar en la clasificación. */
+  async deletePlayersOfAccounts(accountIds) { throw new Error('no implementado'); }
+
   async close() {}
 }

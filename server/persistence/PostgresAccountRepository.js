@@ -35,6 +35,13 @@ export class PostgresAccountRepository extends AccountRepository {
     }
   }
 
+  async deleteAccountsByEmailSuffix(suffix) {
+    // Sesiones y códigos se borran solos (ON DELETE CASCADE).
+    const escaped = suffix.replace(/[\\%_]/g, (char) => `\\${char}`);
+    const { rows } = await this.#database.query('DELETE FROM accounts WHERE email_key LIKE $1 RETURNING id', [`%${escaped}`]);
+    return rows.map((row) => row.id);
+  }
+
   async findAccountById(accountId) {
     const { rows } = await this.#database.query('SELECT * FROM accounts WHERE id = $1', [accountId]);
     return rows.length ? PostgresAccountRepository.#toAccount(rows[0]) : null;
@@ -145,7 +152,11 @@ export class PostgresAccountRepository extends AccountRepository {
   }
 
   /** Nombre o correo repetido según la clave única que saltó. */
+  /** Nombre o correo repetido (UNIQUE) o con formato inválido (CHECK de la base). */
   static #takenReason(error) {
+    if (error?.code === PostgresDatabase.CHECK_VIOLATION) {
+      return error.constraint === 'ck_accounts_email' ? 'invalid-email' : 'invalid-username';
+    }
     if (error?.code !== PostgresDatabase.UNIQUE_VIOLATION) return null;
     return error.constraint === 'uq_accounts_email' ? 'email-taken' : 'username-taken';
   }
