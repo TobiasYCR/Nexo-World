@@ -217,13 +217,84 @@ test('pedidos mal formados reciben errores claros', async () => {
 });
 
 test('/api/health dice qué base usa y avisa si no responde', async () => {
-  const healthy = await api({ healthCheck: async () => ({ storage: 'mysql', database: 'nexo_world' }) });
+  const healthy = await api({ healthCheck: async () => ({ storage: 'postgres', database: 'nexo_world' }) });
   const ok = await healthy.call('GET', '/health');
   assert.equal(ok.status, 200);
-  assert.deepEqual(ok.body, { ok: true, storage: 'mysql', database: 'nexo_world' });
+  assert.deepEqual(ok.body, { ok: true, storage: 'postgres', database: 'nexo_world' });
 
   const down = await api({ healthCheck: async () => { throw new Error('ECONNREFUSED'); } });
   const failed = await down.call('GET', '/health');
   assert.equal(failed.status, 503);
   assert.deepEqual(failed.body, { ok: false, error: 'database-unreachable' });
+});
+
+test('el servidor publica el juego compilado: archivos, ruta sin extensión e intento de salir de la carpeta', async () => {
+  const { mkdtemp, writeFile, mkdir } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { StaticFiles } = await import('../server/http/StaticFiles.js');
+  const root = await mkdtemp(join(tmpdir(), 'nexo-dist-'));
+  await writeFile(join(root, 'index.html'), '<!doctype html><title>Nexo</title>');
+  await mkdir(join(root, 'assets'));
+  await writeFile(join(root, 'assets', 'app-123.js'), 'console.log(1)');
+  const files = new StaticFiles(root);
+  assert.equal(await files.isAvailable(), true);
+
+  const { createServer } = await import('node:http');
+  const server = createServer(async (request, response) => {
+    const served = await files.serve(request, response, new URL(request.url, 'http://x').pathname);
+    if (!served) response.writeHead(404).end();
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const respond = async (pathname) => {
+    const response = await fetch(base + pathname);
+    return { served: response.status === 200, headers: Object.fromEntries(response.headers), body: await response.text() };
+  };
+  try {
+    const index = await respond('/');
+    assert.equal(index.served, true);
+    assert.match(index.headers['content-type'], /text\/html/);
+    const script = await respond('/assets/app-123.js');
+    assert.match(script.headers['content-type'], /javascript/);
+    assert.match(script.headers['cache-control'], /immutable/);
+    assert.equal((await respond('/jugar')).served, true, 'una ruta sin extensión devuelve index.html');
+    assert.equal((await respond('/no-existe.png')).served, false);
+
+    // Rutas que intentan salir de la carpeta: nunca se sirve nada de afuera
+    // (como mucho, el index.html del juego).
+    const { PassThrough } = await import('node:stream');
+    for (const pathname of ['/..%2f..%2fpackage.json', '/..%2F..%2F..%2Fetc%2Fpasswd', '/%2e%2e%2f%2e%2e%2fetc%2fpasswd']) {
+      const sink = new PassThrough();
+      let body = '';
+      sink.on('data', (chunk) => { body += chunk; });
+      sink.writeHead = () => {};
+      const served = await files.serve({ method: 'GET' }, sink, pathname);
+      assert.ok(!served || body === '<!doctype html><title>Nexo</title>', `${pathname} sirvió algo de afuera`);
+    }
+  } finally {
+    // fetch deja conexiones abiertas (keep-alive): sin cerrarlas, close() espera para siempre.
+    server.closeAllConnections();
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test('ServerConfig toma la base de Render (DATABASE_URL) y el puerto de PORT', async () => {
+  const { ServerConfig } = await import('../server/ServerConfig.js');
+  const render = ServerConfig.fromEnv({ PORT: '10000', DATABASE_URL: 'postgresql://u:p@dpg-abc-a/nexo_world' });
+  assert.equal(render.host, '0.0.0.0');
+  assert.equal(render.port, 10000);
+  assert.equal(render.storage, 'postgres');
+  assert.equal(render.postgres.connectionString, 'postgresql://u:p@dpg-abc-a/nexo_world');
+  assert.equal(render.postgres.ssl, false, 'la URL interna de Render no usa SSL');
+  assert.equal(ServerConfig.describeStorage(render), 'PostgreSQL dpg-abc-a/nexo_world', 'sin mostrar la contraseña');
+
+  const external = ServerConfig.fromEnv({ DATABASE_URL: 'postgresql://u:p@dpg-abc-a.oregon-postgres.render.com/nexo_world' });
+  assert.equal(external.postgres.ssl, true, 'la URL externa de Render exige SSL');
+  assert.equal(external.host, '127.0.0.1');
+
+  const local = ServerConfig.fromEnv({});
+  assert.equal(local.postgres.connectionString, null);
+  assert.equal(local.postgres.port, 5432);
+  assert.equal(ServerConfig.fromEnv({ STORAGE: 'memory' }).storage, 'memory');
 });

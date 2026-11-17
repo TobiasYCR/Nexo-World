@@ -19,7 +19,7 @@ Proyecto de la materia P.I.S.W.D. Equipo: Andrea Cubas, Tobias Caballero, Leandr
 - **Partidas:**
   - Crear mundos con nombre, semilla y modo; guardarlos y cargarlos desde el navegador.
   - Se guardan el mundo, el jugador, la semilla, el modo y el plano en curso.
-- **Cuentas** (servidor con MySQL):
+- **Cuentas** (servidor con PostgreSQL):
   - Registro, inicio de sesión y perfil.
   - Recuperación de contraseña con un código que da un administrador.
 - **Puntuaciones:**
@@ -44,64 +44,66 @@ Proyecto de la materia P.I.S.W.D. Equipo: Andrea Cubas, Tobias Caballero, Leandr
 | JavaScript ES (módulos nativos) | Una clase por archivo |
 | Vite 7 | Servidor de desarrollo y build |
 | Node.js + `node:http` | Servidor de cuentas y puntuaciones |
-| MySQL 8 (`mysql2`) | Cuentas, sesiones, progreso y clasificación |
+| PostgreSQL (`pg`) | Cuentas, sesiones, progreso y clasificación |
 | `node:test` | Pruebas unitarias y de integración |
 
 ---
 
 ## Instalación y ejecución
 
-Requiere **Node.js 20.12 o superior** y, para cuentas y puntuaciones, **MySQL 8**.
+Requiere **Node.js 20.12 o superior** y, para cuentas y puntuaciones, **PostgreSQL 13 o superior**.
 
 ```bash
 npm install
-cp .env.example .env     # completar usuario y contraseña de MySQL
+cp .env.example .env     # completar usuario y contraseña de PostgreSQL
 npm run server           # API de cuentas y puntuaciones en http://127.0.0.1:3001
 npm run dev              # juego en http://localhost:5173 (otra terminal)
 ```
 
-El servidor crea la base `nexo_world` y sus tablas si no existen. Vite reenvía `/api` al servidor.
+El servidor crea la base `nexo_world` (si el usuario tiene permiso) y sus tablas si no existen. Vite reenvía `/api` al servidor.
 
-Sin servidor el juego funciona, pero no hay cuentas ni clasificación; el progreso queda guardado en el navegador.
+Sin servidor el juego funciona, pero no hay cuentas ni clasificación; el progreso queda guardado en el navegador. Para probar el servidor sin instalar PostgreSQL: `STORAGE=memory` en `.env` (los datos se pierden al cerrarlo).
 
-### Con Laragon (Windows)
+### PostgreSQL en Windows
 
-Para iniciar sesión solo hace falta que MySQL esté corriendo y el servidor del juego levantado. **phpMyAdmin no hace falta**: sirve únicamente para mirar los datos.
-
-1. Abrir Laragon y tocar **Start All** (o al menos iniciar **MySQL**).
-2. La primera vez, en la carpeta del proyecto:
-   ```bash
-   npm install
-   copy .env.example .env
+1. Instalar PostgreSQL desde https://www.postgresql.org/download/windows/ (el instalador pide una contraseña para el usuario `postgres` e incluye pgAdmin).
+2. En `.env`: `PGUSER=postgres` y en `PGPASSWORD` la contraseña elegida.
+3. `npm run server` tiene que mostrar:
    ```
-   El `.env` de ejemplo ya usa lo que trae Laragon: usuario `root` sin contraseña, en `127.0.0.1:3306`. Si le pusiste contraseña a MySQL, completala en `MYSQL_PASSWORD`.
-3. En una terminal: `npm run server`. Tiene que mostrar:
+   [Nexo World] API de puntuaciones y cuentas en http://127.0.0.1:3001/api · almacenamiento: PostgreSQL 127.0.0.1:5432/nexo_world
    ```
-   [Nexo World] API de puntuaciones y cuentas en http://127.0.0.1:3001/api · almacenamiento: MySQL 127.0.0.1:3306/nexo_world
-   ```
-   Si dice `no se pudo iniciar el servidor de puntuaciones`, MySQL no está iniciado en Laragon o los datos del `.env` no coinciden.
-4. En otra terminal: `npm run dev` y abrir http://localhost:5173.
+   Si dice `no se pudo iniciar el servidor de puntuaciones`, PostgreSQL no está corriendo o los datos del `.env` no coinciden.
 
 ### Comprobar que la base funciona
 
-1. Abrir http://127.0.0.1:3001/api/health en el navegador.
-   - `{"ok":true,"storage":"mysql","database":"nexo_world"}`: el servidor está conectado a MySQL.
-   - `{"ok":false,"error":"database-unreachable"}`: el servidor está levantado pero MySQL dejó de responder (por ejemplo, se detuvo en Laragon).
-   - La página no carga: el servidor no está corriendo (`npm run server`).
+1. Abrir http://127.0.0.1:3001/api/health:
+   - `{"ok":true,"storage":"postgres","database":"nexo_world"}`: conectado.
+   - `{"ok":false,"error":"database-unreachable"}`: el servidor está levantado pero la base no responde.
+   - La página no carga: el servidor no está corriendo.
 2. En el juego: **REGISTRARSE**, crear una cuenta e iniciar sesión.
-3. Ver los datos (opcional), con usuario `root` y contraseña vacía:
-   - **phpMyAdmin:** en Laragon, botón **Database**, o http://localhost/phpmyadmin. Si no está instalado, se agrega desde el menú de Laragon (*Quick add* → phpMyAdmin) o copiándolo en `C:\laragon\etc\apps\phpMyAdmin`.
-   - En la base `nexo_world` tienen que estar las tablas `accounts`, `sessions`, `players`, `progress`, `leaderboard` y `password_resets`. La cuenta recién creada aparece en `accounts`, y la contraseña se guarda cifrada, nunca en texto plano.
+3. Ver los datos (opcional) con pgAdmin o `psql -U postgres -d nexo_world`: tablas `accounts`, `sessions`, `players`, `progress`, `leaderboard` y `password_resets`. La contraseña se guarda cifrada.
+
+## Despliegue en Render
+
+El repositorio trae `render.yaml`: un servicio web (juego + API en el mismo dominio) y una base PostgreSQL, los dos en el plan gratuito.
+
+1. En https://dashboard.render.com: **New → Blueprint**, conectar GitHub y elegir este repositorio.
+2. Render lee `render.yaml`, crea la base `nexo-world-db` y el servicio `nexo-world`, y le pasa la conexión en `DATABASE_URL`.
+3. Al terminar el build, el juego queda en `https://nexo-world.onrender.com` (o el nombre que asigne Render) y la comprobación en `/api/health`.
+
+Cada push a `main` vuelve a desplegar. En el plan gratuito el servicio se duerme a los 15 minutos sin visitas (la primera visita después tarda en responder) y la base vence a los 30 días de creada.
+
+**Recuperar una contraseña en Render:** el plan gratuito no tiene consola, así que el comando se corre desde una PC. En Render, en la base `nexo-world-db` → **Connect**, copiar la **External Database URL** y ponerla en `.env` como `DATABASE_URL=...`. Después: `npm run admin -- reset-password <usuario o correo>`.
 
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo |
 | `npm run build` | Build de producción en `dist/` |
 | `npm run preview` | Sirve el build |
-| `npm run server` | API de cuentas y puntuaciones |
+| `npm run server` | API de cuentas y puntuaciones (y el juego compilado, si existe `dist/`) |
 | `npm run admin -- reset-password <usuario o correo>` | Código de recuperación de contraseña (vence en 30 min, un solo uso) |
 | `npm test` | Pruebas |
-| `NEXO_TEST_MYSQL=1 MYSQL_PASSWORD=... npm test` | Pruebas también contra MySQL real (bases `nexo_world_test` y `nexo_world_test_cuentas`) |
+| `NEXO_TEST_POSTGRES=1 PGPASSWORD=... npm test` | Pruebas también contra PostgreSQL real (bases `nexo_world_test` y `nexo_world_test_cuentas`) |
 
 ### Recuperar una contraseña
 
@@ -157,7 +159,7 @@ src/
 ├── audio/           Sonidos y lectura en voz alta
 ├── ui/, interface/  HUD, pantallas y componentes
 └── utils/           Constantes y utilidades
-server/              API de cuentas y puntuaciones, persistencia MySQL, comando de administrador
+server/              API de cuentas y puntuaciones, persistencia PostgreSQL, comando de administrador
 tests/               Pruebas con node:test
 docs/                Arquitectura, convenciones, progresión, chat y hoja de ruta
 ```

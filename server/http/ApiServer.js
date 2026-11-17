@@ -42,8 +42,10 @@ export class ApiServer {
    * @param {{allowedOrigin:string, basePath?:string, logger?:{error:Function},
    *          authRoutes?: import('./AuthRoutes.js').AuthRoutes|null}} options
    */
-  constructor(service, { allowedOrigin, basePath = '/api', logger = console, authRoutes = null, healthCheck = null }) {
+  constructor(service, { allowedOrigin, basePath = '/api', logger = console, authRoutes = null, healthCheck = null, staticFiles = null }) {
     this.service = service;
+    /** El juego compilado (dist); fuera de /api se sirve desde acá. */
+    this.staticFiles = staticFiles;
     /** Devuelve qué almacenamiento se usa y lanza si la base no responde. */
     this.healthCheck = healthCheck;
     this.authRoutes = authRoutes;
@@ -82,6 +84,7 @@ export class ApiServer {
 
     const url = new URL(request.url, 'http://localhost');
     if (!url.pathname.startsWith(`${this.basePath}/`)) {
+      if (this.staticFiles && await this.staticFiles.serve(request, response, url.pathname)) return;
       this.#sendResult(response, ProgressionResult.fail(Reasons.NOT_FOUND));
       return;
     }
