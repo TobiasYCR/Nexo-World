@@ -71,6 +71,8 @@ export function classifyBlockCategory(block) {
  */
 export class InventoryView {
   #blockRegistry;
+  #settingsModel;
+  #speed = 1;
   #onSelect;
   #onEquip;
   #speechService;
@@ -95,8 +97,13 @@ export class InventoryView {
    * @param {Function} [options.onEquip]
    * @param {SpeechService} [options.speechService]
    */
-  constructor({ blockRegistry = null, onSelect = null, onEquip = null, speechService = null } = {}) {
+  constructor({ blockRegistry = null, onSelect = null, onEquip = null, speechService = null, settingsModel = null } = {}) {
     this.#blockRegistry = blockRegistry ?? createDefaultBlockRegistry();
+    /** Si está, la velocidad de lectura se guarda y queda igual que en Configuración. */
+    this.#settingsModel = settingsModel;
+    this.#settingsModel?.subscribe?.((key, value) => {
+      if (key === 'speechSpeed') this.#syncSpeedControl(value);
+    });
     this.#onSelect = onSelect;
     this.#onEquip = onEquip;
     this.#speechService = speechService ?? SpeechService.getInstance();
@@ -658,6 +665,56 @@ export class InventoryView {
     }
   }
 
+  /** Velocidad actual de la lectura en voz alta (×1 a ×2,5). */
+  get speechSpeed() {
+    return this.#settingsModel?.get?.('speechSpeed') ?? this.#speed;
+  }
+
+  /**
+   * Barra de velocidad debajo del deletreo: de ×1 (pausada) a ×2,5. Comparte
+   * el valor con Configuración → General.
+   */
+  setSpeechSpeed(value) {
+    const speed = Math.min(2.5, Math.max(1, Math.round(Number(value) * 10) / 10));
+    this.#speed = speed;
+    if (this.#settingsModel?.set) this.#settingsModel.set('speechSpeed', speed);
+    else this.#speechService?.setRate?.(SpeechService.BASE_RATE * speed);
+    this.#syncSpeedControl(speed);
+  }
+
+  #createSpeedControl() {
+    const row = document.createElement('div');
+    row.className = 'nx-details-speed-row';
+    const label = document.createElement('label');
+    label.className = 'nx-details-speed-label';
+    label.textContent = 'Velocidad de lectura';
+    this.speedInput = document.createElement('input');
+    this.speedInput.type = 'range';
+    this.speedInput.className = 'nx-details-speed';
+    this.speedInput.min = '1';
+    this.speedInput.max = '2.5';
+    this.speedInput.step = '0.1';
+    this.speedInput.value = String(this.speechSpeed);
+    this.speedInput.setAttribute('aria-label', 'Velocidad de lectura en voz alta');
+    this.speedInput.addEventListener('input', (event) => {
+      event?.stopPropagation?.();
+      this.setSpeechSpeed(event?.target?.value ?? this.speedInput.value);
+    });
+    this.speedInput.addEventListener('click', (event) => event?.stopPropagation?.());
+    this.speedValue = document.createElement('span');
+    this.speedValue.className = 'nx-details-speed-value';
+    this.speedValue.textContent = `×${Number(this.speechSpeed).toFixed(1)}`;
+    row.appendChild(label);
+    row.appendChild(this.speedInput);
+    row.appendChild(this.speedValue);
+    return row;
+  }
+
+  #syncSpeedControl(value) {
+    if (this.speedInput) this.speedInput.value = String(value);
+    if (this.speedValue) this.speedValue.textContent = `×${Number(value).toFixed(1)}`;
+  }
+
   #renderDetails() {
     this.detailsPanel.innerHTML = '';
     const block = this.#selectedBlock;
@@ -713,6 +770,8 @@ export class InventoryView {
     eduRow.appendChild(syllablesDisplay);
     eduRow.appendChild(actionsWrap);
 
+    const speedRow = this.#createSpeedControl();
+
     // Fila de descripción breve del material + botón para escuchar la descripción con audio
     const descRow = document.createElement('div');
     descRow.className = 'nx-details-description-row';
@@ -759,6 +818,7 @@ export class InventoryView {
 
     this.detailsPanel.appendChild(header);
     this.detailsPanel.appendChild(eduRow);
+    this.detailsPanel.appendChild(speedRow);
     this.detailsPanel.appendChild(descRow);
     this.detailsPanel.appendChild(specs);
     this.#syncSyllableHighlight();

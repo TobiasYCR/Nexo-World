@@ -1,3 +1,4 @@
+import { SpeechService } from '../audio/SpeechService.js';
 import { ScreenType } from './ScreenType.js';
 
 /**
@@ -56,8 +57,8 @@ export class SettingsApplier {
       case 'clouds':
         game?.clouds?.setEnabled?.(value);
         return true;
-      case 'speechRate':
-        this.speech?.setRate?.(value);
+      case 'speechSpeed':
+        this.speech?.setRate?.(SpeechService.BASE_RATE * value);
         return true;
       case 'renderDistance':
         game?.blockRenderer?.setRenderDistance?.(value * (game.world?.chunkSizeX ?? 16));

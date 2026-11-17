@@ -18,9 +18,14 @@ export class InventoryScreen extends Screen {
    * @param {import('../../ui/ScreenManager.js').ScreenManager} [screenManager]
    * @param {IntentBus} [intentBus]
    */
-  constructor(blockRegistry = null, screenManager = null, intentBus = null) {
+  /**
+   * @param {Object} [options]
+   * @param {import('../models/SettingsModel.js').SettingsModel} [options.settingsModel] para la velocidad de lectura
+   */
+  constructor(blockRegistry = null, screenManager = null, intentBus = null, { settingsModel = null } = {}) {
     super(ScreenType.INVENTORY, screenManager, intentBus);
     this.blockRegistry = blockRegistry || createDefaultBlockRegistry();
+    this.settingsModel = settingsModel;
     this.#buildDOM();
   }
 
@@ -35,6 +40,7 @@ export class InventoryScreen extends Screen {
 
     this.inventoryView = new InventoryView({
       blockRegistry: this.blockRegistry,
+      settingsModel: this.settingsModel,
       onSelect: (_block) => {},
       onEquip: (block, slotIndex) => this.#onBlockEquipped(block, slotIndex)
     });
