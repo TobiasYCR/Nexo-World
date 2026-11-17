@@ -74,6 +74,16 @@ export class InMemoryProgressionRepository extends ProgressionRepository {
     return { ok: true };
   }
 
+  async deletePlayersOfAccounts(accountIds) {
+    const owners = new Set(accountIds);
+    for (const [id, player] of this.#players) {
+      if (!owners.has(player.accountId)) continue;
+      this.#players.delete(id);
+      for (const [key, progress] of this.#progress) if (progress.playerId === id) this.#progress.delete(key);
+      for (const [key, best] of this.#best) if (best.playerId === id) this.#best.delete(key);
+    }
+  }
+
   async topScores(mode, limit) {
     return Leaderboard.top(this.#entries(mode), limit);
   }

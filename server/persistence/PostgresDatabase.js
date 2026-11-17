@@ -125,4 +125,5 @@ export class PostgresDatabase {
 
   /** Código de PostgreSQL para una clave única repetida. */
   static UNIQUE_VIOLATION = '23505';
+  static CHECK_VIOLATION = '23514';
 }

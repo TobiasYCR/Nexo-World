@@ -356,11 +356,19 @@ export const GameConfig = Object.freeze({
     AUTH_SOURCE: 'server',
     USERNAME_MIN_LENGTH: 3,
     USERNAME_MAX_LENGTH: 20,
-    /** Letras, números, guion y guion bajo. Sin espacios ni símbolos: el nombre se usa como clave. */
-    USERNAME_PATTERN: /^[A-Za-z0-9_-]+$/,
+    /**
+     * Letras sin acentos, números, guion y guion bajo; empieza con letra o
+     * número. Sin espacios ni símbolos: el nombre se usa como clave.
+     */
+    USERNAME_PATTERN: /^[A-Za-z0-9][A-Za-z0-9_-]*$/,
     PASSWORD_MIN_LENGTH: 8,
-    /** Laxo a propósito: ver el comentario de UserValidator.checkEmail. */
-    EMAIL_PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    /**
+     * usuario@dominio.ext en ASCII: el usuario admite letras, números y . _ % + -
+     * (sin empezar ni terminar con punto); el dominio, etiquetas de letras,
+     * números y guiones, y una extensión de 2 a 24 letras. Los puntos seguidos
+     * los rechaza UserValidator.checkEmail.
+     */
+    EMAIL_PATTERN: /^[A-Za-z0-9_%+-](?:[A-Za-z0-9._%+-]{0,62}[A-Za-z0-9_%+-])?@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24}$/,
     EMAIL_MAX_LENGTH: 254,
     /** Duración de una sesión local, en milisegundos: 7 días. */
     SESSION_TTL_MS: 7 * 24 * 60 * 60 * 1000,

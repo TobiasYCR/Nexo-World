@@ -34,10 +34,9 @@ export class UserValidator {
    * Valida un correo, si viene. Ausente o vacío es válido: el correo es
    * opcional en la capa de datos, aunque la pantalla de registro lo exija.
    *
-   * La comprobación es deliberadamente laxa (algo@algo.algo): validar correos
-   * con precisión es imposible con una expresión regular, y el único modo real
-   * de saber si uno existe es mandarle un mensaje, cosa que sin servidor no se
-   * puede hacer.
+   * Acepta la forma común de un correo (ver EMAIL_PATTERN) y rechaza espacios,
+   * símbolos raros, puntos seguidos y caracteres no ASCII. Que el correo exista
+   * solo se sabría mandándole un mensaje.
    *
    * @param {unknown} email
    * @returns {'invalid-email'|null}
@@ -48,6 +47,7 @@ export class UserValidator {
     const limpio = email.trim();
     if (limpio.length === 0) return null;
     if (limpio.length > this.#rules.EMAIL_MAX_LENGTH) return 'invalid-email';
+    if (limpio.includes('..')) return 'invalid-email';
     return this.#rules.EMAIL_PATTERN.test(limpio) ? null : 'invalid-email';
   }
 

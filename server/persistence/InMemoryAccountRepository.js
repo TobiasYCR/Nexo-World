@@ -44,6 +44,16 @@ export class InMemoryAccountRepository extends AccountRepository {
     return { ok: true };
   }
 
+  async deleteAccountsByEmailSuffix(suffix) {
+    const ids = [...this.#accounts.values()].filter((account) => account.emailKey.endsWith(suffix)).map((account) => account.id);
+    for (const id of ids) {
+      this.#accounts.delete(id);
+      for (const [hash, session] of this.#sessions) if (session.accountId === id) this.#sessions.delete(hash);
+      for (const [hash, reset] of this.#resets) if (reset.accountId === id) this.#resets.delete(hash);
+    }
+    return ids;
+  }
+
   async createSession(session) {
     this.#sessions.set(session.tokenHash, { ...session });
   }

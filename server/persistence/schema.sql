@@ -55,6 +55,23 @@ CREATE TABLE IF NOT EXISTS accounts (
   CONSTRAINT uq_accounts_email UNIQUE (email_key)
 );
 
+-- Formato de nombre y correo también en la base, por si algo escribe sin pasar
+-- por UserValidator. NOT VALID: rige para filas nuevas y modificadas, sin
+-- revisar las que ya existían (así agregarla nunca frena el arranque).
+DO $$
+BEGIN
+  ALTER TABLE accounts ADD CONSTRAINT ck_accounts_username
+    CHECK (username_key ~ '^[a-z0-9][a-z0-9_-]{2,19}$') NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$
+BEGIN
+  ALTER TABLE accounts ADD CONSTRAINT ck_accounts_email
+    CHECK (email_key ~ '^[a-z0-9_%+-]([a-z0-9._%+-]*[a-z0-9_%+-])?@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,24}$'
+      AND position('..' in email_key) = 0) NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- Sesiones abiertas. Como con los jugadores, se guarda el hash SHA-256 del
 -- token y no el token: una filtración de la tabla no permite entrar a cuentas.
 CREATE TABLE IF NOT EXISTS sessions (

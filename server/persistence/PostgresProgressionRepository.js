@@ -150,6 +150,12 @@ export class PostgresProgressionRepository extends ProgressionRepository {
   }
 
   /** Cierra la conexión solo si es propia; la compartida la cierra quien la creó. */
+  async deletePlayersOfAccounts(accountIds) {
+    if (accountIds.length === 0) return;
+    // Progreso y clasificación se borran solos (ON DELETE CASCADE).
+    await this.#database.query('DELETE FROM players WHERE account_id = ANY($1)', [accountIds]);
+  }
+
   async close() {
     if (this.#ownsDatabase) await this.#database.close();
   }
