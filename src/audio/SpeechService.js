@@ -1,4 +1,4 @@
-import { resolveBlockSyllables } from '../blocks/BlockType.js';
+import { resolveBlockSyllables, resolveBlockDescription } from '../blocks/BlockType.js';
 
 /**
  * Mapa fonético de sílabas en español para evitar que el motor TTS del navegador
@@ -332,16 +332,19 @@ export class SpeechService {
   }
 
   /**
-   * Pronuncia un bloque o término según el modo elegido ('syllabic' por defecto o 'word').
+   * Pronuncia un bloque o término según el modo elegido ('syllabic' por defecto, 'word' o 'description').
    * @param {Object|string} blockOrText
    * @param {Object} [options]
-   * @param {'syllabic'|'word'} [options.mode='syllabic']
+   * @param {'syllabic'|'word'|'description'} [options.mode='syllabic']
    * @param {(index: number, syllable: string) => void} [options.onSyllable]
    * @param {(word: string) => void} [options.onCompleteWord]
    * @param {() => void} [options.onEnd]
    */
   speak(blockOrText, options = {}) {
     const mode = options.mode ?? 'syllabic';
+    if (mode === 'description') {
+      return this.speakDescription(blockOrText, options);
+    }
     if (mode === 'word') {
       const word = typeof blockOrText === 'string'
         ? blockOrText
@@ -349,6 +352,24 @@ export class SpeechService {
       return this.speakWord(word, options);
     }
     return this.speakSyllables(blockOrText, options);
+  }
+
+  /**
+   * Modo 3: Pronuncia en voz alta la descripción breve del material o bloque.
+   * @param {Object|string} blockOrDescription
+   * @param {Object} [callbacks]
+   * @param {(text: string) => void} [callbacks.onCompleteWord]
+   * @param {() => void} [callbacks.onEnd]
+   */
+  speakDescription(blockOrDescription, callbacks = {}) {
+    const text = typeof blockOrDescription === 'string'
+      ? blockOrDescription.trim()
+      : resolveBlockDescription({
+          label: blockOrDescription?.label,
+          name: blockOrDescription?.name,
+          description: blockOrDescription?.description
+        });
+    return this.speakWord(text, callbacks);
   }
 
   /**

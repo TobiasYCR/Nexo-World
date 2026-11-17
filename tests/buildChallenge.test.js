@@ -315,6 +315,66 @@ test('la guía rehace geometría solo cuando cambia el desafío y puede ocultars
   assert.equal(p.calls.model, modelsBefore);
 });
 
+test('un bloque incorrecto rodeado se marca en rojo y se puede corregir sin mallas vacías', () => {
+  const p = createP5Stub();
+  const boxes = [];
+  const colors = [];
+  Object.assign(p, {
+    fill: (...rgba) => colors.push(rgba),
+    box: (size) => boxes.push(size),
+    model: (geometry) => assert.ok(geometry.vertices.length > 0),
+    freeGeometry: (geometry) => assert.ok(geometry)
+  });
+  const ghost = new BlueprintGhost({ p, blockRegistry: createDefaultBlockRegistry(), config: CONFIG.education });
+  const cell = (x, y, z, status) => ({ x, y, z, expectedBlockId: BlockIds.PLANKS, status });
+  const blocks = [cell(0, 0, 0, 'wrong'), ...[
+    [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
+  ].map(([x, y, z]) => cell(x, y, z, 'correct'))];
+  ghost.update({ blueprintId: 'enclosed', blocks });
+  assert.doesNotThrow(() => ghost.draw(p));
+  assert.deepEqual(colors, [[...CONFIG.education.WRONG_BLOCK_COLOR]]);
+  assert.deepEqual(boxes, [GameConfig.world.BLOCK_SIZE * 1.02]);
+  blocks[0] = cell(0, 0, 0, 'missing');
+  assert.doesNotThrow(() => ghost.update({ blueprintId: 'enclosed', blocks }));
+  blocks[0] = cell(0, 0, 0, 'correct');
+  assert.doesNotThrow(() => ghost.update({ blueprintId: 'enclosed', blocks }));
+  assert.equal(ghost.geometryCount, 0);
+  assert.doesNotThrow(() => ghost.dispose());
+});
+
+test('el rojo restablece un tint RGBA válido para el shader WebGL de p5', () => {
+  const p = createP5Stub();
+  let tint = [255, 255, 255, 255];
+  const drawnTints = [];
+  Object.assign(p, {
+    tint: (...rgba) => { tint = rgba; },
+    // Reproduce p5 1.x: noTint deja null, incompatible con uTint en WebGL.
+    noTint: () => { tint = null; },
+    model: () => assert.equal(tint.length, 4),
+    box: () => {
+      assert.equal(tint.length, 4);
+      drawnTints.push([...tint]);
+    }
+  });
+  const ghost = new BlueprintGhost({
+    p,
+    blockRegistry: createDefaultBlockRegistry(),
+    textureManager: { get: () => ({}) },
+    config: CONFIG.education
+  });
+  ghost.update({
+    blueprintId: 'mixed',
+    nextBlock: { position: { x: 2, y: 0, z: 0 } },
+    blocks: [
+      { x: 0, y: 0, z: 0, expectedBlockId: BlockIds.PLANKS, status: 'missing' },
+      { x: 2, y: 0, z: 0, expectedBlockId: BlockIds.PLANKS, status: 'wrong' }
+    ]
+  });
+  assert.doesNotThrow(() => ghost.draw(p));
+  assert.deepEqual(drawnTints, [[255, 255, 255, 255], [255, 255, 255, 255]]);
+  assert.doesNotThrow(() => ghost.draw(p), 'el siguiente frame también debe dibujarse');
+});
+
 test('el efecto de finalización respeta la configuración', () => {
   const p = createP5Stub();
   const enabled = new ChallengeCompleteEffect({ ...CONFIG.education, SHOW_COMPLETE_EFFECT: true });
@@ -436,7 +496,8 @@ test('la guía usa la textura de cada bloque, así tablón y tronco se distingue
   Object.assign(p, {
     tint: (...rgba) => { pending.alpha = rgba[3]; },
     texture: (image) => { pending.texture = image.name; },
-    fill: () => { pending.texture = null; },
+    fill: (...rgba) => { pending.texture = null; pending.color = rgba; },
+    box: (size) => { used.push({ gid: `wrong-${BlockIds.LOG}`, size, ...pending }); pending = {}; },
     model: (geometry) => { used.push({ gid: geometry.gid, ...pending }); pending = {}; }
   });
   const textureManager = { get: (name) => ({ name }) };
@@ -456,5 +517,6 @@ test('la guía usa la textura de cada bloque, así tablón y tronco se distingue
   assert.equal(textures[`missing-${BlockIds.LOG}`], blockRegistry.get(BlockIds.LOG).texture);
   assert.notEqual(textures[`missing-${BlockIds.PLANKS}`], textures[`missing-${BlockIds.LOG}`]);
   assert.equal(textures[`wrong-${BlockIds.LOG}`], null, 'lo incorrecto sigue en rojo liso');
+  assert.deepEqual(used.find(({ size }) => size).color, [...CONFIG.education.WRONG_BLOCK_COLOR]);
   assert.ok(used.find(({ gid }) => gid.endsWith(`missing-${BlockIds.LOG}`)).alpha < 255, 'semitransparente');
 });
