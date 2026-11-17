@@ -1,3 +1,4 @@
+import { BlockIds } from '../src/utils/Constants.js';
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDomStub, uninstallDomStub } from './support/domStub.js';
@@ -45,7 +46,8 @@ test('InventoryView muestra exclusivamente bloques registrados del BlockRegistry
   const invView = new InventoryView({ blockRegistry: registry });
   invView.refresh();
 
-  const placeable = registry.placeableTypes();
+  // Todo menos el aire: la roca madre se muestra aunque no se pueda colocar.
+  const placeable = registry.values().filter((type) => type.id !== BlockIds.AIR);
   const cardElements = invView.element.querySelectorAll('.nx-block-card');
   assert.equal(cardElements.length, placeable.length);
 
@@ -68,7 +70,12 @@ test('InventoryView filtra bloques por categoría correctamente', () => {
   // Filtrar por todos
   invView.setCategory('all');
   const allCards = invView.element.querySelectorAll('.nx-block-card');
-  assert.equal(allCards.length, registry.placeableTypes().length);
+  assert.equal(allCards.length, registry.values().length - 1);
+
+  invView.setCategory('stones');
+  assert.equal(invView.element.querySelectorAll('.nx-block-card').length, 14);
+  invView.setCategory('woods');
+  assert.equal(invView.element.querySelectorAll('.nx-block-card').length, 16);
 });
 
 test('InventoryView busca por nombre y label en tiempo real', () => {
@@ -79,9 +86,9 @@ test('InventoryView busca por nombre y label en tiempo real', () => {
   invView.searchInput.value = 'vidrio';
   invView.searchInput.dispatch('input', { target: invView.searchInput });
 
+  // Encuentra el vidrio por nombre y la obsidiana por su descripción ("vidrio volcánico").
   const cards = invView.element.querySelectorAll('.nx-block-card');
-  assert.equal(cards.length, 1);
-  assert.equal(cards[0].getAttribute('aria-label'), 'Vidrio');
+  assert.deepEqual(cards.map((card) => card.getAttribute('aria-label')), ['Vidrio', 'Obsidiana']);
 });
 
 test('InventoryView selecciona un bloque y muestra sus metadatos', () => {

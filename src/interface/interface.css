@@ -625,7 +625,8 @@
   gap: 6px;
   padding: 10px 8px;
   min-height: 184px;
-  height: 100%;
+  /* Sin height: 100%: con alto fijo, los botones de audio se salían de la tarjeta. */
+  overflow: hidden;
   background: var(--nx-bg-card);
   border: 2px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--nx-radius-md);
@@ -761,10 +762,11 @@
 
 .nx-block-card-actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 5px;
   width: 100%;
+  margin-top: auto;
 }
 
 .nx-btn-speak-card-desc {
