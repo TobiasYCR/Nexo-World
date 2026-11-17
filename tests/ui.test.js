@@ -185,7 +185,7 @@ test('ControlsScreen lista todas las categorías y teclas configuradas', () => {
 
   assert.equal(controls.id, ScreenType.CONTROLS);
   assert.equal(controls.element.querySelectorAll('.nx-controls-group').length, 3);
-  assert.equal(controls.element.querySelectorAll('.nx-key-badge').length, 15);
+  assert.equal(controls.element.querySelectorAll('.nx-key-badge').length, 17, 'incluye V (escuchar) y T (chat)');
   assert.equal(controls.element.querySelector('.nx-control-hint').textContent, 'Espacio sube · Shift baja');
 });
 

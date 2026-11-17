@@ -52,8 +52,11 @@ export class HotbarView {
     this.speakBtn = document.createElement('button');
     this.speakBtn.type = 'button';
     this.speakBtn.className = 'hud-hotbar-speak-btn';
-    this.speakBtn.innerHTML = Icons.speaker;
-    this.speakBtn.setAttribute('aria-label', 'Escuchar pronunciación del bloque activo');
+    // Jugando, el mouse está capturado y no se puede hacer clic: el botón
+    // muestra la tecla que lo reproduce (V).
+    this.speakBtn.innerHTML = `${Icons.speaker}<span class="hud-hotbar-speak-key">V</span>`;
+    this.speakBtn.title = 'Escuchar (tecla V)';
+    this.speakBtn.setAttribute('aria-label', 'Escuchar pronunciación del bloque activo (tecla V)');
     this.speakBtn.addEventListener('click', (e) => {
       e.stopPropagation?.();
       this.speakActiveBlock('syllabic');

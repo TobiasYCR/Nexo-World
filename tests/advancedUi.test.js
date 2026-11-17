@@ -399,3 +399,9 @@ test('el inventario tiene la barra de velocidad de lectura de ×1 a ×2,5, compa
   assert.equal(model.get('speechSpeed'), 2.5, 'no pasa de ×2,5');
   model.set('speechSpeed', 1);
 });
+
+test('el botón de escuchar de la hotbar muestra la tecla V, porque jugando no se puede hacer clic', () => {
+  const hotbar = new HotbarView(9);
+  assert.match(hotbar.speakBtn.innerHTML, /hud-hotbar-speak-key">V</);
+  assert.match(hotbar.speakBtn.getAttribute('aria-label'), /tecla V/);
+});
