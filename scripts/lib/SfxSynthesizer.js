@@ -9,28 +9,32 @@ export class SfxSynthesizer {
   /** Rampa final para que el corte no produzca un clic audible. */
   static #FADE_OUT_SECONDS = 0.006;
 
-  /** Colocar bloque: golpe sordo y corto. */
+  /**
+   * Colocar bloque: un "toc" de madera suave. Tono medio que baja apenas, con
+   * entrada de 3 ms (sin el chasquido de ruido de antes) y menos nivel.
+   */
   static blockPlace() {
-    const random = SeededRandom.fromString('block_place');
-    return SfxSynthesizer.#render(0.1, (time) => {
-      const frequency = 110 + 90 * Math.exp(-time / 0.02);
-      const body = Math.sin(2 * Math.PI * frequency * time) * Math.exp(-time / 0.03);
-      const click = time < 0.004 ? random.signed() * (1 - time / 0.004) * 0.5 : 0;
-      return (body + click) * 0.7;
+    return SfxSynthesizer.#render(0.09, (time) => {
+      const frequency = 180 + 60 * Math.exp(-time / 0.015);
+      const attack = Math.min(1, time / 0.003);
+      const body = Math.sin(2 * Math.PI * frequency * time) * Math.exp(-time / 0.022);
+      const overtone = Math.sin(2 * Math.PI * frequency * 2.4 * time) * Math.exp(-time / 0.01) * 0.25;
+      return (body + overtone) * attack * 0.32;
     });
   }
 
-  /** Romper bloque: crujido de ruido con un golpe grave debajo. */
+  /** Romper bloque: crujido corto y apagado, con un golpe leve debajo. */
   static blockBreak() {
     const random = SeededRandom.fromString('block_break');
     let lowPassed = 0;
     return SfxSynthesizer.#render(0.18, (time) => {
       // Pasa bajos de un polo: saca el siseo agudo y deja un "crunch".
-      lowPassed += (random.signed() - lowPassed) * 0.35;
-      const crackle = random.next() < 0.03 ? random.signed() * 0.6 : 0;
-      const noise = (lowPassed * 1.6 + crackle) * Math.exp(-time / 0.05);
-      const thump = Math.sin(2 * Math.PI * 85 * time) * Math.exp(-time / 0.04) * 0.5;
-      return (noise + thump) * 0.6;
+      lowPassed += (random.signed() - lowPassed) * 0.3;
+      const crackle = random.next() < 0.025 ? random.signed() * 0.3 : 0;
+      const attack = Math.min(1, time / 0.004);
+      const noise = (lowPassed * 1.1 + crackle) * Math.exp(-time / 0.045);
+      const thump = Math.sin(2 * Math.PI * 120 * time) * Math.exp(-time / 0.025) * 0.2;
+      return (noise + thump) * attack * 0.38;
     });
   }
 

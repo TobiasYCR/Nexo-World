@@ -182,8 +182,9 @@ export class Game {
     /** Arranca con el primer clic en el juego (el navegador no deja sonar antes). */
     this.music = new AmbientMusic(this.audio);
     this.footsteps = new FootstepPlayer(config.audio, config.world.BLOCK_SIZE);
-    this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
-    this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
+    const blockVolume = config.audio.BLOCK_SOUND_VOLUME ?? 1;
+    this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK, { volume: blockVolume }));
+    this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE, { volume: blockVolume }));
     // El asistente lee el estado vivo de la partida. Se pasa un proveedor y no
     // los objetos porque el estado cambia en cada frame y el HUD se arma una
     // sola vez; además así el chat no guarda referencias que impidan liberar
