@@ -96,7 +96,18 @@ export class PauseScreen extends Screen {
     `;
     this.controlsBtn.addEventListener('click', () => this.handleControls());
 
-    // 6. Volver al Menú Principal
+    // 6. Tutorial: lo vuelve a empezar desde el primer paso
+    this.tutorialBtn = document.createElement('button');
+    this.tutorialBtn.type = 'button';
+    this.tutorialBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
+    this.tutorialBtn.id = 'pause-btn-tutorial';
+    this.tutorialBtn.innerHTML = `
+      <span class="nx-btn-icon">${Icons.info}</span>
+      <span class="nx-btn-text">TUTORIAL</span>
+    `;
+    this.tutorialBtn.addEventListener('click', () => this.handleTutorial());
+
+    // 7. Volver al Menú Principal
     this.menuBtn = document.createElement('button');
     this.menuBtn.type = 'button';
     this.menuBtn.className = 'nx-btn nx-btn-danger nx-btn-large';
@@ -113,6 +124,7 @@ export class PauseScreen extends Screen {
     actions.appendChild(this.loadBtn);
     actions.appendChild(this.settingsBtn);
     actions.appendChild(this.controlsBtn);
+    actions.appendChild(this.tutorialBtn);
     actions.appendChild(this.menuBtn);
 
     const hint = document.createElement('div');
@@ -171,6 +183,12 @@ export class PauseScreen extends Screen {
     if (this.screenManager) {
       this.screenManager.open(ScreenType.SETTINGS);
     }
+  }
+
+  /** Empieza el tutorial y vuelve al juego, donde se ve arriba a la izquierda. */
+  handleTutorial() {
+    this.intentBus?.emit(IntentBus.Events.START_TUTORIAL);
+    this.handleResume();
   }
 
   handleControls() {

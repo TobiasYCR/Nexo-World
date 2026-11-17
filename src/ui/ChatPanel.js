@@ -27,6 +27,7 @@ export class ChatPanel {
   #input;
   #form;
   #isOpen = false;
+  #closeListeners = new Set();
 
   /**
    * @param {Object} [options]
@@ -222,6 +223,13 @@ export class ChatPanel {
     this.#isOpen = false;
     this.element.hidden = true;
     this.#input?.blur?.();
+    for (const listener of this.#closeListeners) listener();
+  }
+
+  /** Avisa cuando el chat se cierra (para volver a capturar el mouse). */
+  onClose(listener) {
+    this.#closeListeners.add(listener);
+    return () => this.#closeListeners.delete(listener);
   }
 
   /** @returns {Promise<void>} */

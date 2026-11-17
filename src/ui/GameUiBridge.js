@@ -169,6 +169,7 @@ export class GameUiBridge {
 
     this.#bindBuildChallenge();
     this.#bindTutorial();
+    this.#bindPointerLock();
   }
 
   /**
@@ -193,6 +194,35 @@ export class GameUiBridge {
       this.toast.success(`¡Completaste el plano "${snapshot.name}"!`, 4500);
       SpeechService.getInstance().speakWord(`¡Felicitaciones! Construiste ${snapshot.name}`);
     });
+  }
+
+  /**
+   * El mouse solo se libera en los menús y en el chat. Si se suelta jugando
+   * (Esc del navegador, cambiar de ventana) se abre la pausa, y al volver al
+   * juego se captura de nuevo. Cuando el navegador no lo deja capturar sin un
+   * clic (por ejemplo, al volver con Esc), se muestra "Hacé clic para jugar".
+   */
+  #bindPointerLock() {
+    const mouse = this.game?.input?.mouse;
+    const hud = this.hud;
+    const screens = hud?.screenManager;
+    if (!mouse?.onLockChange || !screens) return;
+
+    const isPlaying = () => screens.currentScreenType === ScreenType.PLAYING;
+    const chatOpen = () => Boolean(hud.chatPanel?.isOpen);
+    const sync = () => hud.setClickToPlay?.(isPlaying() && !chatOpen() && !mouse.isPointerLocked);
+
+    mouse.onLockChange((locked) => {
+      if (!locked && isPlaying() && !chatOpen()) this.intentBus.emit(IntentBus.Events.PAUSE_GAME);
+      sync();
+    });
+    const recapture = () => {
+      if (isPlaying() && !chatOpen() && !mouse.isPointerLocked) mouse.requestPointerLock();
+      sync();
+    };
+    screens.onChange(recapture);
+    hud.chatPanel?.onClose?.(recapture);
+    sync();
   }
 
   /** Lo que el jugador hace en el mundo avanza el tutorial. */
