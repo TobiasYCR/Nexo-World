@@ -420,6 +420,28 @@ test('MenuScreen adapta su barra de usuario según el estado autenticado o invit
   assert.ok(menuScreen.userBadge.textContent.includes('Invitado'));
 });
 
+test('MenuScreen muestra "Cerrar sesión" solo con la sesión iniciada y la cierra', async () => {
+  const intentBus = new IntentBus();
+  const service = new AuthService({ client: createMockBackendClient(), intentBus });
+  const menuScreen = new MenuScreen(null, intentBus, service);
+  const toasts = [];
+  intentBus.on(IntentBus.Events.SHOW_TOAST, (payload) => toasts.push(payload.message));
+
+  assert.equal(menuScreen.logoutBtn.hidden, true, 'un invitado no ve el botón');
+
+  await service.register({ username: 'OnlineAlex', email: 'online@alex.com', password: 'password123', confirmPassword: 'password123' });
+  menuScreen.updateUserBadge();
+  assert.equal(menuScreen.logoutBtn.hidden, false);
+  assert.ok(menuScreen.logoutBtn.innerHTML.includes('CERRAR SESIÓN'));
+
+  await menuScreen.handleLogout();
+  assert.equal(service.isAuthenticated, false);
+  assert.equal(menuScreen.logoutBtn.hidden, true);
+  assert.ok(menuScreen.userBadge.textContent.includes('Invitado'));
+  assert.ok(menuScreen.authActionBtn.textContent.includes('INICIAR SESIÓN'));
+  assert.deepEqual(toasts, ['Sesión cerrada correctamente.']);
+});
+
 // ============================================================================
 // 7. INTEGRACIÓN CON HUD COMPLETO
 // ============================================================================

@@ -304,3 +304,18 @@ test('crear un mundo con un nombre ya guardado muestra el aviso y no lo pisa', a
   assert.equal(screen.worldCreationView.submit(), null);
   assert.equal(globalThis.localStorage.getItem(`${SaveManager.STORAGE_PREFIX}Nuevo Mundo`), before);
 });
+
+test('con el fondo fijo del menú el mundo no se dibuja', async () => {
+  const game = await startGame();
+  new GameUiBridge(game, game.hud, game.hud.intentBus);
+  let draws = 0;
+  game.renderer.render = () => { draws += 1; };
+  game.hud.screenManager.open('menu');
+  assert.equal(game.isWorldHidden, true);
+  game.render();
+  assert.equal(draws, 0);
+  game.hud.screenManager.open('playing');
+  assert.equal(game.isWorldHidden, false);
+  game.render();
+  assert.equal(draws, 1);
+});

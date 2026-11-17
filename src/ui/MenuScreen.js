@@ -6,7 +6,8 @@ import { Icons } from './Icons.js';
 /**
  * Pantalla del Menú Principal.
  * Presenta el título del juego, identidad del usuario (autenticado/invitado),
- * y las acciones principales: Jugar, Perfil, Login, Configuración y Controles.
+ * y las acciones principales: Jugar, ¿Cómo jugar?, Perfil, Login, Configuración, Controles y,
+ * con la sesión iniciada, Cerrar sesión.
  */
 export class MenuScreen extends Screen {
   #authService;
@@ -85,6 +86,16 @@ export class MenuScreen extends Screen {
     this.authActionBtn.id = 'menu-btn-auth';
     this.authActionBtn.addEventListener('click', () => this.handleAuthAction());
 
+    this.howToPlayBtn = document.createElement('button');
+    this.howToPlayBtn.type = 'button';
+    this.howToPlayBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
+    this.howToPlayBtn.id = 'menu-btn-how-to-play';
+    this.howToPlayBtn.innerHTML = `
+      <span class="nx-btn-icon">${Icons.help}</span>
+      <span class="nx-btn-text">¿CÓMO JUGAR?</span>
+    `;
+    this.howToPlayBtn.addEventListener('click', () => this.handleHowToPlay());
+
     this.leaderboardBtn = document.createElement('button');
     this.leaderboardBtn.type = 'button';
     this.leaderboardBtn.className = 'nx-btn nx-btn-secondary nx-btn-large';
@@ -116,10 +127,24 @@ export class MenuScreen extends Screen {
     this.controlsBtn.addEventListener('click', () => this.handleControls());
 
     nav.appendChild(this.playBtn);
+    nav.appendChild(this.howToPlayBtn);
     nav.appendChild(this.authActionBtn);
     nav.appendChild(this.leaderboardBtn);
     nav.appendChild(this.settingsBtn);
+    // Solo con la sesión iniciada (lo resuelve updateUserBadge).
+    this.logoutBtn = document.createElement('button');
+    this.logoutBtn.type = 'button';
+    this.logoutBtn.className = 'nx-btn nx-btn-danger nx-btn-large';
+    this.logoutBtn.id = 'menu-btn-logout';
+    this.logoutBtn.hidden = true;
+    this.logoutBtn.innerHTML = `
+      <span class="nx-btn-icon">${Icons.logout}</span>
+      <span class="nx-btn-text">CERRAR SESIÓN</span>
+    `;
+    this.logoutBtn.addEventListener('click', () => this.handleLogout());
+
     nav.appendChild(this.controlsBtn);
+    nav.appendChild(this.logoutBtn);
 
     // Footer de versión y atajos
     const footer = document.createElement('div');
@@ -169,6 +194,21 @@ export class MenuScreen extends Screen {
 
     this.authActionBtn.appendChild(iconSpan);
     this.authActionBtn.appendChild(labelSpan);
+    if (this.logoutBtn) this.logoutBtn.hidden = !isAuth;
+  }
+
+  /** Cierra la sesión y deja el menú en modo invitado. */
+  async handleLogout() {
+    if (!this.#authService?.isAuthenticated || this.logoutBtn.disabled) return;
+    this.logoutBtn.disabled = true;
+    try {
+      await this.#authService.logout();
+    } finally {
+      this.logoutBtn.disabled = false;
+    }
+    this.updateUserBadge();
+    this.intentBus?.emit(IntentBus.Events.SHOW_TOAST, { message: 'Sesión cerrada correctamente.', type: 'info' });
+    this.playBtn?.focus?.();
   }
 
   handleAuthAction() {
@@ -202,6 +242,10 @@ export class MenuScreen extends Screen {
     if (this.screenManager) {
       this.screenManager.open(ScreenType.SETTINGS);
     }
+  }
+
+  handleHowToPlay() {
+    this.screenManager?.open(ScreenType.HOW_TO_PLAY);
   }
 
   handleLeaderboard() {

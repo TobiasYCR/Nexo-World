@@ -49,9 +49,16 @@ export class BuildZone {
     return t * t * (3 - 2 * t);
   }
 
-  /** La columna queda sin árboles: ni troncos ni copas sobre la zona. */
+  /**
+   * La columna queda sin árboles: ni troncos ni copas sobre la zona. El margen
+   * es cuadrado (no redondeado) porque las copas también lo son: con bordes
+   * redondeados, un árbol en diagonal metía hojas en las esquinas.
+   */
   blocksTrees(x, z) {
-    return this.contains(x, z, this.treeClearance);
+    if (!this.enabled) return false;
+    const dx = Math.abs(x - this.centerX) - this.radius;
+    const dz = Math.abs(z - this.centerZ) - this.radius;
+    return Math.max(dx, dz) <= this.treeClearance;
   }
 
   /** La columna queda sin cuevas: se puede cavar cimientos sin caer a un hueco. */
