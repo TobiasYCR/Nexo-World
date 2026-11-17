@@ -81,6 +81,13 @@ export class HUD {
     this.chatHintElement.textContent = 'Presiona T para abrir chatbot';
     this.chatHintElement.hidden = true;
 
+    // Jugando sin el mouse capturado (al empezar, o al volver con Esc, que el
+    // navegador no deja usar para capturarlo): un clic lo captura.
+    this.clickToPlayElement = document.createElement('div');
+    this.clickToPlayElement.className = 'hud-click-to-play';
+    this.clickToPlayElement.textContent = 'Hacé clic para jugar';
+    this.clickToPlayElement.hidden = true;
+
     // Tutorial para quien nunca jugó. Al terminarlo o saltarlo no vuelve a
     // aparecer, salvo que se active de nuevo en Configuración → Interfaz.
     this.tutorial = new TutorialPanel({
@@ -113,7 +120,7 @@ export class HUD {
 
     this.settingsScreen = new SettingsScreen(this.settingsModel, this.screenManager, this.intentBus);
     this.controlsScreen = new ControlsScreen(this.screenManager, this.intentBus);
-    this.inventoryScreen = new InventoryScreen(null, this.screenManager, this.intentBus);
+    this.inventoryScreen = new InventoryScreen(null, this.screenManager, this.intentBus, { settingsModel: this.settingsModel });
     this.presetsScreen = new PresetsScreen(this.screenManager, this.intentBus);
 
     this.loginScreen = new LoginScreen(this.authService, this.screenManager, this.intentBus);
@@ -162,6 +169,12 @@ export class HUD {
 
     this.intentBus.on(IntentBus.Events.BACK_TO_MENU, () => {
       this.screenManager.open(ScreenType.MENU);
+    });
+
+    this.intentBus.on(IntentBus.Events.START_TUTORIAL, () => {
+      this.tutorial.start();
+      // Si estaba apagado queda encendido, como si se activara en Configuración.
+      this.settingsModel.set('showTutorial', true);
     });
 
     this.intentBus.on(IntentBus.Events.OPEN_SCREEN, (payload) => {
@@ -297,6 +310,7 @@ export class HUD {
       this.container.appendChild(this.chatHintElement);
     }
     this.tutorial.mount(this.container);
+    if (!this.clickToPlayElement.parentNode) this.container.appendChild(this.clickToPlayElement);
     this.toast.mount(this.container);
 
     // Inicializar con el Menú Principal
@@ -312,6 +326,11 @@ export class HUD {
   }
 
   /** Abre o cierra el chat del asistente. */
+  /** Muestra u oculta el aviso de hacer clic para capturar el mouse. */
+  setClickToPlay(visible) {
+    this.clickToPlayElement.hidden = !visible;
+  }
+
   toggleChat() {
     this.chatPanel.toggle();
     if (this.chatPanel.isOpen) this.tutorial.notify(TutorialPanel.Signals.CHAT_OPENED);

@@ -28,7 +28,8 @@ export class IntentBus {
     LOGOUT_REQUESTED: 'intent:logoutRequested',
     START_BUILD_CHALLENGE: 'intent:startBuildChallenge',
     CANCEL_BUILD_CHALLENGE: 'intent:cancelBuildChallenge',
-    SPEAK_BLOCK: 'intent:speakBlock'
+    SPEAK_BLOCK: 'intent:speakBlock',
+    START_TUTORIAL: 'intent:startTutorial'
   });
 
   #listeners = new Map();
