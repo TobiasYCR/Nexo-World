@@ -141,6 +141,42 @@ export class SaveManager {
     }
   }
 
+  /**
+   * Nombres de todas las partidas guardadas. Un Storage sin length/key (algunos
+   * dobles de prueba) devuelve una lista vacía.
+   * @returns {string[]}
+   */
+  listSlots() {
+    const slots = [];
+    if (!this.#storage || typeof this.#storage.key !== 'function') return slots;
+    try {
+      for (let index = 0; index < this.#storage.length; index += 1) {
+        const key = this.#storage.key(index);
+        if (key?.startsWith(SaveManager.STORAGE_PREFIX)) slots.push(key.slice(SaveManager.STORAGE_PREFIX.length));
+      }
+    } catch {
+      return [];
+    }
+    return slots;
+  }
+
+  /**
+   * Partida guardada con ese nombre, sin distinguir mayúsculas ni espacios de
+   * los bordes ("nuevo mundo " es el mismo mundo que "Nuevo Mundo").
+   * @param {string} name
+   * @returns {string|null} el nombre tal como está guardado, o null
+   */
+  findSlot(name) {
+    const wanted = SaveManager.normalizeName(name);
+    if (!wanted) return null;
+    return this.listSlots().find((slot) => SaveManager.normalizeName(slot) === wanted) ?? null;
+  }
+
+  /** Forma de comparar nombres de mundos. */
+  static normalizeName(name) {
+    return typeof name === 'string' ? name.trim().toLocaleLowerCase('es') : '';
+  }
+
   delete(slotName) {
     const { Reasons } = SaveResult;
     if (!SaveManager.#isValidSlot(slotName)) return SaveResult.fail(Reasons.INVALID_SLOT);

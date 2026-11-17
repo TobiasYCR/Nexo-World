@@ -10,15 +10,19 @@ export class WorldCreationView {
   #gameMode = 'creative'; // 'creative' | 'survival'
   #onSubmit;
   #onCancel;
+  #isNameTaken;
+  #nameOnly = false;
 
   /**
    * @param {Object} options
    * @param {Function} [options.onSubmit]
    * @param {Function} [options.onCancel]
+   * @param {(name: string) => boolean} [options.isNameTaken] true si ya hay un mundo guardado con ese nombre
    */
-  constructor({ onSubmit = null, onCancel = null } = {}) {
+  constructor({ onSubmit = null, onCancel = null, isNameTaken = null } = {}) {
     this.#onSubmit = onSubmit;
     this.#onCancel = onCancel;
+    this.#isNameTaken = isNameTaken;
     this.element = document.createElement('div');
     this.element.className = 'nx-world-creation-view';
 
@@ -65,6 +69,12 @@ export class WorldCreationView {
       this.#worldName = e.target.value;
       this.validate();
     });
+    this.nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault?.();
+        this.submit();
+      }
+    });
 
     nameGroup.appendChild(nameLabel);
     nameGroup.appendChild(this.nameInput);
@@ -88,6 +98,7 @@ export class WorldCreationView {
       this.#seed = e.target.value.trim();
     });
 
+    this.seedGroup = seedGroup;
     seedGroup.appendChild(seedLabel);
     seedGroup.appendChild(this.seedInput);
     this.element.appendChild(seedGroup);
@@ -141,6 +152,7 @@ export class WorldCreationView {
       this.modeCards[m.id] = card;
     });
 
+    this.modeGroup = modeGroup;
     modeGroup.appendChild(modeLabel);
     modeGroup.appendChild(modeOptions);
     this.element.appendChild(modeGroup);
@@ -156,9 +168,7 @@ export class WorldCreationView {
     const advDetails = document.createElement('div');
     advDetails.className = 'nx-advanced-grid';
 
-    const width = GameConfig.world?.WIDTH ?? 64;
-    const height = GameConfig.world?.HEIGHT ?? 32;
-    const depth = GameConfig.world?.DEPTH ?? 64;
+    const { WORLD_WIDTH: width, WORLD_HEIGHT: height, WORLD_DEPTH: depth } = GameConfig.world;
 
     advDetails.innerHTML = `
       <span>Dimensiones: <strong>${width}x${height}x${depth} bloques</strong></span>
@@ -166,6 +176,7 @@ export class WorldCreationView {
       <span>Tamaño de chunk: <strong>16x16 bloques</strong></span>
     `;
 
+    this.advancedGroup = advGroup;
     advGroup.appendChild(advHeader);
     advGroup.appendChild(advDetails);
     this.element.appendChild(advGroup);
@@ -181,19 +192,26 @@ export class WorldCreationView {
     });
   }
 
+  /**
+   * Solo nombre: para guardar un mundo que todavía no tiene nombre. Oculta la
+   * semilla, el modo y los parámetros del motor.
+   */
+  setNameOnly(nameOnly) {
+    this.#nameOnly = Boolean(nameOnly);
+    for (const group of [this.seedGroup, this.modeGroup, this.advancedGroup]) group.hidden = this.#nameOnly;
+  }
+
+  setWorldName(name) {
+    this.#worldName = String(name ?? '');
+    this.nameInput.value = this.#worldName;
+  }
+
   validate() {
     const trimmed = this.#worldName.trim();
-    if (!trimmed) {
-      this.nameError.textContent = 'El nombre del mundo no puede estar vacío.';
-      this.nameError.hidden = false;
-      this.nameInput.classList.add('is-invalid');
-      return false;
-    }
-    if (trimmed.length > 32) {
-      this.nameError.textContent = 'El nombre no puede exceder 32 caracteres.';
-      this.nameError.hidden = false;
-      this.nameInput.classList.add('is-invalid');
-      return false;
+    if (!trimmed) return this.#showError('El nombre del mundo no puede estar vacío.');
+    if (trimmed.length > 32) return this.#showError('El nombre no puede exceder 32 caracteres.');
+    if (this.#isNameTaken?.(trimmed)) {
+      return this.#showError(`Ya existe un mundo llamado "${trimmed}". Cambiale el nombre para no pisarlo.`);
     }
 
     this.nameError.hidden = true;
@@ -201,10 +219,23 @@ export class WorldCreationView {
     return true;
   }
 
+  #showError(message) {
+    this.nameError.textContent = message;
+    this.nameError.hidden = false;
+    this.nameInput.classList.add('is-invalid');
+    return false;
+  }
+
   submit() {
     if (!this.validate()) {
       this.nameInput.focus();
       return null;
+    }
+
+    if (this.#nameOnly) {
+      const payload = { name: this.#worldName.trim() };
+      this.#onSubmit?.(payload);
+      return payload;
     }
 
     const payload = {

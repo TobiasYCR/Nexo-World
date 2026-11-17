@@ -310,6 +310,11 @@ export class Game {
     return this.state.isPaused;
   }
 
+  /** Nombre del mundo en juego, o null si todavía no se guardó con nombre. */
+  get worldName() {
+    return this.#session.name;
+  }
+
   saveGame(slot) {
     this.progression.flush();
     const result = this.saveManager.save(slot, this.world, this.player, {

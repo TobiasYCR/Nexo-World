@@ -1,4 +1,5 @@
 import { Base64Codec } from '../utils/Base64Codec.js';
+import { RunLengthCodec } from '../utils/RunLengthCodec.js';
 import { BlockIds } from '../utils/Constants.js';
 import { SaveResult } from './SaveResult.js';
 
@@ -7,21 +8,25 @@ import { SaveResult } from './SaveResult.js';
  * Separado de SaveManager para que el formato sea independiente del medio de
  * almacenamiento.
  *
- * Formato v2: cada chunk guarda su Uint8Array en base64 (~1/3 del tamaño del
- * JSON numérico de v1). Los chunks totalmente de aire no se guardan.
+ * Formato v3: cada chunk guarda sus bloques comprimidos por tramos
+ * (RunLengthCodec) y en base64, en el campo `rle`. Los chunks totalmente de
+ * aire no se guardan. Los guardados v2 (base64 sin comprimir, campo `data`)
+ * se siguen cargando.
  *
  * La carga es en dos fases: decode() valida y decodifica TODO sin tocar el
  * mundo; apply() recién entonces lo reemplaza. Un guardado dañado a la mitad
  * deja el mundo en memoria intacto.
  */
 export class WorldSerializer {
-  static FORMAT_VERSION = 2;
+  static FORMAT_VERSION = 3;
+  /** Versiones que decode() todavía entiende. */
+  static READABLE_VERSIONS = Object.freeze([2, 3]);
 
   serialize(world) {
     const chunks = [];
     for (const chunk of world.chunks) {
       if (chunk.blocks.every((blockId) => blockId === BlockIds.AIR)) continue;
-      chunks.push({ x: chunk.chunkX, z: chunk.chunkZ, data: Base64Codec.encode(chunk.blocks) });
+      chunks.push({ x: chunk.chunkX, z: chunk.chunkZ, rle: Base64Codec.encode(RunLengthCodec.encode(chunk.blocks)) });
     }
 
     return {
@@ -39,7 +44,7 @@ export class WorldSerializer {
   decode(world, data) {
     const { Reasons } = SaveResult;
     if (!WorldSerializer.#isObject(data)) return SaveResult.fail(Reasons.CORRUPT_DATA, 'world no es un objeto');
-    if (data.version !== WorldSerializer.FORMAT_VERSION) {
+    if (!WorldSerializer.READABLE_VERSIONS.includes(data.version)) {
       return SaveResult.fail(Reasons.INCOMPATIBLE_VERSION, `formato de mundo v${data.version}, se esperaba v${WorldSerializer.FORMAT_VERSION}`);
     }
 
@@ -73,9 +78,10 @@ export class WorldSerializer {
       if (seen.has(key)) return fail('chunk duplicado');
       seen.add(key);
 
-      const blocks = Base64Codec.decode(entry.data);
-      if (!blocks) return fail('base64 inválido');
-      if (blocks.length !== expectedLength) return fail(`se esperaban ${expectedLength} bloques y hay ${blocks.length}`);
+      const bytes = Base64Codec.decode(data.version === 2 ? entry.data : entry.rle);
+      if (!bytes) return fail('base64 inválido');
+      const blocks = data.version === 2 ? bytes : RunLengthCodec.decode(bytes, expectedLength);
+      if (!blocks || blocks.length !== expectedLength) return fail(`los bloques no suman ${expectedLength}`);
       for (const blockId of blocks) {
         if (!knownIds[blockId]) return fail(`id de bloque desconocido ${blockId}`);
       }

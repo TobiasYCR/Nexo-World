@@ -78,8 +78,9 @@ export class WorldSelectionView {
         let status = 'available';
         let statusText = 'Disponible';
         let savedAt = null;
+        let savedAtMs = 0;
         let seed = 'N/D';
-        let dimensions = '64x32x64';
+        let dimensions = 'N/D';
         let saveVersion = null;
 
         try {
@@ -95,11 +96,11 @@ export class WorldSelectionView {
             status = 'available';
             statusText = 'Listo para jugar';
             saveVersion = envelope.saveVersion;
-            savedAt = envelope.savedAt ? new Date(envelope.savedAt).toLocaleString() : null;
-            if (envelope.world) {
-              dimensions = `${envelope.world.width ?? 64}x${envelope.world.height ?? 32}x${envelope.world.depth ?? 64}`;
-              seed = envelope.world.seed ?? envelope.seed ?? 'N/D';
-            }
+            savedAtMs = Number(envelope.savedAt) || 0;
+            savedAt = savedAtMs ? new Date(savedAtMs).toLocaleString() : null;
+            const size = envelope.world?.dimensions;
+            if (size) dimensions = `${size.width}x${size.height}x${size.depth}`;
+            seed = envelope.meta?.seed ?? envelope.world?.seed ?? 'N/D';
           }
         } catch (_) {
           status = 'corrupt';
@@ -111,6 +112,7 @@ export class WorldSelectionView {
           status,
           statusText,
           savedAt,
+          savedAtMs,
           seed,
           dimensions,
           bytes,
@@ -122,8 +124,8 @@ export class WorldSelectionView {
       console.error('[WorldSelectionView] Error al escanear partidas:', err);
     }
 
-    // Ordenar de más reciente a más antiguo si hay fecha
-    list.sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
+    // De más reciente a más antiguo (por la fecha real, no por el texto).
+    list.sort((a, b) => b.savedAtMs - a.savedAtMs);
     return list;
   }
 
