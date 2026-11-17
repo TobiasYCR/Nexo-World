@@ -1,6 +1,7 @@
 import { PixelCanvas } from './PixelCanvas.js';
 import { SeededRandom } from './SeededRandom.js';
 import { TilingNoise } from './TilingNoise.js';
+import { MaterialTextureFactory } from './MaterialTextureFactory.js';
 
 /**
  * Diseños de las texturas de bloque. Cada material combina ruido periódico
@@ -37,7 +38,7 @@ export class BlockTextureFactory {
 
   /** @returns {Map<string, PixelCanvas>} nombre de archivo -> lienzo */
   static createAll() {
-    return new Map([
+    const base = new Map([
       ['grass_top.png', BlockTextureFactory.grassTop()],
       ['grass_side.png', BlockTextureFactory.grassSide()],
       ['dirt.png', BlockTextureFactory.dirt()],
@@ -56,6 +57,9 @@ export class BlockTextureFactory {
       ['gold_ore.png', BlockTextureFactory.ore('gold_ore', BlockTextureFactory.PALETTES.gold)],
       ['diamond_ore.png', BlockTextureFactory.ore('diamond_ore', BlockTextureFactory.PALETTES.diamond)]
     ]);
+    // Las piedras y maderas del catálogo; la roca madre nueva reemplaza a la de acá.
+    for (const [fileName, canvas] of MaterialTextureFactory.createAll()) base.set(fileName, canvas);
+    return base;
   }
 
   static grassTop() {
