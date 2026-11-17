@@ -28,6 +28,8 @@ Proyecto de la materia P.I.S.W.D. Equipo: Andrea Cubas, Tobias Caballero, Leandr
 - **Modo educativo:**
   - Planos de construcción (casa, torre y puente) con guía 3D en el mundo. Se apoyan en el suelo llano más cercano y piden los bloques por etapas: piso, columnas, paredes, ventanas y techo.
   - La guía muestra la textura de cada bloque; los lugares del bloque que se tiene en la mano se iluminan. Al completar un plano, termina.
+  - Catálogo de 14 piedras y 16 maderas, cada una un bloque propio con su textura, descripción y lectura en voz alta (velocidad ajustable en Configuración).
+- **Tutorial** para quien nunca jugó, arriba a la izquierda: avanza solo al hacer cada cosa, se puede saltar y se vuelve a activar desde Configuración → Interfaz.
   - Nombres de bloques en sílabas y lectura en voz alta (Web Speech API).
 - **Asistente de consultas:** chat que responde sobre el juego y la partida a partir de los datos del juego, sin servicios externos.
 - **Render por mallas de chunk:** solo las caras visibles, caras iguales unidas (greedy meshing), recorte por distancia y por cono de visión.
@@ -126,7 +128,8 @@ Para iniciar sesión solo hace falta que MySQL esté corriendo y el servidor del
 | `O` | Configuración |
 | `F1` | Controles |
 | `F3` | Panel de diagnóstico |
-| `Esc` | Pausa / cerrar pantalla |
+| `Esc` | Pausa / cerrar pantalla (también cierra el menú de pausa) |
+| `Enter` | Siguiente paso del tutorial |
 
 ---
 

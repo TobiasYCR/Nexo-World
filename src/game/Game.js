@@ -50,6 +50,9 @@ import { ChallengeCompleteEffect } from '../viewmodel/ChallengeCompleteEffect.js
  * física ni dibujado. Cada sistema es reemplazable de forma aislada.
  */
 export class Game {
+  /** Se reanudó desde la interfaz: el Escape de este frame ya lo usó el menú de pausa. */
+  #resumedThisFrame = false;
+
   #viewmodelState = { isBreaking: false, horizontalSpeed: 0, isOnGround: false };
   /** Nombre (si se guardó), semilla y modo de la partida en curso. */
   #session = { name: null, seed: 0, mode: 'survival' };
@@ -265,7 +268,16 @@ export class Game {
 
   #handleGlobalActions() {
     if (this.input.wasActionJustPressed(InputActions.TOGGLE_DEBUG)) this.hud.toggleDebug();
-    if (this.input.wasActionJustPressed(InputActions.PAUSE)) this.togglePause();
+    // Escape solo pausa. Con la partida en pausa, Escape lo maneja el menú de
+    // pausa (que la reanuda): si acá también se alternaba, la misma tecla
+    // reanudaba y volvía a pausar, y el menú no se cerraba nunca.
+    const pausePressed = this.input.wasActionJustPressed(InputActions.PAUSE);
+    if (this.#resumedThisFrame) {
+      // El menú de pausa se cierra con el mismo Escape que el juego lee en este frame.
+      this.#resumedThisFrame = false;
+      return;
+    }
+    if (pausePressed && this.state.isRunning) this.pause();
   }
 
   togglePause() {
@@ -280,6 +292,7 @@ export class Game {
 
   resume() {
     this.state.set(GameStates.RUNNING);
+    this.#resumedThisFrame = true;
   }
 
   get isPaused() {

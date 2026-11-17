@@ -62,11 +62,24 @@ test('el recorte por distancia y por oclusión reduce los bloques dibujados', as
   assert.ok(game.renderer.stats.renderedBlocks < totalSolid);
 });
 
-test('la pausa se alterna con la acción correspondiente', async () => {
+test('Escape pausa, y con la partida en pausa no la vuelve a pausar', async () => {
   const game = await startGame();
   dom.window.dispatch('keydown', { code: 'Escape' });
   game.update(1 / 60);
+  dom.window.dispatch('keyup', { code: 'Escape' });
   assert.equal(game.state.current, GameStates.PAUSED);
+
+  // El menú de pausa recibe el mismo Escape y reanuda; el juego no debe pausar de nuevo.
+  dom.window.dispatch('keydown', { code: 'Escape' });
+  game.resume();
+  game.update(1 / 60);
+  dom.window.dispatch('keyup', { code: 'Escape' });
+  assert.equal(game.state.current, GameStates.RUNNING);
+
+  game.pause();
+  dom.window.dispatch('keydown', { code: 'Escape' });
+  game.update(1 / 60);
+  assert.equal(game.state.current, GameStates.PAUSED, 'en pausa, Escape no alterna desde el juego');
 });
 
 test('el movimiento solo se aplica mientras el juego corre', async () => {
