@@ -83,6 +83,21 @@ html, body {
   pointer-events: auto;
 }
 
+/* Fondo fijo de los menús fuera de partida: tapa el canvas, debajo de todas las pantallas. */
+.nx-menu-scenery {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: #0b0f19;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+
+.nx-menu-scenery[hidden] {
+  display: none;
+}
+
 /* Solo los elementos interactivos o pantallas activas capturan el puntero */
 .screen:not([hidden]),
 .screen.is-active,

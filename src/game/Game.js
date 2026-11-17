@@ -54,6 +54,7 @@ import { ChallengeCompleteEffect } from '../viewmodel/ChallengeCompleteEffect.js
 export class Game {
   /** Se reanudó desde la interfaz: el Escape de este frame ya lo usó el menú de pausa. */
   #resumedThisFrame = false;
+  #worldHidden = false;
 
   #viewmodelState = { isBreaking: false, horizontalSpeed: 0, isOnGround: false };
   /** Nombre (si se guardó), semilla y modo de la partida en curso. */
@@ -268,8 +269,21 @@ export class Game {
     this.input.endFrame();
   }
 
+  /**
+   * Con un fondo fijo tapando el canvas (menús fuera de partida) no se dibuja
+   * el mundo: no se ve y así no gasta GPU.
+   */
+  setWorldHidden(hidden) {
+    this.#worldHidden = Boolean(hidden);
+  }
+
+  get isWorldHidden() {
+    return this.#worldHidden;
+  }
+
   /** Dibujado de un frame. Delegado por completo en el renderer. */
   render() {
+    if (this.#worldHidden) return;
     this.renderer.render(this.world, this.camera);
   }
 

@@ -173,6 +173,9 @@ export class GameUiBridge {
       }
     });
 
+    // Mientras el fondo fijo del menú tapa el canvas, el mundo no se dibuja.
+    this.hud?.menuScenery?.onChange((visible) => this.game?.setWorldHidden?.(visible));
+
     this.#bindBuildChallenge();
     this.#bindTutorial();
     this.#bindPointerLock();

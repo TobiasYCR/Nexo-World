@@ -1,3 +1,4 @@
+import { GameConfig } from '../game/GameConfig.js';
 import { SaveManager } from '../persistence/SaveManager.js';
 import { SaveResult } from '../persistence/SaveResult.js';
 import { Icons, setIconLabel } from './Icons.js';
@@ -101,6 +102,12 @@ export class WorldSelectionView {
             const size = envelope.world?.dimensions;
             if (size) dimensions = `${size.width}x${size.height}x${size.depth}`;
             seed = envelope.meta?.seed ?? envelope.world?.seed ?? 'N/D';
+            // Un mundo de otro tamaño (por ejemplo, de antes de agrandarlo) no se puede cargar.
+            const { WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH } = GameConfig.world;
+            if (size && (size.width !== WORLD_WIDTH || size.height !== WORLD_HEIGHT || size.depth !== WORLD_DEPTH)) {
+              status = 'incompatible';
+              statusText = 'Otro tamaño de mundo';
+            }
           }
         } catch (_) {
           status = 'corrupt';

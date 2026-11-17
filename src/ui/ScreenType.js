@@ -16,5 +16,6 @@ export const ScreenType = Object.freeze({
   PROFILE: 'profile',
   PASSWORD_RECOVERY: 'password-recovery',
   PRESETS: 'presets',
-  LEADERBOARD: 'leaderboard'
+  LEADERBOARD: 'leaderboard',
+  HOW_TO_PLAY: 'how-to-play'
 });

@@ -1,4 +1,5 @@
 import { Crosshair } from './Crosshair.js';
+import { MenuScenery } from './MenuScenery.js';
 import { TutorialPanel } from './TutorialPanel.js';
 import { KeyNames } from '../chatbot/KeyNames.js';
 import { DebugOverlay } from './DebugOverlay.js';
@@ -17,6 +18,7 @@ import { ControlsScreen } from '../interface/screens/ControlsScreen.js';
 import { InventoryScreen } from '../interface/screens/InventoryScreen.js';
 import { WorldSelectionScreen } from '../interface/screens/WorldSelectionScreen.js';
 import { WorldCreationScreen } from '../interface/screens/WorldCreationScreen.js';
+import { HowToPlayScreen } from '../interface/screens/HowToPlayScreen.js';
 import { SettingsModel } from '../interface/models/SettingsModel.js';
 import { AuthService } from '../auth/AuthService.js';
 import { LocalAuthClient } from '../users/LocalAuthClient.js';
@@ -96,6 +98,11 @@ export class HUD {
     });
     if (this.settingsModel.get('showTutorial')) this.tutorial.start();
 
+    // Imagen fija detrás de los menús, en vez del mundo.
+    this.menuScenery = new MenuScenery();
+    this.menuScenery.mount(this.container);
+    this.menuScenery.bind(this.screenManager);
+
     this.#registerScreens();
     this.#setupIntentListeners();
     this.#setupKeyboardShortcuts();
@@ -128,6 +135,7 @@ export class HUD {
     this.profileScreen = new ProfileScreen(this.authService, this.backend2Service, this.screenManager, this.intentBus);
     this.passwordRecoveryScreen = new PasswordRecoveryScreen(this.authService, this.screenManager, this.intentBus);
     this.leaderboardScreen = new LeaderboardScreen(this.backend2Service, this.screenManager, this.intentBus);
+    this.howToPlayScreen = new HowToPlayScreen(this.screenManager, this.intentBus);
 
     this.screenManager.register(ScreenType.MENU, this.menuScreen);
     this.screenManager.register(ScreenType.WORLD_SELECTION, this.worldSelectionScreen);
@@ -142,6 +150,7 @@ export class HUD {
     this.screenManager.register(ScreenType.PROFILE, this.profileScreen);
     this.screenManager.register(ScreenType.PASSWORD_RECOVERY, this.passwordRecoveryScreen);
     this.screenManager.register(ScreenType.LEADERBOARD, this.leaderboardScreen);
+    this.screenManager.register(ScreenType.HOW_TO_PLAY, this.howToPlayScreen);
   }
 
   /**

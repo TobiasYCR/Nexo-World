@@ -7,9 +7,9 @@ import { InputActions, BlockIds } from '../utils/Constants.js';
 export const GameConfig = Object.freeze({
   world: Object.freeze({
     BLOCK_SIZE: 20,
-    WORLD_WIDTH: 96,
+    WORLD_WIDTH: 128,
     WORLD_HEIGHT: 24,
-    WORLD_DEPTH: 96,
+    WORLD_DEPTH: 128,
     /** Altura base del terreno generado, en bloques. */
     BASE_TERRAIN_HEIGHT: 6,
     /** Amplitud vertical del ruido, en bloques. */
