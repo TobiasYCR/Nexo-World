@@ -29,6 +29,26 @@ export const SETTINGS_SCHEMA = Object.freeze({
     formatter: (v) => `${Math.round(v)}°`,
     disabled: false
   }),
+  musicEnabled: Object.freeze({
+    id: 'musicEnabled',
+    category: 'general',
+    label: 'Música de ambiente',
+    type: 'boolean',
+    default: true,
+    disabled: false
+  }),
+  musicVolume: Object.freeze({
+    id: 'musicVolume',
+    category: 'general',
+    label: 'Volumen de la música',
+    type: 'number',
+    default: 40,
+    min: 0,
+    max: 100,
+    step: 5,
+    formatter: (v) => `${Math.round(v)}%`,
+    disabled: false
+  }),
   speechRate: Object.freeze({
     id: 'speechRate',
     category: 'general',
@@ -165,6 +185,14 @@ export const SETTINGS_SCHEMA = Object.freeze({
     max: 1.0,
     step: 0.1,
     formatter: (v) => `${Math.round(v * 100)}%`,
+    disabled: false
+  }),
+  clouds: Object.freeze({
+    id: 'clouds',
+    category: 'graphics',
+    label: 'Nubes',
+    type: 'boolean',
+    default: true,
     disabled: false
   }),
   showTutorial: Object.freeze({

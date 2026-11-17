@@ -47,6 +47,15 @@ export class SettingsApplier {
         if (value && hud?.tutorial && !hud.tutorial.isActive) hud.tutorial.start();
         if (!value && hud?.tutorial?.isActive) hud.tutorial.skipAll();
         return true;
+      case 'musicEnabled':
+        game?.music?.setEnabled?.(value);
+        return true;
+      case 'musicVolume':
+        game?.audio?.setCategoryVolume?.('music', value / 100);
+        return true;
+      case 'clouds':
+        game?.clouds?.setEnabled?.(value);
+        return true;
       case 'speechRate':
         this.speech?.setRate?.(value);
         return true;

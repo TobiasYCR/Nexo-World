@@ -7,9 +7,13 @@ import { GameConfig } from '../game/GameConfig.js';
  * No conoce reglas del juego ni modifica el estado del mundo.
  */
 export class Renderer {
-  constructor(p, blockRenderer, config = GameConfig.rendering) {
+  /**
+   * @param {object} [cloudLayer] capa de nubes; se dibuja después del mundo
+   */
+  constructor(p, blockRenderer, config = GameConfig.rendering, cloudLayer = null) {
     this.p = p;
     this.blockRenderer = blockRenderer;
+    this.cloudLayer = cloudLayer;
     this.lighting = new LightingManager(p, config);
     this.backgroundColor = config.BACKGROUND_COLOR;
     this.overlays = new Set();
@@ -34,6 +38,8 @@ export class Renderer {
     camera.applyTo(p);
     this.lighting.apply();
     this.blockRenderer.render(world, camera.position, camera);
+    // Las nubes apagan las luces: se vuelven a aplicar para los overlays.
+    if (this.cloudLayer?.draw(camera.position)) this.lighting.apply();
     for (const overlay of this.overlays) overlay.draw(p, camera);
   }
 

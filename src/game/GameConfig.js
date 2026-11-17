@@ -297,7 +297,7 @@ export const GameConfig = Object.freeze({
     /** Bloques caminados entre un paso y el siguiente (corriendo se recorre más rápido). */
     // PLAYER_SPEED·2π / (WALK_BOB_FREQUENCY·BLOCK_SIZE): un paso por ciclo del balanceo de cámara al caminar.
     STEP_DISTANCE_BLOCKS: 4.2,
-    STEP_VOLUME: 0.45
+    STEP_VOLUME: 0.28
   }),
 
   camera: Object.freeze({
@@ -324,6 +324,18 @@ export const GameConfig = Object.freeze({
      * pesaba; con un juego de píxeles grandes no se nota la diferencia.
      */
     PIXEL_DENSITY: 1,
+    /** Capa de nubes: una sola textura que se repite y se desplaza con el viento. */
+    CLOUDS: Object.freeze({
+      ENABLED: true,
+      /** Bloques por encima del techo del mundo. */
+      HEIGHT_ABOVE_WORLD: 14,
+      /** Bloques de cielo que cubre una repetición de la textura (128 px → 2 bloques por píxel). */
+      TILE_BLOCKS: 256,
+      /** Radio de la capa alrededor de la cámara, en bloques (dentro del plano lejano). */
+      RADIUS_BLOCKS: 180,
+      /** Velocidad del viento, en bloques por segundo. */
+      WIND_BLOCKS_PER_SECOND: 1.2
+    }),
     /** No dibujar los chunks que quedan fuera del cono de visión. */
     FRUSTUM_CULLING: true,
     /** Unir caras vecinas del mismo tipo en rectángulos (menos geometría). */
@@ -374,6 +386,8 @@ export const GameConfig = Object.freeze({
      * por eso estas rutas no incluyen el prefijo "assets/".
      */
     TEXTURE_BASE_PATH: '/textures/blocks/',
+    /** Textura de las nubes (scripts/lib/SkyTextureFactory.js). */
+    CLOUD_TEXTURE: '/textures/sky/clouds.png',
     AUDIO_BASE_PATH: '/audio/'
   }),
 
