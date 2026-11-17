@@ -35,19 +35,26 @@ export class SfxSynthesizer {
   }
 
   /**
-   * Paso: ruido muy filtrado (sordo) con un golpe grave corto. Dos variantes
-   * con distinto filtro para que caminar no suene a metrónomo.
+   * Paso: un roce suave sobre pasto, no un golpe. Ruido en una banda media
+   * (sin los graves que lo hacían pesado ni el siseo agudo), ataque de 8 ms y
+   * cola corta. Dos variantes con distinta banda y largo para que caminar no
+   * suene a metrónomo.
    */
   static step(variant) {
     const random = SeededRandom.fromString(`step_${variant}`);
-    const smoothing = variant === 1 ? 0.18 : 0.24;
+    const [bright, rumble, decay] = variant === 1 ? [0.42, 0.05, 0.026] : [0.36, 0.045, 0.032];
     let lowPassed = 0;
-    return SfxSynthesizer.#render(0.11, (time) => {
-      lowPassed += (random.signed() - lowPassed) * smoothing;
-      const attack = Math.min(1, time / 0.004);
-      const noise = lowPassed * 1.8 * Math.exp(-time / 0.03);
-      const thump = Math.sin(2 * Math.PI * (variant === 1 ? 90 : 105) * time) * Math.exp(-time / 0.02) * 0.35;
-      return (noise + thump) * attack * 0.55;
+    let rumblePassed = 0;
+    return SfxSynthesizer.#render(0.1, (time) => {
+      const noise = random.signed();
+      lowPassed += (noise - lowPassed) * bright;
+      rumblePassed += (noise - rumblePassed) * rumble;
+      // Pasa banda: lo filtrado menos su parte más grave.
+      const band = lowPassed - rumblePassed;
+      const attack = Math.min(1, time / 0.008);
+      // Dos roces muy seguidos, como una pisada que apoya talón y punta.
+      const second = time > 0.035 ? 0.45 * Math.exp(-(time - 0.035) / decay) : 0;
+      return band * attack * (Math.exp(-time / decay) + second) * 0.5;
     });
   }
 

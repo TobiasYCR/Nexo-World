@@ -20,6 +20,8 @@ import { CollisionSystem } from '../physics/CollisionSystem.js';
 import { Raycast } from '../physics/Raycast.js';
 import { InputManager } from '../input/InputManager.js';
 import { TextureManager } from '../rendering/TextureManager.js';
+import { CloudLayer } from '../rendering/CloudLayer.js';
+import { AmbientMusic } from '../audio/AmbientMusic.js';
 import { BlockRenderer } from '../rendering/BlockRenderer.js';
 import { Renderer } from '../rendering/Renderer.js';
 import { Hotbar } from '../inventory/Hotbar.js';
@@ -108,7 +110,11 @@ export class Game {
 
     this.textureManager = new TextureManager(p, config.assets);
     this.blockRenderer = new BlockRenderer(p, this.blockRegistry, this.textureManager, config);
-    this.renderer = new Renderer(p, this.blockRenderer, config.rendering);
+    this.clouds = new CloudLayer(p, config.rendering.CLOUDS, {
+      blockSize: config.world.BLOCK_SIZE,
+      worldHeight: config.world.WORLD_HEIGHT
+    });
+    this.renderer = new Renderer(p, this.blockRenderer, config.rendering, this.clouds);
 
     this.hotbar = new Hotbar(config.inventory.HOTBAR_SIZE);
     this.blockInteraction = new BlockInteraction(this.world, this.player, this.hotbar, this.raycast, config, this.events);
@@ -173,6 +179,8 @@ export class Game {
     this.renderer.addOverlay(this.challengeCompleteEffect);
     this.renderer.addOverlay(this.visualEffectsManager);
     this.audio = new AudioManager(config.assets);
+    /** Arranca con el primer clic en el juego (el navegador no deja sonar antes). */
+    this.music = new AmbientMusic(this.audio);
     this.footsteps = new FootstepPlayer(config.audio, config.world.BLOCK_SIZE);
     this.events.on(GameEventTypes.BLOCK_BROKEN, () => this.audio.play(SoundIds.BLOCK_BREAK));
     this.events.on(GameEventTypes.BLOCK_PLACED, () => this.audio.play(SoundIds.BLOCK_PLACE));
@@ -220,6 +228,7 @@ export class Game {
 
     // Deliberadamente sin await: el mundo se dibuja con colores hasta que lleguen.
     this.textureManager.loadAll(this.blockRegistry.textureNames());
+    this.clouds.load(this.textureManager, this.config.assets.CLOUD_TEXTURE).catch(() => {});
     this.audio.preload().catch(() => {});
   }
 
@@ -250,6 +259,7 @@ export class Game {
     }
 
     this.#updateViewmodel(deltaTime);
+    this.clouds.update(deltaTime);
     this.hud.update(deltaTime, this.#buildDebugStats(), {
       selectedIndex: this.hotbar.selectedIndex,
       slots: this.hotbar.slots.map(({ blockType, count }) => ({ blockType, count }))
@@ -523,7 +533,7 @@ export class Game {
   #bindPointerLock(canvasElement) {
     canvasElement.addEventListener('click', () => {
       if (!this.input.isPointerLocked) this.input.mouse.requestPointerLock();
-      this.audio.unlock().catch(() => {});
+      this.audio.unlock().then((ready) => ready && this.music.start()).catch(() => {});
     });
   }
 

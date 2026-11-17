@@ -124,6 +124,27 @@ export class SettingsScreen extends Screen {
     });
     generalPanel.appendChild(this.#controls.masterVolume.element);
 
+    // Música de ambiente: encendida o apagada, y su volumen
+    this.#controls.musicEnabled = new Toggle({
+      label: schema.musicEnabled.label,
+      checked: this.model.get('musicEnabled'),
+      disabled: schema.musicEnabled.disabled,
+      onChange: (checked) => this.#onSettingChange('musicEnabled', checked)
+    });
+    generalPanel.appendChild(this.#controls.musicEnabled.element);
+
+    this.#controls.musicVolume = new Slider({
+      label: schema.musicVolume.label,
+      min: schema.musicVolume.min,
+      max: schema.musicVolume.max,
+      step: schema.musicVolume.step,
+      value: this.model.get('musicVolume'),
+      formatter: schema.musicVolume.formatter,
+      disabled: schema.musicVolume.disabled,
+      onChange: (val) => this.#onSettingChange('musicVolume', val)
+    });
+    generalPanel.appendChild(this.#controls.musicVolume.element);
+
     // Velocidad de la lectura en voz alta (sílabas, palabras y descripciones)
     this.#controls.speechRate = new Slider({
       label: schema.speechRate.label,
@@ -225,6 +246,15 @@ export class SettingsScreen extends Screen {
       onChange: (checked) => this.#onSettingChange('damageEffects', checked)
     });
     graphicsPanel.appendChild(this.#controls.damageEffects.element);
+
+    // Nubes
+    this.#controls.clouds = new Toggle({
+      label: schema.clouds.label,
+      checked: this.model.get('clouds'),
+      disabled: schema.clouds.disabled,
+      onChange: (checked) => this.#onSettingChange('clouds', checked)
+    });
+    graphicsPanel.appendChild(this.#controls.clouds.element);
 
     // Frustum Culling (Disabled)
     this.#controls.frustumCulling = new Toggle({
