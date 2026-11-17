@@ -2,7 +2,7 @@ import { IntentBus } from './IntentBus.js';
 import { ScreenType } from './ScreenType.js';
 import { Icons, setIconLabel } from './Icons.js';
 import { SpeechService } from '../audio/SpeechService.js';
-import { resolveBlockSyllables } from '../blocks/BlockType.js';
+import { resolveBlockSyllables, resolveBlockDescription } from '../blocks/BlockType.js';
 
 /**
  * Panel HUD in-game del Modo Educativo (Desafíos de Construcción con Presets).
@@ -220,12 +220,21 @@ export class BuildChallengeHUD {
       textCol.appendChild(blockName);
       textCol.appendChild(syllablesRow);
 
+      const descText = document.createElement('p');
+      descText.className = 'hud-edu-next-desc';
+      descText.textContent = next.description || resolveBlockDescription(next);
+      textCol.appendChild(descText);
+
+      const audioButtonsCol = document.createElement('div');
+      audioButtonsCol.className = 'hud-edu-next-actions';
+
       const speakBtn = document.createElement('button');
       speakBtn.type = 'button';
       speakBtn.className = 'nx-btn nx-btn-primary nx-btn-small hud-edu-speak-btn';
       setIconLabel(speakBtn, Icons.speaker, 'Escuchar');
       speakBtn.setAttribute('aria-label', `Escuchar sílabas de ${next.label}`);
       speakBtn.addEventListener('click', () => {
+        descText.classList.remove('is-speaking');
         this.#speechService?.speakSyllables(next, {
           onSyllable: (idx) => {
             syllableParts.forEach((el, i) => el.classList.toggle('is-speaking', i === idx));
@@ -239,9 +248,27 @@ export class BuildChallengeHUD {
         });
       });
 
+      const speakDescBtn = document.createElement('button');
+      speakDescBtn.type = 'button';
+      speakDescBtn.className = 'nx-btn nx-btn-secondary nx-btn-small hud-edu-speak-desc-btn';
+      setIconLabel(speakDescBtn, Icons.speech, 'Descripción');
+      speakDescBtn.setAttribute('aria-label', `Escuchar descripción de ${next.label}`);
+      speakDescBtn.addEventListener('click', () => {
+        syllableParts.forEach((el) => el.classList.remove('is-speaking'));
+        descText.classList.add('is-speaking');
+        this.#speechService?.speakDescription(next, {
+          onEnd: () => {
+            descText.classList.remove('is-speaking');
+          }
+        });
+      });
+
+      audioButtonsCol.appendChild(speakBtn);
+      audioButtonsCol.appendChild(speakDescBtn);
+
       nextRow.appendChild(swatch);
       nextRow.appendChild(textCol);
-      nextRow.appendChild(speakBtn);
+      nextRow.appendChild(audioButtonsCol);
 
       nextBox.appendChild(nextHeader);
       nextBox.appendChild(nextRow);

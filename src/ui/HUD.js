@@ -74,6 +74,11 @@ export class HUD {
       loadBot: options.loadBot ?? ChatPanel.defaultLoader(options.gameContextProvider ?? null)
     });
 
+    this.chatHintElement = document.createElement('div');
+    this.chatHintElement.className = 'hud-chat-hint';
+    this.chatHintElement.textContent = 'Presiona T para abrir chatbot';
+    this.chatHintElement.hidden = true;
+
     this.#registerScreens();
     this.#setupIntentListeners();
     this.#setupKeyboardShortcuts();
@@ -189,6 +194,7 @@ export class HUD {
       this.crosshair.setVisible(isPlaying);
       this.hotbarView.setVisible(isPlaying);
       this.buildChallengeHud.setVisible(isPlaying);
+      this.chatHintElement.hidden = !isPlaying;
       if (!isPlaying) this.chatPanel.close();
       this.healthBar.setVisible(isPlaying && this.settingsModel.get('showHealthBar'));
     });
@@ -268,6 +274,9 @@ export class HUD {
     this.debugOverlay.mount(this.container);
     this.buildChallengeHud.mount(this.container);
     this.chatPanel.mount(this.container);
+    if (!this.chatHintElement.parentNode) {
+      this.container.appendChild(this.chatHintElement);
+    }
     this.toast.mount(this.container);
 
     // Inicializar con el Menú Principal
@@ -278,6 +287,7 @@ export class HUD {
     this.hotbarView.setVisible(false);
     this.healthBar.setVisible(false);
     this.buildChallengeHud.setVisible(false);
+    this.chatHintElement.hidden = true;
   }
 
   /** Abre o cierra el chat del asistente. */

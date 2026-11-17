@@ -179,3 +179,19 @@ test('el primer frame conserva el swing aunque deltaTime exceda su duración', (
   hand.draw(p);
   assert.equal(p.calls.box, 1, 'el swing finalizado vuelve a mostrar el bloque');
 });
+
+test('HandRenderer dibuja el tronco con texturas diferenciadas si beginShape está disponible', () => {
+  const texturesApplied = [];
+  const fakeTm = { get: (name) => ({ name }) };
+  const hand = new HandRenderer(fakeTm);
+  const p = createHandP5Stub();
+  p.beginShape = () => {};
+  p.vertex = () => {};
+  p.endShape = () => {};
+  p.texture = (tex) => { texturesApplied.push(tex.name); };
+  hand.setSelectedSlot(0, createDefaultBlockRegistry().get(BlockIds.LOG));
+  hand.update(1 / 60, {});
+  hand.draw(p);
+  assert.ok(texturesApplied.includes('log_top.png'));
+  assert.ok(texturesApplied.includes('log_side.png'));
+});

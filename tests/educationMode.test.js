@@ -6,11 +6,14 @@ import {
   BlockRegistry,
   resolveBlockSyllables,
   resolveBlockSyllableLines,
+  resolveBlockDescription,
   splitSpanishWordIntoSyllables
 } from '../src/blocks/BlockRegistry.js';
 import { BlockIds } from '../src/utils/Constants.js';
 import { SpeechService, formatSyllableForSpeech } from '../src/audio/SpeechService.js';
 import { InventoryView } from '../src/ui/InventoryView.js';
+import { InventoryScreen } from '../src/interface/screens/InventoryScreen.js';
+import { createEducationalMaterials } from '../src/blocks/EducationalMaterials.js';
 import { HotbarView } from '../src/ui/HotbarView.js';
 import { createDefaultBlueprintRegistry } from '../src/education/BlueprintRegistry.js';
 import { BuildChallenge } from '../src/education/BuildChallenge.js';
@@ -61,6 +64,78 @@ test('todos los bloques del BlockRegistry incluyen syllables y syllableText vál
   const stone = registry.get(BlockIds.STONE);
   assert.deepEqual([...stone.syllables], ['PIE', 'DRA']);
   assert.equal(stone.syllableText, 'PIE - DRA');
+  assert.ok(stone.description.length > 10, 'Cada bloque debe incluir una descripción breve');
+});
+
+test('todos los materiales incluyen una descripción breve y se puede reproducir por audio en Inventario y Planos', () => {
+  const registry = createDefaultBlockRegistry();
+  for (const block of registry.values()) {
+    assert.equal(typeof block.description, 'string');
+    assert.ok(block.description.length > 10, `${block.name} debe tener una descripción breve`);
+  }
+
+  // Respaldo del diccionario para Mármol y respaldo genérico para bloques no listados
+  const marmolDesc = resolveBlockDescription({ label: 'Mármol', name: 'Marble' });
+  assert.equal(marmolDesc, 'Roca metamórfica blanca y pulida, de aspecto elegante.');
+  const customDesc = resolveBlockDescription({ label: 'Cuarzo', name: 'Quartz' });
+  assert.ok(customDesc.includes('cuarzo'));
+
+  const env = createFakeSpeechEnv();
+  const speech = new SpeechService({
+    synth: env.synth,
+    UtteranceClass: env.FakeUtterance,
+    syllablePauseMs: 10,
+    stepFallbackMs: 20
+  });
+
+  // 1. En InventoryView: muestra la descripción del material seleccionado y botón para escucharla
+  const invView = new InventoryView({ blockRegistry: registry, speechService: speech });
+  const stone = registry.get(BlockIds.STONE);
+  invView.selectBlock(stone);
+
+  const descEl = invView.detailsPanel.querySelector('.nx-details-description');
+  const speakDescBtn = invView.detailsPanel.querySelector('.nx-btn-speak-description');
+  assert.ok(descEl !== null, 'El panel de detalles debe mostrar la descripción del material');
+  assert.equal(descEl.textContent, stone.description);
+  assert.ok(speakDescBtn !== null, 'Debe existir el botón para escuchar la descripción');
+
+  speakDescBtn.dispatch('click', { stopPropagation: () => {} });
+  assert.equal(env.spoken.at(-1)?.text, stone.description);
+
+  // 2. En PresetsScreen: cada material del plano muestra su descripción y botón para reproducir su audio
+  const { challenge } = challengeHarness();
+  const view = new BuildChallengeView(registry);
+  const presetsScreen = new PresetsScreen(null, null, {
+    presets: view.presets(challenge.blueprints()),
+    speechService: speech
+  });
+
+  const firstMatDesc = presetsScreen.element.querySelector('.nx-preset-mat-desc');
+  const firstMatSpeakDescBtn = presetsScreen.element.querySelector('.nx-preset-speak-desc-btn');
+  assert.ok(firstMatDesc !== null, 'Cada material del plano debe mostrar su descripción breve');
+  assert.ok(firstMatDesc.textContent.length > 10);
+  assert.ok(firstMatSpeakDescBtn !== null, 'Cada material del plano debe tener botón de audio para su descripción');
+
+  firstMatSpeakDescBtn.dispatch('click', { stopPropagation: () => {} });
+  assert.equal(env.spoken.at(-1)?.text, firstMatDesc.textContent);
+
+  // 3. Catálogo de 28 materiales (14 Piedras + 14 Maderas) en InventoryScreen con descripción y audio
+  const materials = createEducationalMaterials();
+  assert.equal(materials.length, 28, 'Deben existir las 14 piedras y las 14 maderas');
+  assert.equal(materials.filter((m) => m.category === 'stones').length, 14);
+  assert.equal(materials.filter((m) => m.category === 'woods').length, 14);
+
+  const invScreen = new InventoryScreen(null, null, null);
+  const matCards = invScreen.element.querySelectorAll('.nx-block-card');
+  assert.equal(matCards.length, 28);
+
+  const cardDesc = matCards[0].querySelector('.nx-block-desc');
+  const cardDescBtn = matCards[0].querySelector('.nx-btn-speak-card-desc');
+  assert.ok(cardDesc !== null);
+  assert.ok(cardDescBtn !== null);
+  assert.ok(cardDesc.textContent.includes('Roca gris común'));
+
+  speech.cancel();
 });
 
 test('el helper y diccionario de respaldo resuelven bloques sin sílabas manuales', () => {

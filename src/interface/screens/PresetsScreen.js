@@ -5,7 +5,7 @@ import { Icons, setIconLabel } from '../../ui/Icons.js';
 import { Modal } from '../components/Modal.js';
 import { Button } from '../components/Button.js';
 import { SpeechService } from '../../audio/SpeechService.js';
-import { resolveBlockSyllables } from '../../blocks/BlockType.js';
+import { resolveBlockSyllables, resolveBlockDescription } from '../../blocks/BlockType.js';
 
 /**
  * Pantalla de Selección de Planos de Construcción Guiada (Presets Educativos).
@@ -173,6 +173,14 @@ export class PresetsScreen extends Screen {
         matInfo.appendChild(matName);
         matInfo.appendChild(matSyllables);
 
+        const matDesc = document.createElement('p');
+        matDesc.className = 'nx-preset-mat-desc';
+        matDesc.textContent = mat.description || resolveBlockDescription(mat);
+        matInfo.appendChild(matDesc);
+
+        const matActions = document.createElement('div');
+        matActions.className = 'nx-preset-mat-actions';
+
         const speakMatBtn = document.createElement('button');
         speakMatBtn.type = 'button';
         speakMatBtn.className = 'nx-btn-speak-block nx-preset-speak-btn';
@@ -180,6 +188,7 @@ export class PresetsScreen extends Screen {
         speakMatBtn.setAttribute('aria-label', `Escuchar sílabas de ${mat.label}`);
         speakMatBtn.addEventListener('click', (e) => {
           e.stopPropagation?.();
+          matDesc.classList.remove('is-speaking');
           this.#speechService?.speakSyllables(mat, {
             onSyllable: (idx) => {
               parts.forEach((el, i) => el.classList.toggle('is-speaking', i === idx));
@@ -193,9 +202,28 @@ export class PresetsScreen extends Screen {
           });
         });
 
+        const speakDescBtn = document.createElement('button');
+        speakDescBtn.type = 'button';
+        speakDescBtn.className = 'nx-btn-speak-block nx-btn-speak-desc nx-preset-speak-desc-btn';
+        setIconLabel(speakDescBtn, Icons.speech, 'Descripción');
+        speakDescBtn.setAttribute('aria-label', `Escuchar descripción de ${mat.label}`);
+        speakDescBtn.addEventListener('click', (e) => {
+          e.stopPropagation?.();
+          parts.forEach((el) => el.classList.remove('is-speaking'));
+          matDesc.classList.add('is-speaking');
+          this.#speechService?.speakDescription(mat, {
+            onEnd: () => {
+              matDesc.classList.remove('is-speaking');
+            }
+          });
+        });
+
+        matActions.appendChild(speakMatBtn);
+        matActions.appendChild(speakDescBtn);
+
         matRow.appendChild(swatch);
         matRow.appendChild(matInfo);
-        matRow.appendChild(speakMatBtn);
+        matRow.appendChild(matActions);
         matList.appendChild(matRow);
       });
 

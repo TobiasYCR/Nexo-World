@@ -59,7 +59,8 @@ html, body {
 .hud-hotbar-container[hidden],
 .hud-hotbar-label[hidden],
 .hud-health-container[hidden],
-.hud-education-panel[hidden] {
+.hud-education-panel[hidden],
+.hud-chat-hint[hidden] {
   display: none !important;
 }
 
@@ -656,6 +657,20 @@ html, body {
   display: none !important;
 }
 
+.hud-chat-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: transparent;
+  color: rgba(248, 250, 252, 0.9);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 120;
+}
+
 .nx-chat-header {
   display: flex;
   align-items: baseline;
@@ -894,6 +909,26 @@ html, body {
   font-weight: 900;
   letter-spacing: 0.06em;
   color: #fde047;
+}
+
+.hud-edu-next-desc {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #cbd5e1;
+  transition: color 0.15s ease;
+}
+
+.hud-edu-next-desc.is-speaking {
+  color: #fde047;
+  font-weight: 700;
+}
+
+.hud-edu-next-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .hud-edu-materials {
