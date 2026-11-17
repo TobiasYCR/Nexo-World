@@ -604,7 +604,7 @@
 
 .nx-inventory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
   grid-auto-rows: minmax(215px, auto);
   align-items: stretch;
   gap: 10px;
@@ -762,11 +762,21 @@
 
 .nx-block-card-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
+  flex-direction: row;
+  justify-content: center;
+  gap: 4px;
   width: 100%;
   margin-top: auto;
+}
+
+/* Uno al lado del otro: cada botón ocupa la mitad de la tarjeta. */
+.nx-block-card-actions .nx-btn-speak-block {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  padding: 4px 5px;
+  gap: 4px;
+  font-size: 0.66rem;
 }
 
 .nx-btn-speak-card-desc {
