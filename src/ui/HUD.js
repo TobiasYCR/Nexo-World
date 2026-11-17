@@ -102,7 +102,7 @@ export class HUD {
   }
 
   /**
-   * Cuentas en el servidor (MySQL) o en el navegador, según GameConfig.users.AUTH_SOURCE.
+   * Cuentas en el servidor (PostgreSQL) o en el navegador, según GameConfig.users.AUTH_SOURCE.
    * Con servidor se envía el token del invitado de este navegador, para que la
    * cuenta nueva se quede con su progreso.
    */

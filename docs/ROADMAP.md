@@ -13,7 +13,7 @@ Estado al cierre del proyecto (noviembre de 2026).
 | Modos | Supervivencia (vida, daño por caída) y creativo (bloques sin límite, sin daño, vuelo con F) |
 | Partidas | Crear con nombre, semilla y modo; guardar y cargar con el plano en curso |
 | Render | Mallas por chunk con solo las caras visibles y caras iguales unidas (greedy meshing), armadas por cercanía y liberadas al alejarse; recorte por distancia y por cono de visión |
-| Cuentas | Registro, sesión, perfil y recuperación por código de administrador, en MySQL |
+| Cuentas | Registro, sesión, perfil y recuperación por código de administrador, en PostgreSQL |
 | Puntuaciones | Puntos, niveles y clasificación por modo, validados por el servidor |
 | Modo educativo | Planos ubicados en llano y armados por etapas, con guía 3D, sílabas y lectura en voz alta |
 | Asistente | Chat de consultas sobre el juego y la partida, sin servicios externos |

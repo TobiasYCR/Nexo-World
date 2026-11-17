@@ -83,7 +83,7 @@ Decisiones para Nexo World:
 
 ### 1.4 Integración con usuarios
 
-Las cuentas viven en la misma base MySQL (tablas `accounts` y `sessions`) y las atiende el mismo servidor (`server/accounts/AccountService.js`).
+Las cuentas viven en la misma base PostgreSQL (tablas `accounts` y `sessions`) y las atiende el mismo servidor (`server/accounts/AccountService.js`).
 
 - Sin sesión se juega como **invitado**: `POST /api/players` crea un jugador con id (UUID) y un token secreto que guarda el navegador. La base guarda solo el **hash SHA-256** del token.
 - Cada cuenta tiene un jugador (`players.account_id`, único). Al **registrarse**, el navegador manda el token de su invitado (`guestToken`): si ese invitado no es de nadie, pasa a ser el jugador de la cuenta y conserva su progreso. Si no, se crea un jugador nuevo con el nombre de la cuenta.
@@ -113,12 +113,12 @@ Las cuentas viven en la misma base MySQL (tablas `accounts` y `sessions`) y las 
 | Oro | 5 |
 | Diamante | 10 |
 
-### Tablas MySQL (`server/persistence/schema.sql`)
+### Tablas PostgreSQL (`server/persistence/schema.sql`)
 
 | Tabla | Clave | Contenido |
 |---|---|---|
 | `players` | `id` | Nombre, hash del token, `account_id`, alta. |
-| `progress` | `player_id, mode, world_key` | Revisión, puntuación, estadísticas y estado (JSON), última actualización. |
+| `progress` | `player_id, mode, world_key` | Revisión, puntuación, estadísticas y estado (JSONB), última actualización. |
 | `leaderboard` | `mode, player_id` | Mejor marca, cuándo se alcanzó y en qué mundo. Índice `(mode, best_score DESC, achieved_at, player_id)`. |
 | `accounts` | `id` | Usuario, correo, claves únicas en minúsculas (`username_key`, `email_key`), credencial PBKDF2-SHA-256 con sal (JSON), alta y modificación. |
 | `sessions` | `token_hash` | Hash SHA-256 del token de sesión, cuenta y vencimiento (7 días). |
@@ -208,16 +208,17 @@ Recuperar una contraseña: el administrador corre `npm run admin -- reset-passwo
 - `standingOf`
 - `findPlayerByAccountId`, `linkPlayerToAccount`, `renameAccountPlayer`: vínculo con las cuentas.
 
-Las implementaciones son `MySqlProgressionRepository` e `InMemoryProgressionRepository` (tests). Las cuentas usan `AccountRepository` (`MySqlAccountRepository`, `InMemoryAccountRepository`). Las dos versiones MySQL comparten la conexión (`MySqlDatabase`).
+Las implementaciones son `PostgresProgressionRepository` e `InMemoryProgressionRepository` (tests). Las cuentas usan `AccountRepository` (`PostgresAccountRepository`, `InMemoryAccountRepository`). Las dos versiones PostgreSQL comparten la conexión (`PostgresDatabase`).
 
 ## 5. Tecnologías
 
 | Pieza | Elección | Motivo |
 |---|---|---|
-| Base | MySQL 8 (probado también con MariaDB 10.11) | Pedido del equipo. |
-| Driver | `mysql2` 3.24.5 | Única dependencia nueva; el navegador no puede hablar con MySQL. |
+| Base | PostgreSQL 13+ (probado con 16) | Es la base que ofrece Render para desplegar. Antes era MySQL 8. |
+| Driver | `pg` 8.16.3 | Única dependencia del servidor; el navegador no puede hablar con la base. |
 | Servidor | `node:http` | Sin frameworks: son pocas rutas. |
 | Desarrollo | Proxy de Vite `/api` → `127.0.0.1:3001` | El juego usa rutas relativas. |
+| Producción | El mismo servidor publica `dist/` (`StaticFiles`) | Un solo servicio en Render, sin CORS. |
 
 ## 6. Limitaciones y mejoras futuras
 

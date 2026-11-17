@@ -11,8 +11,8 @@ const config = ServerConfig.fromEnv();
 try {
   const server = await createProgressionServer(config);
   const port = await server.api.listen(config.port, config.host);
-  const storage = config.storage === 'memory' ? 'memoria (sin persistencia)' : `MySQL ${config.mysql.host}:${config.mysql.port}/${config.mysql.database}`;
-  console.log(`[Nexo World] API de puntuaciones y cuentas en http://${config.host}:${port}/api · almacenamiento: ${storage}`);
+  console.log(`[Nexo World] API de puntuaciones y cuentas en http://${config.host}:${port}/api · almacenamiento: ${ServerConfig.describeStorage(config)}`);
+  if (server.servesClient) console.log(`[Nexo World] juego publicado desde ${config.clientDir}/ en http://${config.host}:${port}/`);
 
   const shutdown = async () => {
     await server.close();
@@ -22,6 +22,6 @@ try {
   process.once('SIGTERM', shutdown);
 } catch (error) {
   console.error('[Nexo World] no se pudo iniciar el servidor de puntuaciones:', error.message);
-  if (config.storage === 'mysql') console.error('Revisá que MySQL esté corriendo y los datos de conexión en .env.');
+  if (config.storage === 'postgres') console.error(`Revisá que PostgreSQL esté corriendo y los datos de conexión (${ServerConfig.describeStorage(config)}).`);
   process.exit(1);
 }

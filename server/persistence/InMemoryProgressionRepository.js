@@ -3,7 +3,7 @@ import { Leaderboard } from '../../src/progression/Leaderboard.js';
 
 /**
  * Implementación en memoria del repositorio. Sirve para los tests y para
- * levantar el servidor sin MySQL (STORAGE=memory); se pierde al reiniciar.
+ * levantar el servidor sin base de datos (STORAGE=memory); se pierde al reiniciar.
  * Usa el mismo criterio de orden (Leaderboard) que replica la consulta SQL.
  */
 export class InMemoryProgressionRepository extends ProgressionRepository {

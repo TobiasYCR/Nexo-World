@@ -1,6 +1,6 @@
 /**
  * Contrato de almacenamiento de la progresión. ProgressionService solo habla
- * con esta interfaz; las implementaciones (MySQL, memoria) son intercambiables.
+ * con esta interfaz; las implementaciones (PostgreSQL, memoria) son intercambiables.
  * Es también el contrato a acordar con Backend 1 si la persistencia pasa a
  * su sistema de cuentas.
  *

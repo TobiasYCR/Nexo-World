@@ -350,7 +350,7 @@ export const GameConfig = Object.freeze({
 
   users: Object.freeze({
     /**
-     * Dónde viven las cuentas: 'server' (MySQL, a través de npm run server) o
+     * Dónde viven las cuentas: 'server' (PostgreSQL, a través de npm run server) o
      * 'local' (localStorage, sin servidor: solo separa perfiles en una máquina).
      */
     AUTH_SOURCE: 'server',
