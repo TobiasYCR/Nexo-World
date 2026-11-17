@@ -1,7 +1,6 @@
 import { GameConfig } from '../game/GameConfig.js';
 import { ChunkMeshBuilder } from './ChunkMeshBuilder.js';
 import { ViewFrustum } from './ViewFrustum.js';
-import { BlockIds } from '../utils/Constants.js';
 
 /**
  * Dibuja los bloques del mundo. Es la ÚNICA clase que sabe cómo se ve un bloque.
@@ -214,7 +213,8 @@ export class BlockRenderer {
     const meshes = [];
     for (const [blockId, group] of groups) {
       const blockType = this.blockRegistry.get(blockId);
-      const isMulti = blockId === BlockIds.LOG && blockType.textures && (
+      // Cualquier bloque con otra textura arriba o abajo (tronco, césped) se separa por cara.
+      const isMulti = blockType.textures && (
         blockType.textures.top !== blockType.textures.side ||
         blockType.textures.bottom !== blockType.textures.side
       );

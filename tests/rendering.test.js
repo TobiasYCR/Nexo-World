@@ -63,8 +63,9 @@ test('TextureManager carga lo que declara el BlockRegistry', async (t) => {
     '/textures/blocks/planks.png',
     '/textures/blocks/sand.png',
     '/textures/blocks/sandstone.png',
-    '/textures/blocks/stone.png'
-  ]);
+    '/textures/blocks/stone.png',
+    '/textures/blocks/granite.png', '/textures/blocks/diorite.png', '/textures/blocks/andesite.png', '/textures/blocks/basalt.png', '/textures/blocks/obsidian.png', '/textures/blocks/limestone.png', '/textures/blocks/marble.png', '/textures/blocks/slate.png', '/textures/blocks/tuff.png', '/textures/blocks/mossy_cobblestone.png', '/textures/blocks/wood_oak.png', '/textures/blocks/wood_birch.png', '/textures/blocks/wood_pine.png', '/textures/blocks/wood_fir.png', '/textures/blocks/wood_ebony.png', '/textures/blocks/wood_mahogany.png', '/textures/blocks/wood_acacia.png', '/textures/blocks/wood_cherry.png', '/textures/blocks/wood_willow.png', '/textures/blocks/wood_mangrove.png', '/textures/blocks/wood_bamboo.png', '/textures/blocks/wood_palm.png', '/textures/blocks/wood_olive.png', '/textures/blocks/wood_rotten.png'
+  ].sort());
 });
 
 test('dos pedidos simultáneos de la misma textura disparan una sola carga', async () => {
@@ -158,8 +159,11 @@ test('BlockRenderer dibuja una malla por chunk y tipo, y cambia de material una 
   assert.equal(renderer.drawnChunks, world.chunkCount);
   assert.equal(p.calls.box, 0, 'ya no hay un box() por bloque');
   assert.ok(p.calls.model >= types.size && p.calls.model <= types.size * world.chunkCount);
-  assert.equal(p.calls.texture + p.calls.material, types.size);
-  assert.equal(p.calls.texture, 1, 'solo el cesped tiene textura en este doble');
+  // Un cambio de material por tipo, más uno por cada textura extra del césped y el tronco
+  // (arriba, costado y abajo se dibujan aparte).
+  assert.ok(p.calls.texture + p.calls.material >= types.size);
+  assert.ok(p.calls.texture + p.calls.material <= types.size + 4);
+  assert.equal(p.calls.texture, 1, 'solo la cara de arriba del césped tiene textura en este doble');
 });
 
 test('las mallas se arman una vez y se rehacen solo en el chunk que cambia', () => {

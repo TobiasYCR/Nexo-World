@@ -9,7 +9,9 @@ test('el registro por defecto contiene los tipos base del mundo', () => {
     registry.values().map((type) => type.name),
     [
       'Air', 'Grass', 'Dirt', 'Stone', 'Log', 'Leaves', 'Planks', 'Sand', 'Cobblestone', 'Glass',
-      'Sandstone', 'Bedrock', 'CoalOre', 'IronOre', 'GoldOre', 'DiamondOre'
+      'Sandstone', 'Bedrock', 'CoalOre', 'IronOre', 'GoldOre', 'DiamondOre',
+      // Piedras y maderas del catálogo educativo
+      'Granite', 'Diorite', 'Andesite', 'Basalt', 'Obsidian', 'Limestone', 'Marble', 'Slate', 'Tuff', 'MossyCobblestone', 'Oak', 'Birch', 'Pine', 'Fir', 'Ebony', 'Mahogany', 'Acacia', 'Cherry', 'Willow', 'Mangrove', 'Bamboo', 'Palm', 'Olive', 'RottenWood'
     ]
   );
 });
@@ -24,7 +26,23 @@ test('el aire no es sólido y los demás sí', () => {
 test('los tipos colocables excluyen al aire', () => {
   const registry = createDefaultBlockRegistry();
   assert.equal(registry.placeableTypes().some((type) => type.id === BlockIds.AIR), false);
-  assert.equal(registry.placeableTypes().length, 15);
+  // Todo menos el aire y la roca madre, que es indestructible.
+  assert.equal(registry.placeableTypes().length, registry.values().length - 2);
+  assert.equal(registry.placeableTypes().some((type) => type.id === BlockIds.BEDROCK), false);
+});
+
+test('cada piedra y madera del catálogo es un bloque propio con su textura', () => {
+  const registry = createDefaultBlockRegistry();
+  const stones = registry.typesInCategory('stones');
+  const woods = registry.typesInCategory('woods');
+  assert.equal(stones.length, 14);
+  assert.equal(woods.length, 16);
+  const all = [...stones, ...woods];
+  assert.equal(new Set(all.map((type) => type.id)).size, all.length, 'ids distintos');
+  assert.equal(new Set(all.map((type) => type.texture)).size, all.length, 'texturas distintas');
+  assert.notEqual(registry.get(BlockIds.OBSIDIAN).texture, registry.get(BlockIds.BEDROCK).texture);
+  assert.equal(registry.get(BlockIds.OBSIDIAN).breakable, true, 'la obsidiana se puede romper');
+  assert.notEqual(registry.get(BlockIds.LOG).description, registry.get(BlockIds.PLANKS).description);
 });
 
 test('no se permiten ids ni nombres duplicados', () => {
@@ -58,7 +76,8 @@ test('textureNames devuelve solo texturas declaradas y sin repetir', () => {
     'coal_ore.png',
     'iron_ore.png',
     'gold_ore.png',
-    'diamond_ore.png'
+    'diamond_ore.png',
+    'granite.png', 'diorite.png', 'andesite.png', 'basalt.png', 'obsidian.png', 'limestone.png', 'marble.png', 'slate.png', 'tuff.png', 'mossy_cobblestone.png', 'wood_oak.png', 'wood_birch.png', 'wood_pine.png', 'wood_fir.png', 'wood_ebony.png', 'wood_mahogany.png', 'wood_acacia.png', 'wood_cherry.png', 'wood_willow.png', 'wood_mangrove.png', 'wood_bamboo.png', 'wood_palm.png', 'wood_olive.png', 'wood_rotten.png'
   ]);
 });
 

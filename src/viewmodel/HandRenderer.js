@@ -1,7 +1,6 @@
 import { GameConfig } from '../game/GameConfig.js';
 import { MathUtils } from '../utils/MathUtils.js';
 import { HandAnimator } from './HandAnimator.js';
-import { BlockIds } from '../utils/Constants.js';
 
 /** Dibuja la mano en primera persona; HandAnimator calcula sus transformaciones. */
 export class HandRenderer {
@@ -120,8 +119,10 @@ export class HandRenderer {
   }
 
   #drawBlock(p) {
-    if (this.#blockType.id === BlockIds.LOG && typeof p.beginShape === 'function') {
-      this.#drawLogBlock(p);
+    const textures = this.#blockType.textures;
+    const multi = textures && (textures.top !== textures.side || textures.bottom !== textures.side);
+    if (multi && typeof p.beginShape === 'function') {
+      this.#drawMultiTextureBlock(p);
       return;
     }
     const texture = this.#blockType.texture ? this.textures?.get(this.#blockType.texture) : null;
@@ -134,68 +135,49 @@ export class HandRenderer {
     p.box(this.config.BLOCK_SCALE);
   }
 
-  #drawLogBlock(p) {
-    const s = this.config.BLOCK_SCALE;
-    const h = s / 2;
-    const topTexName = this.#blockType.textures?.top ?? this.#blockType.texture;
-    const sideTexName = this.#blockType.textures?.side ?? this.#blockType.texture;
-    const topTex = topTexName ? this.textures?.get(topTexName) : null;
-    const sideTex = sideTexName ? this.textures?.get(sideTexName) : null;
+  /**
+   * Bloque con otra textura arriba o abajo (tronco, césped): una figura por
+   * textura, con la normal de cada cara para que la luz la ilumine igual que
+   * a box().
+   */
+  #drawMultiTextureBlock(p) {
+    const h = this.config.BLOCK_SCALE / 2;
+    const { top, side, bottom } = this.#blockType.textures;
     const mode = p.QUADS ?? 0;
-
-    // Caras superior e inferior (anillos del tronco)
-    p.push();
-    if (topTex) {
-      p.texture(topTex);
-    } else {
-      p.fill(...this.#blockType.color);
-      p.ambientMaterial(...this.#blockType.color);
+    // [normal, vértices [x, y, z, u, v]]. En el espacio de la mano +Y queda arriba en pantalla: la tapa va en +h y,
+    // en los costados, v = 0 (borde de arriba de la imagen) también en +h.
+    const faces = {
+      top: [[[0, 1, 0], [[-h, h, -h, 0, 0], [h, h, -h, 1, 0], [h, h, h, 1, 1], [-h, h, h, 0, 1]]]],
+      bottom: [[[0, -1, 0], [[-h, -h, -h, 0, 0], [h, -h, -h, 1, 0], [h, -h, h, 1, 1], [-h, -h, h, 0, 1]]]],
+      side: [
+        [[0, 0, 1], [[-h, h, h, 0, 0], [h, h, h, 1, 0], [h, -h, h, 1, 1], [-h, -h, h, 0, 1]]],
+        [[0, 0, -1], [[h, h, -h, 0, 0], [-h, h, -h, 1, 0], [-h, -h, -h, 1, 1], [h, -h, -h, 0, 1]]],
+        [[-1, 0, 0], [[-h, h, -h, 0, 0], [-h, h, h, 1, 0], [-h, -h, h, 1, 1], [-h, -h, -h, 0, 1]]],
+        [[1, 0, 0], [[h, h, h, 0, 0], [h, h, -h, 1, 0], [h, -h, -h, 1, 1], [h, -h, h, 0, 1]]]
+      ]
+    };
+    for (const [name, textureName] of [['top', top], ['bottom', bottom], ['side', side]]) {
+      const texture = textureName ? this.textures?.get(textureName) : null;
+      p.push();
+      if (texture) {
+        // Las coordenadas van de 0 a 1: sin NORMAL, p5 las toma como píxeles y
+        // la cara queda de un solo color (el primer píxel de la textura).
+        p.textureMode?.(p.NORMAL);
+        p.texture(texture);
+      } else {
+        p.fill(...this.#blockType.color);
+        p.ambientMaterial(...this.#blockType.color);
+      }
+      p.beginShape(mode);
+      for (const [normal, vertices] of faces[name]) {
+        for (const vertex of vertices) {
+          p.normal?.(...normal);
+          p.vertex(...vertex);
+        }
+      }
+      p.endShape();
+      p.pop();
     }
-    p.beginShape(mode);
-    // Top (+Y)
-    p.vertex(-h, h, -h, 0, 0);
-    p.vertex(h, h, -h, 1, 0);
-    p.vertex(h, h, h, 1, 1);
-    p.vertex(-h, h, h, 0, 1);
-    // Bottom (-Y)
-    p.vertex(-h, -h, -h, 0, 0);
-    p.vertex(h, -h, -h, 1, 0);
-    p.vertex(h, -h, h, 1, 1);
-    p.vertex(-h, -h, h, 0, 1);
-    p.endShape();
-    p.pop();
-
-    // Caras laterales (corteza vertical)
-    p.push();
-    if (sideTex) {
-      p.texture(sideTex);
-    } else {
-      p.fill(...this.#blockType.color);
-      p.ambientMaterial(...this.#blockType.color);
-    }
-    p.beginShape(mode);
-    // Front (+Z)
-    p.vertex(-h, -h, h, 0, 1);
-    p.vertex(h, -h, h, 1, 1);
-    p.vertex(h, h, h, 1, 0);
-    p.vertex(-h, h, h, 0, 0);
-    // Back (-Z)
-    p.vertex(h, -h, -h, 0, 1);
-    p.vertex(-h, -h, -h, 1, 1);
-    p.vertex(-h, h, -h, 1, 0);
-    p.vertex(h, h, -h, 0, 0);
-    // Left (-X)
-    p.vertex(-h, -h, -h, 0, 1);
-    p.vertex(-h, -h, h, 1, 1);
-    p.vertex(-h, h, h, 1, 0);
-    p.vertex(-h, h, -h, 0, 0);
-    // Right (+X)
-    p.vertex(h, -h, h, 0, 1);
-    p.vertex(h, -h, -h, 1, 1);
-    p.vertex(h, h, -h, 1, 0);
-    p.vertex(h, h, h, 0, 0);
-    p.endShape();
-    p.pop();
   }
 
   #drawArm(p) {

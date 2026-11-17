@@ -84,16 +84,16 @@ export const FALLBACK_DESCRIPTIONS_DICTIONARY = Object.freeze({
   pasto: 'Bloque de tierra cubierto de pasto verde donde crecen plantas y árboles.',
   dirt: 'Suelo blando y marrón que forma la superficie natural del mundo.',
   tierra: 'Suelo blando y marrón que forma la superficie natural del mundo.',
-  stone: 'Roca gris común que forma la mayor parte del subsuelo; básica para construir y fabricar herramientas.',
-  piedra: 'Roca gris común que forma la mayor parte del subsuelo; básica para construir y fabricar herramientas.',
-  log: 'Madera marrón clara, resistente y la más común en bosques templados.',
-  tronco: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  stone: 'Roca gris común que forma la mayor parte del subsuelo; al picarla se obtiene piedra partida.',
+  piedra: 'Roca gris común que forma la mayor parte del subsuelo; al picarla se obtiene piedra partida.',
+  log: 'Parte principal del árbol, con corteza por fuera y anillos por dentro; de ahí salen los tablones.',
+  tronco: 'Parte principal del árbol, con corteza por fuera y anillos por dentro; de ahí salen los tablones.',
   wood: 'Madera marrón clara, resistente y la más común en bosques templados.',
   madera: 'Madera marrón clara, resistente y la más común en bosques templados.',
   leaves: 'Follaje verde de las copas de los árboles que deja pasar un poco de luz.',
   hojas: 'Follaje verde de las copas de los árboles que deja pasar un poco de luz.',
-  planks: 'Madera marrón clara, resistente y la más común en bosques templados.',
-  tablones: 'Madera marrón clara, resistente y la más común en bosques templados.',
+  planks: 'Tablas planas que se cortan del tronco; la madera básica para construir.',
+  tablones: 'Tablas planas que se cortan del tronco; la madera básica para construir.',
   sand: 'Granos finos de color claro que cubren las playas y los desiertos.',
   arena: 'Granos finos de color claro que cubren las playas y los desiertos.',
   cobblestone: 'Piedra fragmentada que se obtiene al picar piedra; resistente y fácil de conseguir.',
@@ -427,7 +427,11 @@ export class BlockType {
     /** Superficie sobre la que la generación puede plantar árboles. */
     sustainsTrees = false,
     /** Se entrega en la hotbar inicial de la partida. */
-    starter = false
+    starter = false,
+    /** Grupo del catálogo educativo ('stones', 'woods') o null. */
+    category = null,
+    /** El jugador lo puede equipar y colocar (la roca madre no: es indestructible). */
+    placeable = true
   }) {
     if (!Number.isInteger(id) || id < 0) {
       throw new TypeError(`BlockType "${name}": id debe ser un entero >= 0.`);
@@ -461,6 +465,8 @@ export class BlockType {
     this.oreHost = oreHost;
     this.sustainsTrees = sustainsTrees;
     this.starter = starter;
+    this.category = category;
+    this.placeable = placeable;
 
     Object.freeze(this);
   }
