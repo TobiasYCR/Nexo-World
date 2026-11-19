@@ -137,6 +137,21 @@ Cada push a `main` vuelve a desplegar. En el plan gratuito el servicio se duerme
 | `Esc` | Pausa / cerrar pantalla (también cierra el menú de pausa) |
 | `Enter` | Siguiente paso del tutorial |
 
+### Celular y tablet
+
+En pantallas táctiles sin mouse los controles aparecen solos. Se juega mejor en horizontal.
+
+| Control | Acción |
+|---|---|
+| Joystick (abajo a la izquierda) | Caminar; al borde, correr |
+| Arrastrar en la pantalla | Mirar |
+| `Romper` (mantener) / `Colocar` | Romper y colocar |
+| `Saltar` · `Volar` · `Bajar` | Saltar; en creativo, volar, subir y bajar |
+| Tocar la barra de abajo | Elegir bloque |
+| `Pausa` · `Bloques` · `Planos` · `Ayuda` · `Pantalla` | Menú, inventario, planos, asistente y pantalla completa |
+
+`?touch=1` en la URL fuerza los controles táctiles en una PC (para probarlos); `?touch=0` los apaga. En iPhone no hay pantalla completa desde el navegador: **Compartir → Agregar a inicio** abre el juego a pantalla completa.
+
 ---
 
 ## Estructura

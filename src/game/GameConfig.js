@@ -401,6 +401,21 @@ export const GameConfig = Object.freeze({
     AUDIO_BASE_PATH: '/audio/'
   }),
 
+  /** Controles táctiles (celulares y tablets). */
+  touch: Object.freeze({
+    /**
+     * Activación: 'auto' los muestra en pantallas táctiles sin mouse, 'on' y
+     * 'off' los fuerzan. ?touch=1 o ?touch=0 en la URL pisa este valor.
+     */
+    MODE: 'auto',
+    /** Multiplica el arrastre del dedo antes de pasarlo a la cámara. */
+    LOOK_SCALE: 1.4,
+    /** Fracción del radio del joystick que se ignora (evita deriva con el pulgar quieto). */
+    JOYSTICK_DEAD_ZONE: 0.18,
+    /** Radio del recorrido del joystick, en píxeles CSS. */
+    JOYSTICK_RADIUS: 56
+  }),
+
   input: Object.freeze({
     /** Mapa tecla -> acción lógica. Cambiar controles no requiere tocar el código. */
     KEY_BINDINGS: Object.freeze({

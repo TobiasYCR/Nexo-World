@@ -728,6 +728,34 @@ html, body {
   color: var(--ui-text-muted);
 }
 
+.nx-chat-hint {
+  margin-left: auto;
+}
+
+.nx-chat-close {
+  align-self: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: #f8fafc;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.nx-chat-close:hover,
+.nx-chat-close:focus-visible {
+  background: rgba(16, 185, 129, 0.25);
+  outline: none;
+}
+
+body.nx-touch-mode .nx-chat-hint {
+  display: none;
+}
+
 .nx-chat-log {
   flex: 1;
   min-height: 0;
@@ -1105,4 +1133,445 @@ html, body {
 
 .hud-click-to-play[hidden] {
   display: none !important;
+}
+
+/* ==========================================================================
+   Controles táctiles (celulares y tablets)
+   body.nx-touch-mode lo pone TouchControls cuando se juega con la pantalla.
+   ========================================================================== */
+html,
+body {
+  overscroll-behavior: none;
+}
+
+body.nx-touch-mode {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+body.nx-touch-mode canvas {
+  touch-action: none;
+}
+
+.nx-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.nx-touch[hidden] {
+  display: none !important;
+}
+
+/* Todo lo que no es un botón ni el joystick sirve para mirar. */
+.nx-touch-look {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.nx-touch-stick,
+.nx-touch-btn {
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Joystick: área de toque generosa, base visible más chica. */
+.nx-touch-stick {
+  position: absolute;
+  left: calc(8px + env(safe-area-inset-left, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  width: 168px;
+  height: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nx-touch-stick-base {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.42);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nx-touch-stick-knob {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  will-change: transform;
+}
+
+/* Botones */
+.nx-touch-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.55);
+  color: #f8fafc;
+  font: 700 9px/1 var(--ui-font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: transform 0.08s ease, background 0.08s ease;
+}
+
+.nx-touch-btn[hidden] {
+  display: none !important;
+}
+
+.nx-touch-btn.is-pressed {
+  transform: scale(0.92);
+  background: rgba(16, 185, 129, 0.75);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.nx-touch-btn.is-active {
+  background: rgba(16, 185, 129, 0.55);
+  border-color: var(--ui-emerald-light);
+}
+
+.nx-touch-icon {
+  display: flex;
+}
+
+/* Acciones abajo a la derecha: romper grande, el resto alrededor. */
+.nx-touch-actions {
+  position: absolute;
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-columns: repeat(2, 64px);
+  grid-template-areas:
+    "fly descend"
+    "jump place"
+    "break break";
+  gap: 10px;
+  justify-items: center;
+  align-items: end;
+}
+
+.nx-touch-actions .nx-touch-btn {
+  width: 62px;
+  height: 62px;
+}
+
+.nx-touch-fly { grid-area: fly; }
+.nx-touch-descend { grid-area: descend; }
+.nx-touch-jump { grid-area: jump; }
+.nx-touch-place { grid-area: place; }
+
+.nx-touch-actions .nx-touch-break {
+  grid-area: break;
+  width: 78px;
+  height: 78px;
+  background: rgba(239, 68, 68, 0.45);
+  border-color: rgba(254, 202, 202, 0.7);
+}
+
+.nx-touch-actions .nx-touch-break.is-pressed {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+.nx-touch-actions .nx-touch-place {
+  background: rgba(16, 185, 129, 0.4);
+  border-color: rgba(167, 243, 208, 0.7);
+}
+
+/* Menú arriba al centro: no choca con el tutorial (izquierda) ni con el plano (derecha). */
+.nx-touch-menu {
+  position: absolute;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 8px;
+}
+
+.nx-touch-menu .nx-touch-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 8px;
+}
+
+.nx-touch-menu .nx-touch-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nx-touch-rotate {
+  display: none;
+  position: absolute;
+  top: calc(66px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (orientation: portrait) {
+  .nx-touch-rotate {
+    display: block;
+  }
+}
+
+/* HUD con controles táctiles: se puede tocar y se acomoda alrededor de los botones. */
+body.nx-touch-mode .hud-hotbar-bar,
+body.nx-touch-mode .hud-hotbar-slot {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+body.nx-touch-mode .hud-hotbar-container {
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+body.nx-touch-mode .hud-tutorial {
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: calc(8px + env(safe-area-inset-left, 0px));
+}
+
+body.nx-touch-mode .hud-education-panel {
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  right: calc(8px + env(safe-area-inset-right, 0px));
+}
+
+body.nx-touch-mode .nx-chat {
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 160;
+}
+
+/* Celulares: todo más compacto para que entre el mundo entre los controles. */
+@media (max-height: 520px), (max-width: 720px) {
+  body.nx-touch-mode .hud-hotbar-slot {
+    width: 36px;
+    height: 36px;
+  }
+
+  body.nx-touch-mode .hud-hotbar-bar {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  body.nx-touch-mode .hud-hotbar-label {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+
+  body.nx-touch-mode .hud-health-container {
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.nx-touch-mode .hud-tutorial {
+    width: min(230px, 30vw);
+    padding: 8px 10px;
+    transform: scale(0.9);
+    transform-origin: top left;
+  }
+
+  body.nx-touch-mode .hud-tutorial-text {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  body.nx-touch-mode .hud-education-panel {
+    width: min(250px, 30vw);
+    transform: scale(0.82);
+    transform-origin: top right;
+    max-height: calc(100vh - 230px);
+    overflow-y: auto;
+  }
+
+  body.nx-touch-mode .nx-chat {
+    width: min(420px, calc(100vw - 24px));
+    max-height: calc(100vh - 80px);
+  }
+
+  .nx-touch-stick {
+    width: 140px;
+    height: 140px;
+  }
+
+  .nx-touch-stick-base {
+    width: 112px;
+    height: 112px;
+  }
+
+  .nx-touch-stick-knob {
+    width: 48px;
+    height: 48px;
+  }
+
+  .nx-touch-actions {
+    grid-template-columns: repeat(2, 54px);
+    gap: 8px;
+  }
+
+  .nx-touch-actions .nx-touch-btn {
+    width: 54px;
+    height: 54px;
+  }
+
+  .nx-touch-actions .nx-touch-break {
+    width: 66px;
+    height: 66px;
+  }
+
+  .nx-touch-menu .nx-touch-btn {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* Ayudas de teclado o táctiles según cómo se juega. */
+body.nx-touch-mode .nx-controls-keyboard,
+body:not(.nx-touch-mode) .nx-controls-touch,
+body.nx-touch-mode .nx-pause-hint,
+body.nx-touch-mode .hud-edu-launcher {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Pantallas bajas o angostas (celular): menús que entran y se pueden desplazar
+   ========================================================================== */
+.nx-menu-backdrop,
+.nx-pause-backdrop {
+  overflow-y: auto;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
+}
+
+/* margin: auto centra si sobra lugar y deja desplazar si falta (center a secas cortaba arriba). */
+.nx-menu-card,
+.nx-pause-card {
+  margin: auto;
+}
+
+@media (max-height: 560px) {
+  .nx-menu-card {
+    max-width: 640px;
+    padding: 16px 20px;
+    gap: 12px;
+  }
+
+  .nx-menu-header {
+    gap: 4px;
+  }
+
+  .nx-menu-title {
+    font-size: 1.5rem;
+  }
+
+  .nx-menu-subtitle,
+  .nx-menu-footer {
+    display: none;
+  }
+
+  .nx-pause-card {
+    max-width: 600px;
+    padding: 16px 20px;
+    gap: 12px;
+  }
+
+  .nx-pause-title {
+    font-size: 1.1rem;
+  }
+}
+
+/* Celular acostado: los botones del menú y de la pausa en dos columnas. */
+@media (max-height: 560px) and (min-width: 560px) {
+  .nx-menu-actions,
+  .nx-pause-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .nx-menu-actions .nx-btn-large,
+  .nx-pause-actions .nx-btn-large,
+  .nx-pause-actions .nx-btn {
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
+
+  .nx-menu-actions > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Celular parado: la barra de bloques abajo de todo y los controles encima; el
+   tutorial y el plano debajo del menú de arriba. */
+@media (orientation: portrait) and (max-width: 720px) {
+  body.nx-touch-mode .hud-hotbar-container {
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.nx-touch-mode .hud-hotbar-slot {
+    width: calc((100vw - 52px) / 9);
+    height: calc((100vw - 52px) / 9);
+    max-width: 40px;
+    max-height: 40px;
+  }
+
+  .nx-touch-stick,
+  .nx-touch-actions {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.nx-touch-mode .hud-health-container {
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .nx-touch-rotate {
+    top: calc(58px + env(safe-area-inset-top, 0px));
+  }
+
+  body.nx-touch-mode .hud-tutorial {
+    top: calc(92px + env(safe-area-inset-top, 0px));
+    width: calc(100vw - 16px);
+    max-width: 360px;
+    transform: none;
+  }
+
+  body.nx-touch-mode .hud-education-panel {
+    top: calc(92px + env(safe-area-inset-top, 0px));
+    width: min(300px, 75vw);
+    transform: scale(0.82);
+    max-height: calc(100vh - 330px);
+  }
 }

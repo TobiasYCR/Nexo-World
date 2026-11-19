@@ -243,6 +243,7 @@ export class Game {
 
     if (this.state.isRunning) {
       this.playerController.update();
+      this.hud?.touchControls?.sync({ canFly: this.player.canFly, isFlying: this.player.isFlying });
       this.blockInteraction.update(this.player.eyePosition, this.camera.lookDirection);
       this.#handleBlockInteractions(deltaTime);
       const wasOnGround = this.player.isOnGround;
@@ -434,11 +435,12 @@ export class Game {
   }
 
   /**
-   * Romper y colocar solo con el puntero capturado: el primer clic sobre el
-   * canvas pide Pointer Lock y no debe contar como interacción.
+   * Romper y colocar solo con el puntero capturado (o con controles táctiles):
+   * el primer clic sobre el canvas pide Pointer Lock y no debe contar como
+   * interacción.
    */
   #handleBlockInteractions(deltaTime) {
-    if (!this.input.isPointerLocked) {
+    if (!this.input.hasControl) {
       this.blockInteraction.updateBreaking(deltaTime, false);
       return;
     }
@@ -549,12 +551,24 @@ export class Game {
     for (const blockType of types) this.hotbar.add(blockType, this.config.inventory.STARTER_BLOCK_COUNT);
   }
 
-  /** Pointer Lock necesita un gesto del usuario; se engancha al clic en el canvas. */
+  /**
+   * Pointer Lock necesita un gesto del usuario; se engancha al clic en el
+   * canvas. Con controles táctiles no se captura nada.
+   *
+   * El audio también espera un gesto: el clic en el canvas o, en celular, el
+   * primer toque sobre los controles táctiles (el canvas queda debajo).
+   */
   #bindPointerLock(canvasElement) {
     canvasElement.addEventListener('click', () => {
-      if (!this.input.isPointerLocked) this.input.mouse.requestPointerLock();
-      this.audio.unlock().then((ready) => ready && this.music.start()).catch(() => {});
+      if (!this.input.isPointerLocked && !this.input.touch.isActive) this.input.mouse.requestPointerLock();
     });
+    const unlockAudio = () => {
+      this.audio.unlock().then((ready) => ready && this.music.start()).catch(() => {});
+    };
+    globalThis.document?.addEventListener?.('pointerdown', (event) => {
+      if (event.target?.closest?.('.nx-touch')) unlockAudio();
+    }, { capture: true });
+    canvasElement.addEventListener('click', unlockAudio);
   }
 
   #buildDebugStats() {

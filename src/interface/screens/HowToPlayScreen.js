@@ -15,10 +15,11 @@ export class HowToPlayScreen extends Screen {
 
   /**
    * @param {string} chatKeyLabel tecla del asistente, para mostrarla en el texto
+   * @param {{touch?: boolean}} [options] touch: textos para controles táctiles
    * @returns {Array<{image:string, title:string, text:string}>}
    */
-  static defaultSlides(chatKeyLabel = 'T') {
-    return [
+  static defaultSlides(chatKeyLabel = 'T', { touch = false } = {}) {
+    const slides = [
       {
         image: 'mover.jpg',
         title: 'Moverse y mirar',
@@ -55,15 +56,34 @@ export class HowToPlayScreen extends Screen {
         text: 'Con Esc pausás el juego. Desde ahí guardás tu mundo con su nombre, cargás otro, cambiás la configuración o repetís el tutorial.'
       }
     ];
+    if (!touch) return slides;
+    const touchTexts = {
+      'mover.jpg': 'Usá el joystick de la izquierda para caminar (llevalo al borde para correr) y arrastrá el dedo por la pantalla para mirar. El botón Saltar te hace saltar; en creativo, Volar te deja moverte en el aire con Subir y Bajar.',
+      'bloques.jpg': 'Apuntá con la cruz del centro: mantené apretado Romper para romper un bloque y tocá Colocar para poner el que tenés en la mano. Elegilo tocando la barra de abajo.',
+      'inventario.jpg': 'Con el botón Bloques ves todos los bloques, ordenados por categoría. Cada uno se puede escuchar separado en sílabas y tiene una descripción. Elegí uno para ponerlo en tu barra.',
+      'planos.jpg': 'Con el botón Planos elegís un plano: una casa, una torre o un puente. Te dice qué materiales vas a usar. La torre de piedra es la más fácil para empezar.',
+      'asistente.jpg': 'Con el botón Ayuda abrís a Nexo, el asistente. Preguntale lo que quieras del juego, por ejemplo "¿cómo vuelo?" o "¿dónde hay diamantes?".',
+      'menu.jpg': 'Con el botón Pausa abrís el menú. Desde ahí guardás tu mundo con su nombre, cargás otro, cambiás la configuración o repetís el tutorial.'
+    };
+    return slides.map((slide) => (touchTexts[slide.image] ? { ...slide, text: touchTexts[slide.image] } : slide));
   }
 
   #slides;
   #index = 0;
+  #customSlides;
 
   constructor(screenManager = null, intentBus = null, { slides = null } = {}) {
     super(ScreenType.HOW_TO_PLAY, screenManager, intentBus);
+    this.#customSlides = Boolean(slides);
     this.#slides = slides ?? HowToPlayScreen.defaultSlides(KeyNames.of(GameConfig.chatbot.TOGGLE_KEY));
     this.#buildDOM();
+    this.#render();
+  }
+
+  /** Con controles táctiles los textos hablan de botones y no de teclas. */
+  setTouchMode(touch) {
+    if (this.#customSlides) return;
+    this.#slides = HowToPlayScreen.defaultSlides(KeyNames.of(GameConfig.chatbot.TOGGLE_KEY), { touch });
     this.#render();
   }
 

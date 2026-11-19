@@ -178,6 +178,7 @@ export class GameUiBridge {
 
     this.#bindBuildChallenge();
     this.#bindTutorial();
+    this.#bindTouch();
     this.#bindPointerLock();
   }
 
@@ -217,21 +218,32 @@ export class GameUiBridge {
     const screens = hud?.screenManager;
     if (!mouse?.onLockChange || !screens) return;
 
+    // Con controles táctiles no se captura el puntero: se juega tocando.
+    const touchMode = () => Boolean(hud.isTouchMode);
     const isPlaying = () => screens.currentScreenType === ScreenType.PLAYING;
     const chatOpen = () => Boolean(hud.chatPanel?.isOpen);
-    const sync = () => hud.setClickToPlay?.(isPlaying() && !chatOpen() && !mouse.isPointerLocked);
+    const sync = () => hud.setClickToPlay?.(isPlaying() && !chatOpen() && !mouse.isPointerLocked && !touchMode());
 
     mouse.onLockChange((locked) => {
-      if (!locked && isPlaying() && !chatOpen()) this.intentBus.emit(IntentBus.Events.PAUSE_GAME);
+      if (!locked && isPlaying() && !chatOpen() && !touchMode()) this.intentBus.emit(IntentBus.Events.PAUSE_GAME);
       sync();
     });
     const recapture = () => {
-      if (isPlaying() && !chatOpen() && !mouse.isPointerLocked) mouse.requestPointerLock();
+      if (isPlaying() && !chatOpen() && !mouse.isPointerLocked && !touchMode()) mouse.requestPointerLock();
       sync();
     };
     screens.onChange(recapture);
     hud.chatPanel?.onClose?.(recapture);
     sync();
+  }
+
+  /** Controles táctiles y ranuras de la barra que se tocan. */
+  #bindTouch() {
+    const touchInput = this.game?.input?.touch;
+    if (touchInput) this.hud?.touchControls?.connect(touchInput);
+    this.hud?.hotbarView?.onSlotSelected?.((index) => {
+      this.game?.hotbar?.select(index);
+    });
   }
 
   /** Lo que el jugador hace en el mundo avanza el tutorial. */
