@@ -1807,3 +1807,68 @@
   }
 }
 
+
+/* ==========================================================================
+   Pantallas bajas o angostas (celular)
+   ========================================================================== */
+.nx-modal-backdrop {
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+}
+
+.nx-modal-dialog {
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+}
+
+.nx-modal-footer {
+  flex-wrap: wrap;
+}
+
+@media (max-height: 560px), (max-width: 640px) {
+  .nx-modal-backdrop {
+    padding: max(6px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px))
+      max(6px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  }
+
+  .nx-modal-dialog {
+    max-height: calc(100vh - 12px);
+    max-height: calc(100dvh - 12px);
+    border-radius: var(--nx-radius-md);
+  }
+
+  .nx-modal-header {
+    padding: 10px 16px;
+  }
+
+  .nx-modal-title {
+    font-size: 0.95rem;
+  }
+
+  .nx-modal-body {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .nx-modal-footer {
+    padding: 10px 16px;
+    gap: 8px;
+  }
+
+  .nx-modal-footer .nx-btn {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+
+  .nx-close-btn,
+  .nx-modal-close {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nx-modal-footer .nx-btn {
+    flex: 1 1 auto;
+  }
+}

@@ -21,8 +21,9 @@ export class PlayerController {
   }
 
   #updateLook() {
-    // Sin Pointer Lock el mouse no entrega deltas útiles y la vista saltaría.
-    if (!this.input.isPointerLocked) return;
+    // Sin Pointer Lock (ni controles táctiles) el mouse no entrega deltas
+    // útiles y la vista saltaría.
+    if (!this.input.hasControl) return;
     this.camera.rotate(this.input.lookDeltaX, this.input.lookDeltaY);
   }
 
@@ -48,11 +49,11 @@ export class PlayerController {
     if (player.isFlying) {
       // Volando, Espacio sube y Shift baja; no hay salto ni carrera.
       player.isSprinting = false;
-      player.flyVertical = this.input.axis(InputActions.SPRINT, InputActions.JUMP);
+      player.flyVertical = this.input.flyVerticalAxis();
       return;
     }
 
-    player.isSprinting = this.input.isActionDown(InputActions.SPRINT);
+    player.isSprinting = this.input.isSprintRequested();
     // Borde de subida del salto: mantener la tecla no debe permitir volar.
     player.wantsToJump = this.input.wasActionJustPressed(InputActions.JUMP);
   }

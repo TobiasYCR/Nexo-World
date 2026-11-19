@@ -184,9 +184,12 @@ test('ControlsScreen lista todas las categorías y teclas configuradas', () => {
   controls.mount(dom.uiRoot);
 
   assert.equal(controls.id, ScreenType.CONTROLS);
-  assert.equal(controls.element.querySelectorAll('.nx-controls-group').length, 3);
-  assert.equal(controls.element.querySelectorAll('.nx-key-badge').length, 17, 'incluye V (escuchar) y T (chat)');
-  assert.equal(controls.element.querySelector('.nx-control-hint').textContent, 'Espacio sube · Shift baja');
+  assert.equal(controls.element.querySelectorAll('.nx-controls-keyboard').length, 3);
+  assert.equal(controls.element.querySelectorAll('.nx-controls-touch').length, 1, 'grupo de pantalla táctil');
+  // 17 teclas (incluye V para escuchar y T para el chat) + 11 controles táctiles.
+  assert.equal(controls.element.querySelectorAll('.nx-key-badge').length, 17 + 11);
+  const hints = [...controls.element.querySelectorAll('.nx-control-hint')].map((hint) => hint.textContent);
+  assert.ok(hints.includes('Espacio sube · Shift baja'));
 });
 
 test('KeyboardInput ignora teclas cuando el foco está en un input de texto', () => {

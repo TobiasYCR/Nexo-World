@@ -86,7 +86,16 @@ export class ChatPanel {
     // porque ahí se escribe en vez de disparar atajos.
     hint.textContent = 'Escape para cerrar';
 
-    header.append(title, hint);
+    // Para pantallas táctiles (sin Escape) y para quien prefiera el mouse.
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'nx-chat-close';
+    closeButton.setAttribute('aria-label', 'Cerrar el chat');
+    closeButton.textContent = '×';
+    closeButton.addEventListener('click', () => this.close());
+    this.closeButton = closeButton;
+
+    header.append(title, hint, closeButton);
 
     this.#list = document.createElement('div');
     this.#list.className = 'nx-chat-log';

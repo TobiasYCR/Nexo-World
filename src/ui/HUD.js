@@ -1,6 +1,8 @@
 import { Crosshair } from './Crosshair.js';
 import { MenuScenery } from './MenuScenery.js';
 import { TutorialPanel } from './TutorialPanel.js';
+import { TouchControls } from './TouchControls.js';
+import { TouchSupport } from '../input/TouchSupport.js';
 import { KeyNames } from '../chatbot/KeyNames.js';
 import { DebugOverlay } from './DebugOverlay.js';
 import { HotbarView } from './HotbarView.js';
@@ -96,6 +98,13 @@ export class HUD {
       chatKeyLabel: KeyNames.of(GameConfig.chatbot.TOGGLE_KEY),
       onFinish: () => this.settingsModel.set('showTutorial', false)
     });
+
+    // Celulares y tablets: joystick, arrastrar para mirar y botones.
+    this.touchControls = new TouchControls({
+      onInventory: () => this.screenManager.open(ScreenType.INVENTORY),
+      onBlueprints: () => this.screenManager.open(ScreenType.PRESETS),
+      onChat: () => this.toggleChat()
+    });
     if (this.settingsModel.get('showTutorial')) this.tutorial.start();
 
     // Imagen fija detrás de los menús, en vez del mundo.
@@ -104,6 +113,8 @@ export class HUD {
     this.menuScenery.bind(this.screenManager);
 
     this.#registerScreens();
+    // Después de crear las pantallas: algunas cambian sus textos en modo táctil.
+    this.setTouchMode(TouchSupport.shouldUseTouch());
     this.#setupIntentListeners();
     this.#setupKeyboardShortcuts();
   }
@@ -226,7 +237,8 @@ export class HUD {
       this.crosshair.setVisible(isPlaying);
       this.hotbarView.setVisible(isPlaying);
       this.buildChallengeHud.setVisible(isPlaying);
-      this.chatHintElement.hidden = !isPlaying;
+      this.chatHintElement.hidden = !isPlaying || this.isTouchMode;
+      this.touchControls.setVisible(isPlaying);
       // También en pausa: con el mouse capturado no se pueden tocar sus botones.
       this.tutorial.setVisible(isPlaying || current === ScreenType.PAUSE);
       if (current === ScreenType.PAUSE) this.tutorial.notify(TutorialPanel.Signals.PAUSE_OPENED);
@@ -309,6 +321,7 @@ export class HUD {
    * Monta todos los componentes en el contenedor DOM e inicia en el Menú Principal.
    */
   mount() {
+    this.touchControls.mount(this.container);
     this.crosshair.mount(this.container);
     this.hotbarView.mount(this.container);
     this.healthBar.mount(this.container);
@@ -337,7 +350,21 @@ export class HUD {
   /** Abre o cierra el chat del asistente. */
   /** Muestra u oculta el aviso de hacer clic para capturar el mouse. */
   setClickToPlay(visible) {
-    this.clickToPlayElement.hidden = !visible;
+    this.clickToPlayElement.hidden = !visible || this.isTouchMode;
+  }
+
+  get isTouchMode() {
+    return Boolean(this.touchControls?.enabled);
+  }
+
+  /** Controles táctiles en vez de teclado y mouse (textos y ayudas incluidos). */
+  setTouchMode(touch) {
+    this.touchControls.setEnabled(touch);
+    this.tutorial.setTouchMode(touch);
+    const playing = this.screenManager?.currentScreenType === ScreenType.PLAYING;
+    this.chatHintElement.hidden = touch || !playing;
+    this.hotbarView.setTouchMode?.(touch);
+    this.howToPlayScreen?.setTouchMode(touch);
   }
 
   toggleChat() {

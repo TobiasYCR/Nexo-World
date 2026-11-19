@@ -19,6 +19,7 @@ export class HotbarView {
   /** Desde Configuración: mostrar o no el nombre del bloque al cambiar de ranura. */
   #showBlockName = true;
   #speechService = null;
+  #slotListeners = new Set();
 
   constructor(size = 9, options = {}) {
     this.size = size;
@@ -27,6 +28,18 @@ export class HotbarView {
     this.element.className = 'hud-hotbar-container';
 
     this.#buildDOM();
+  }
+
+  /** @param {(index: number) => void} listener al tocar una ranura */
+  onSlotSelected(listener) {
+    this.#slotListeners.add(listener);
+    return () => this.#slotListeners.delete(listener);
+  }
+
+  /** En pantalla táctil el botón de escuchar no muestra la tecla V. */
+  setTouchMode(touch) {
+    this.speakBtn.innerHTML = touch ? Icons.speaker : `${Icons.speaker}<span class="hud-hotbar-speak-key">V</span>`;
+    this.speakBtn.title = touch ? 'Escuchar' : 'Escuchar (tecla V)';
   }
 
   get selectedIndex() {
@@ -98,6 +111,13 @@ export class HotbarView {
       slot.appendChild(number);
       slot.appendChild(icon);
       slot.appendChild(count);
+
+      // Tocar o hacer clic en una ranura la elige (en celular no hay teclas 1-9).
+      slot.addEventListener('pointerdown', (event) => {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        for (const listener of this.#slotListeners) listener(i);
+      });
 
       this.barElement.appendChild(slot);
       this.#slots.push({ element: slot, icon, count, number });

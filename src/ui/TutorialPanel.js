@@ -27,11 +27,12 @@ export class TutorialPanel {
 
   /**
    * @param {string} chatKeyLabel tecla del chat, para mostrarla en el texto
+   * @param {{touch?: boolean}} [options] touch: textos para controles táctiles
    * @returns {Array<{id:string, title:string, text:string, completeOn:string[]}>}
    */
-  static defaultSteps(chatKeyLabel = 'T') {
+  static defaultSteps(chatKeyLabel = 'T', { touch = false } = {}) {
     const S = TutorialPanel.Signals;
-    return [
+    const steps = [
       {
         id: 'welcome',
         title: 'Bienvenido a Nexo World',
@@ -87,6 +88,17 @@ export class TutorialPanel {
         completeOn: [S.CHAT_OPENED]
       }
     ];
+    if (!touch) return steps;
+    const touchTexts = {
+      move: 'Usá el joystick de la izquierda para caminar (llevalo al borde para correr) y arrastrá el dedo por el resto de la pantalla para mirar. Con el botón Saltar, saltás.',
+      break: 'Apuntá a un bloque cercano con la cruz del centro y mantené apretado el botón Romper hasta que se rompa.',
+      select: 'La barra de abajo tiene tus bloques: tocá uno para elegirlo. Con el botón Bloques (arriba a la derecha) ves todos.',
+      place: 'Apuntá al suelo o a otro bloque con la cruz y tocá el botón Colocar.',
+      menu: 'Tocá Pausa (arriba a la derecha) para abrir el menú: ahí podés guardar la partida, ver los controles y cambiar la configuración. Con "Reanudar partida" volvés al juego.',
+      blueprint: 'Tocá el botón Planos para ver los planos de construcción y tocá "Empezar" en uno. La torre de piedra es la más fácil para arrancar.',
+      help: 'Tocá el botón Ayuda para abrir el asistente y preguntale lo que quieras, por ejemplo "¿cómo vuelo?" o "¿dónde hay diamantes?".'
+    };
+    return steps.map((step) => (touchTexts[step.id] ? { ...step, text: touchTexts[step.id] } : step));
   }
 
   #steps;
@@ -96,6 +108,9 @@ export class TutorialPanel {
   #startPosition = null;
   #lastSelectedIndex = null;
   #onFinish;
+  #chatKeyLabel;
+  #customSteps;
+  #touch = false;
 
   /**
    * @param {Object} [options]
@@ -104,9 +119,18 @@ export class TutorialPanel {
    * @param {(reason: 'completed'|'skipped') => void} [options.onFinish]
    */
   constructor({ steps = null, chatKeyLabel = 'T', onFinish = null } = {}) {
+    this.#customSteps = Boolean(steps);
+    this.#chatKeyLabel = chatKeyLabel;
     this.#steps = steps ?? TutorialPanel.defaultSteps(chatKeyLabel);
     this.#onFinish = onFinish;
     this.#build();
+  }
+
+  /** Con controles táctiles los textos hablan de botones y no de teclas. */
+  setTouchMode(touch) {
+    this.#touch = Boolean(touch);
+    if (!this.#customSteps) this.#steps = TutorialPanel.defaultSteps(this.#chatKeyLabel, { touch: this.#touch });
+    if (this.#active) this.#render();
   }
 
   get isActive() {
@@ -247,7 +271,9 @@ export class TutorialPanel {
     this.textElement.textContent = step.text;
     this.previousButton.hidden = this.#index === 0;
     // Un paso con acción se puede saltar; uno de lectura solo se lee.
-    this.nextButton.textContent = last ? 'Terminar (Enter)' : step.completeOn.length > 0 ? 'Saltar paso (Enter)' : 'Siguiente (Enter)';
+    const label = last ? 'Terminar' : step.completeOn.length > 0 ? 'Saltar paso' : 'Siguiente';
+    // Con teclado, Enter avanza (el mouse está capturado); en pantalla táctil se toca.
+    this.nextButton.textContent = this.#touch ? label : `${label} (Enter)`;
   }
 
   static #button(text, className, onClick) {

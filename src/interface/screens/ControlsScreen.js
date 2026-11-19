@@ -29,7 +29,8 @@ export class ControlsScreen extends Screen {
 
     for (const group of groups) {
       const groupElem = document.createElement('div');
-      groupElem.className = 'nx-controls-group';
+      // Con controles táctiles se ve el grupo táctil y no los de teclado (styles.css).
+      groupElem.className = `nx-controls-group ${group.touch ? 'nx-controls-touch' : 'nx-controls-keyboard'}`;
 
       const titleElem = document.createElement('h3');
       titleElem.className = 'nx-controls-group-title';
@@ -91,6 +92,23 @@ export class ControlsScreen extends Screen {
     };
 
     return [
+      {
+        category: 'Pantalla táctil',
+        touch: true,
+        items: [
+          { label: 'Caminar', hint: 'Al borde, corrés', key: 'Joystick' },
+          { label: 'Mirar', key: 'Arrastrar' },
+          { label: 'Romper bloque', key: 'Mantener Romper' },
+          { label: 'Colocar bloque', key: 'Colocar' },
+          { label: 'Saltar', key: 'Saltar' },
+          { label: 'Volar (creativo)', hint: 'Subir y Bajar para moverte en el aire', key: 'Volar' },
+          { label: 'Elegir bloque', key: 'Tocar la barra' },
+          { label: 'Todos los bloques', key: 'Bloques' },
+          { label: 'Planos de construcción', key: 'Planos' },
+          { label: 'Asistente', key: 'Ayuda' },
+          { label: 'Menú y guardado', key: 'Pausa' }
+        ]
+      },
       {
         category: 'Movimiento',
         items: [
