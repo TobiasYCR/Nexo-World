@@ -6,6 +6,7 @@ import { PlayerTokens } from '../security/PlayerTokens.js';
 import { LoginThrottle } from '../security/LoginThrottle.js';
 import { ResetCode } from '../security/ResetCode.js';
 import { AuthResponse } from './AuthResponse.js';
+import { EmailDomainVerifier } from './EmailDomainVerifier.js';
 
 /**
  * Casos de uso de cuentas: registro, inicio y cierre de sesión, perfil.
@@ -25,6 +26,7 @@ export class AccountService {
   #players;
   #hasher;
   #validator;
+  #emailDomainVerifier;
   #throttle;
   #clock;
   #sessionTtlMs;
@@ -39,12 +41,13 @@ export class AccountService {
   /**
    * @param {import('../persistence/AccountRepository.js').AccountRepository} accounts
    * @param {import('../persistence/ProgressionRepository.js').ProgressionRepository} players
-   * @param {{hasher?:PasswordHasher, validator?:UserValidator, throttle?:LoginThrottle,
-   *          clock?:()=>number, sessionTtlMs?:number, logger?:{error:Function}}} [options]
+   * @param {{hasher?:PasswordHasher, validator?:UserValidator, emailDomainVerifier?:EmailDomainVerifier,
+   *          throttle?:LoginThrottle, clock?:()=>number, sessionTtlMs?:number, logger?:{error:Function}}} [options]
    */
   constructor(accounts, players, {
     hasher = new PasswordHasher(),
     validator = new UserValidator(),
+    emailDomainVerifier = new EmailDomainVerifier(),
     throttle = new LoginThrottle(),
     clock = Date.now,
     sessionTtlMs = GameConfig.users.SESSION_TTL_MS,
@@ -55,6 +58,7 @@ export class AccountService {
     this.#players = players;
     this.#hasher = hasher;
     this.#validator = validator;
+    this.#emailDomainVerifier = emailDomainVerifier;
     this.#throttle = throttle;
     this.#clock = clock;
     this.#sessionTtlMs = sessionTtlMs;
@@ -62,12 +66,17 @@ export class AccountService {
     this.#logger = logger;
   }
 
-  async register(body) {
+  async register(body, { skipDomainCheck = false } = {}) {
     const { username, email, password, guestToken } = body ?? {};
     const invalid = this.#validator.checkUsername(username)
       ?? (typeof email === 'string' && email.trim() !== '' ? this.#validator.checkEmail(email) : 'invalid-email')
       ?? this.#validator.checkPassword(password);
     if (invalid) return AuthResponse.fail(invalid);
+
+    if (!skipDomainCheck && this.#emailDomainVerifier) {
+      const domainError = await this.#emailDomainVerifier.verify(email);
+      if (domainError) return AuthResponse.fail(domainError);
+    }
 
     return this.#guard(async () => {
       const credential = await this.#hasher.derive(password);

@@ -32,6 +32,8 @@ export class ServerConfig {
       }),
       /** Carpeta del juego compilado (npm run build) que el servidor publica; '' para no publicar nada. */
       clientDir: env.CLIENT_DIR ?? 'dist',
+      /** Verifica por DNS (MX) que el dominio del correo exista al registrarse. */
+      verifyEmailDomain: env.VERIFY_EMAIL_DOMAIN !== 'false',
       /** Mundos que el servidor acepta regenerar para validar. */
       worlds: Object.freeze({
         maxWidth: integer(env.MAX_WORLD_WIDTH, 256),

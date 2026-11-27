@@ -4,6 +4,7 @@ import { WorldVerifier } from '../../server/progression/WorldVerifier.js';
 import { InMemoryProgressionRepository } from '../../server/persistence/InMemoryProgressionRepository.js';
 import { InMemoryAccountRepository } from '../../server/persistence/InMemoryAccountRepository.js';
 import { AccountService } from '../../server/accounts/AccountService.js';
+import { EmailDomainVerifier } from '../../server/accounts/EmailDomainVerifier.js';
 import { AuthRoutes } from '../../server/http/AuthRoutes.js';
 import { LoginThrottle } from '../../server/security/LoginThrottle.js';
 import { PasswordHasher } from '../../src/users/PasswordHasher.js';
@@ -31,12 +32,19 @@ const fastHasher = new PasswordHasher(globalThis.crypto, { ...GameConfig.users, 
 export async function startTestApi({
   repository = new InMemoryProgressionRepository(),
   accountRepository = new InMemoryAccountRepository(),
+  emailDomainVerifier = new EmailDomainVerifier({ enabled: false }),
   clock = new FakeClock(),
   throttle = new LoginThrottle(),
   healthCheck = null
 } = {}) {
   const verifier = new WorldVerifier({ maxWidth: 256, maxHeight: 128, maxDepth: 256, cacheSize: 4 });
-  const accounts = new AccountService(accountRepository, repository, { hasher: fastHasher, throttle, clock: clock.read, logger: silentLogger });
+  const accounts = new AccountService(accountRepository, repository, {
+    hasher: fastHasher,
+    emailDomainVerifier,
+    throttle,
+    clock: clock.read,
+    logger: silentLogger
+  });
   const service = new ProgressionService(repository, verifier, { clock: clock.read, logger: silentLogger, sessions: accounts });
   const api = new ApiServer(service, { allowedOrigin: '*', logger: silentLogger, authRoutes: new AuthRoutes(accounts), healthCheck });
   const port = await api.listen(0, '127.0.0.1');

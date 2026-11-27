@@ -8,6 +8,7 @@ import { PostgresAccountRepository } from './persistence/PostgresAccountReposito
 import { StaticFiles } from './http/StaticFiles.js';
 import { InMemoryAccountRepository } from './persistence/InMemoryAccountRepository.js';
 import { AccountService } from './accounts/AccountService.js';
+import { EmailDomainVerifier } from './accounts/EmailDomainVerifier.js';
 import { AuthRoutes } from './http/AuthRoutes.js';
 
 /**
@@ -15,16 +16,20 @@ import { AuthRoutes } from './http/AuthRoutes.js';
  * index.js para que los tests levanten el mismo servidor con otros repositorios.
  * Progresión y cuentas comparten la misma base de datos.
  * @param {ReturnType<import('./ServerConfig.js').ServerConfig.fromEnv>} config
- * @param {{repository?: object, accountRepository?: object, logger?: object}} [overrides]
+ * @param {{repository?: object, accountRepository?: object, emailDomainVerifier?: EmailDomainVerifier, logger?: object}} [overrides]
  */
-export async function createProgressionServer(config, { repository, accountRepository, logger = console } = {}) {
+export async function createProgressionServer(config, { repository, accountRepository, emailDomainVerifier, logger = console } = {}) {
   const database = config.storage === 'memory' ? null : new PostgresDatabase(config.postgres);
   const store = repository ?? (database ? new PostgresProgressionRepository(database) : new InMemoryProgressionRepository());
   const accountStore = accountRepository ?? (database ? new PostgresAccountRepository(database) : new InMemoryAccountRepository());
   await store.init();
   await accountStore.init();
 
-  const accounts = new AccountService(accountStore, store, { logger });
+  const domainVerifier = emailDomainVerifier ?? new EmailDomainVerifier({
+    enabled: config.verifyEmailDomain ?? true,
+    logger
+  });
+  const accounts = new AccountService(accountStore, store, { emailDomainVerifier: domainVerifier, logger });
   const service = new ProgressionService(store, new WorldVerifier(config.worlds), { logger, sessions: accounts });
   const healthCheck = async () => {
     if (!database) return { storage: repository ? 'custom' : 'memory' };

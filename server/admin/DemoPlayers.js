@@ -87,7 +87,7 @@ export class DemoPlayers {
       username: name,
       email: `${name}${DemoPlayers.EMAIL_DOMAIN}`,
       password: randomBytes(18).toString('base64url')
-    });
+    }, { skipDomainCheck: true });
     if (!registered.ok) return registered.body?.code ?? 'register-failed';
 
     const account = await this.#accountStore.findAccountByLogin(UserAccount.normalizeUsername(name));
