@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { startTestApi, FakeClock } from './support/apiServer.js';
 import { defaultWorld } from './support/progression.js';
 import { LoginThrottle } from '../server/security/LoginThrottle.js';
+import { EmailDomainVerifier } from '../server/accounts/EmailDomainVerifier.js';
 import { BackendAuthClient } from '../src/auth/BackendAuthClient.js';
 import { AuthService } from '../src/auth/AuthService.js';
 import { SessionManager } from '../src/auth/SessionManager.js';
@@ -253,4 +254,44 @@ test('sin servidor, BackendAuthClient avisa que no hay conexión', async () => {
 
   const unreachable = new BackendAuthClient({ fetchFn: async () => { throw new TypeError('fetch failed'); } });
   assert.equal((await unreachable.login({ identifier: 'x', password: 'y' })).code, 'NETWORK_ERROR');
+});
+
+test('el registro verifica por DNS (MX) que el dominio del correo sea real', async () => {
+  const emailDomainVerifier = new EmailDomainVerifier({
+    resolveMx: async (domain) => {
+      if (domain === 'gmail.com') return [{ exchange: 'gmail-smtp-in.l.google.com', priority: 5 }];
+      if (domain === 'falla-dns.com') {
+        const err = new Error('SERVFAIL');
+        err.code = 'ESERVFAIL';
+        throw err;
+      }
+      const err = new Error('ENOTFOUND');
+      err.code = 'ENOTFOUND';
+      throw err;
+    },
+    logger: { warn() {}, error() {} }
+  });
+  const server = await api({ emailDomainVerifier });
+
+  const ok = await register(server, { username: 'gonza', email: 'gonza@gmail.com' });
+  assert.equal(ok.status, 201);
+
+  const fake = await register(server, { username: 'falso', email: 'falso@dominio-inexistente.xyz' });
+  assert.equal(fake.status, 400);
+  assert.equal(fake.body.code, 'INVALID_EMAIL_DOMAIN');
+
+  const reserved = await register(server, { username: 'prueba', email: 'prueba@nexo.test' });
+  assert.equal(reserved.status, 400);
+  assert.equal(reserved.body.code, 'INVALID_EMAIL_DOMAIN');
+
+  // El cliente HTTP no puede saltear la verificación mandando skipDomainCheck en el body.
+  const bypassAttempt = await server.call('POST', '/auth/register', {
+    body: { username: 'vivo', email: 'vivo@nexo.test', password: PASSWORD, skipDomainCheck: true }
+  });
+  assert.equal(bypassAttempt.status, 400);
+  assert.equal(bypassAttempt.body.code, 'INVALID_EMAIL_DOMAIN');
+
+  const dnsDown = await register(server, { username: 'caido', email: 'caido@falla-dns.com' });
+  assert.equal(dnsDown.status, 503);
+  assert.equal(dnsDown.body.code, 'EMAIL_VERIFICATION_UNAVAILABLE');
 });

@@ -5,6 +5,8 @@ const ERRORS = Object.freeze({
   'invalid-username': ['INVALID_USERNAME', 400],
   'invalid-password': ['INVALID_PASSWORD', 400],
   'invalid-email': ['INVALID_EMAIL', 400],
+  'invalid-email-domain': ['INVALID_EMAIL_DOMAIN', 400],
+  'email-verification-unavailable': ['EMAIL_VERIFICATION_UNAVAILABLE', 503],
   'invalid-request': ['INVALID_INPUT', 400],
   'invalid-credentials': ['INVALID_CREDENTIALS', 401],
   'invalid-reset-code': ['INVALID_RESET_CODE', 400],
@@ -20,6 +22,8 @@ const ERRORS = Object.freeze({
 
 /** Mensajes propios del servidor; el resto sale de UserResult para que coincidan con el juego. */
 const MESSAGES = Object.freeze({
+  'invalid-email-domain': 'El dominio del correo electrónico no existe o no recibe correos. Usá un correo real.',
+  'email-verification-unavailable': 'No se pudo verificar el dominio del correo en este momento. Probá de nuevo en unos segundos.',
   'invalid-request': 'Faltan datos en la solicitud.',
   'wrong-password': 'La contraseña actual no es correcta.',
   unauthorized: 'La sesión expiró o no es válida. Volvé a iniciar sesión.',
